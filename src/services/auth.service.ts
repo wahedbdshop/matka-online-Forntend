@@ -1,0 +1,158 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import { api, publicApi } from "@/lib/axios";
+import { ApiResponse } from "@/types";
+
+export interface RegisterPayload {
+  name: string;
+  email: string;
+  phone: string;
+  password: string;
+  username: string;
+}
+
+export interface LoginPayload {
+  emailOrUsername: string;
+  password: string;
+}
+
+export interface AuthenticatedLoginResponse {
+  token: string;
+  user: any;
+  accessToken: string;
+  refreshToken: string;
+}
+
+export interface AdminOtpRequiredResponse {
+  requiresAdminOtp: true;
+  pendingToken: string;
+  email: string;
+  expiresInSeconds: number;
+}
+
+export type LoginResponseData =
+  | AuthenticatedLoginResponse
+  | AdminOtpRequiredResponse;
+
+export interface VerifyEmailPayload {
+  email: string;
+  otp: string;
+}
+
+export interface ForgotPasswordPayload {
+  email: string;
+}
+
+export interface ResetPasswordPayload {
+  email: string;
+  otp: string;
+  newPassword: string;
+}
+
+export interface CaptchaResponse {
+  captchaId: string;
+  captchaSvg: string;
+}
+
+export interface LoginWithCaptchaPayload {
+  identifier: string;
+  password: string;
+  captchaId: string;
+  captchaCode: string;
+}
+
+export interface VerifyAdminLoginOtpPayload {
+  pendingToken: string;
+  otp: string;
+}
+
+export const AuthService = {
+  getCaptcha: async () => {
+    const res = await publicApi.get<ApiResponse<CaptchaResponse>>(
+      "/auth/captcha",
+    );
+    return res.data;
+  },
+
+  loginWithCaptcha: async (payload: LoginWithCaptchaPayload) => {
+    const res = await api.post<ApiResponse<LoginResponseData>>(
+      "/auth/login-with-captcha",
+      payload,
+    );
+    return res.data;
+  },
+
+  register: async (payload: RegisterPayload) => {
+    const res = await api.post<ApiResponse<any>>("/auth/register", payload);
+    return res.data;
+  },
+
+  login: async (payload: LoginPayload) => {
+    const res = await api.post<ApiResponse<LoginResponseData>>(
+      "/auth/login",
+      payload,
+    );
+    return res.data;
+  },
+
+  verifyAdminLoginOtp: async (payload: VerifyAdminLoginOtpPayload) => {
+    const res = await api.post<ApiResponse<AuthenticatedLoginResponse>>(
+      "/auth/admin-login/verify-otp",
+      payload,
+    );
+    return res.data;
+  },
+
+  verifyEmail: async (payload: VerifyEmailPayload) => {
+    const res = await api.post<ApiResponse<null>>(
+      "/auth/verify-email",
+      payload,
+    );
+    return res.data;
+  },
+
+  resendVerification: async (email: string) => {
+    const res = await api.post<ApiResponse<null>>("/auth/resend-verification", {
+      email,
+    });
+    return res.data;
+  },
+
+  forgotPassword: async (payload: ForgotPasswordPayload) => {
+    const res = await api.post<ApiResponse<null>>(
+      "/auth/forgot-password",
+      payload,
+    );
+    return res.data;
+  },
+
+  resetPassword: async (payload: ResetPasswordPayload) => {
+    const res = await api.post<ApiResponse<null>>(
+      "/auth/reset-password",
+      payload,
+    );
+    return res.data;
+  },
+
+  logout: async () => {
+    const [backendResult, localResult] = await Promise.allSettled([
+      api.post<ApiResponse<null>>("/auth/logout"),
+      fetch("/api/auth/logout", {
+        method: "POST",
+        credentials: "same-origin",
+      }),
+    ]);
+
+    if (
+      localResult.status === "fulfilled" &&
+      localResult.value.ok
+    ) {
+      return (await localResult.value.json()) as ApiResponse<null>;
+    }
+
+    if (backendResult.status === "fulfilled") {
+      return backendResult.value.data;
+    }
+
+    throw backendResult.reason;
+  },
+};
