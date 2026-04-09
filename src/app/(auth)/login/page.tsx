@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -38,6 +38,7 @@ import {
 } from "@/components/ui/card";
 import { useLoginWithCaptcha, useVerifyAdminLoginOtp } from "@/hooks/use-auth";
 import { AuthService } from "@/services/auth.service";
+import { getForcedPasswordResetSession } from "@/lib/forced-password-reset";
 
 const loginSchema = z.object({
   identifier: z.string().min(1, "Email or username is required").trim(),
@@ -137,6 +138,18 @@ export default function LoginPage() {
   const { mutate: loginWithCaptcha, isPending } = useLoginWithCaptcha();
   const { mutate: verifyAdminOtp, isPending: isOtpPending } =
     useVerifyAdminLoginOtp();
+
+  useEffect(() => {
+    if (pendingAdminOtp) {
+      return;
+    }
+
+    const forcedSession = getForcedPasswordResetSession();
+
+    if (forcedSession) {
+      window.location.replace("/force-password-reset");
+    }
+  }, [pendingAdminOtp]);
 
   const handleBackToLogin = useCallback(() => {
     setPendingAdminOtp(null);

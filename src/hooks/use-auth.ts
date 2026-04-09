@@ -9,6 +9,10 @@ import {
 } from "@/services/auth.service";
 import { useAuthStore } from "@/store/auth.store";
 import { setClientAuthCookies } from "@/lib/auth-cookie";
+import {
+  clearForcedPasswordResetSession,
+  setForcedPasswordResetSession,
+} from "@/lib/forced-password-reset";
 
 async function completeLogin(
   data: AuthenticatedLoginResponse,
@@ -22,6 +26,7 @@ async function completeLogin(
     return null;
   }
 
+  clearForcedPasswordResetSession();
   setClientAuthCookies({
     accessToken,
     refreshToken,
@@ -51,6 +56,12 @@ function isAdminOtpRequiredResponse(
   return "requiresAdminOtp" in data && data.requiresAdminOtp === true;
 }
 
+function isForcePasswordResetResponse(
+  data: LoginResponseData,
+): data is Extract<LoginResponseData, { requiresPasswordChange: true }> {
+  return "requiresPasswordChange" in data && data.requiresPasswordChange === true;
+}
+
 export const useRegister = () => {
   const router = useRouter();
 
@@ -74,6 +85,13 @@ export const useLogin = () => {
     mutationFn: AuthService.login,
     onSuccess: async (data) => {
       if (isAdminOtpRequiredResponse(data.data)) {
+        return;
+      }
+
+      if (isForcePasswordResetResponse(data.data)) {
+        const { userId, email } = data.data;
+        setForcedPasswordResetSession({ userId, email });
+        router.replace("/force-password-reset");
         return;
       }
 
@@ -101,6 +119,13 @@ export const useLoginWithCaptcha = () => {
     mutationFn: AuthService.loginWithCaptcha,
     onSuccess: async (data) => {
       if (isAdminOtpRequiredResponse(data.data)) {
+        return;
+      }
+
+      if (isForcePasswordResetResponse(data.data)) {
+        const { userId, email } = data.data;
+        setForcedPasswordResetSession({ userId, email });
+        router.replace("/force-password-reset");
         return;
       }
 
@@ -195,6 +220,29 @@ export const useResetPassword = () => {
     },
     onError: (error: any) => {
       toast.error(error.response?.data?.message || "Failed to reset password");
+    },
+  });
+};
+
+export const useForceChangePassword = () => {
+  const router = useRouter();
+  const setAuth = useAuthStore((s) => s.setAuth);
+
+  return useMutation({
+    mutationFn: AuthService.forceChangePassword,
+    onSuccess: async (data) => {
+      const user = await completeLogin(data.data, setAuth);
+      if (!user) return;
+
+      toast.success("Password updated successfully!");
+      if (user.role === "ADMIN" || user.role === "AGENT") {
+        router.push("/admin");
+      } else {
+        router.push("/dashboard");
+      }
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.message || "Failed to update password");
     },
   });
 };

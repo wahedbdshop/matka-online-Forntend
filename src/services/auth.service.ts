@@ -29,9 +29,16 @@ export interface AdminOtpRequiredResponse {
   expiresInSeconds: number;
 }
 
+export interface ForcePasswordResetResponse {
+  requiresPasswordChange: true;
+  userId: string;
+  email: string;
+}
+
 export type LoginResponseData =
   | AuthenticatedLoginResponse
-  | AdminOtpRequiredResponse;
+  | AdminOtpRequiredResponse
+  | ForcePasswordResetResponse;
 
 export interface VerifyEmailPayload {
   email: string;
@@ -63,6 +70,11 @@ export interface LoginWithCaptchaPayload {
 export interface VerifyAdminLoginOtpPayload {
   pendingToken: string;
   otp: string;
+}
+
+export interface ForceChangePasswordPayload {
+  userId: string;
+  newPassword: string;
 }
 
 export const AuthService = {
@@ -128,6 +140,14 @@ export const AuthService = {
   resetPassword: async (payload: ResetPasswordPayload) => {
     const res = await api.post<ApiResponse<null>>(
       "/auth/reset-password",
+      payload,
+    );
+    return res.data;
+  },
+
+  forceChangePassword: async (payload: ForceChangePasswordPayload) => {
+    const res = await publicApi.post<ApiResponse<AuthenticatedLoginResponse>>(
+      "/auth/set-forced-password",
       payload,
     );
     return res.data;

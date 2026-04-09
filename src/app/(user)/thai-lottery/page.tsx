@@ -9,7 +9,6 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ChevronDown,
   Plus,
-  X,
   History,
   Trophy,
   Percent,
@@ -260,15 +259,6 @@ export default function ThaiLotteryPage() {
       },
     ]);
 
-  const removeRow = (id: number) => {
-    if (betRows.length <= 1) {
-      toast.error("At least one row required");
-      return;
-    }
-
-    setBetRows((prev) => prev.filter((row) => row.id !== id));
-  };
-
   const buildPayloads = () => {
     if (!selectedPlayType) {
       toast.error("Select category first");
@@ -498,12 +488,12 @@ export default function ThaiLotteryPage() {
                   <Link
                     key={item.label}
                     href={item.href}
-                    className="flex flex-col items-center gap-1.5 rounded-[18px] border border-slate-700/70 bg-slate-800/55 px-2 py-2.5 text-center transition-colors hover:bg-slate-800"
+                    className="flex flex-col items-center gap-1 rounded-[18px] border border-slate-700/70 bg-slate-800/55 px-1 py-2 text-center transition-colors hover:bg-slate-800"
                   >
-                    <div className={`rounded-xl p-2 ${item.color}`}>
-                      <item.icon className="h-4 w-4" />
+                    <div className={`rounded-xl p-1.5 ${item.color}`}>
+                      <item.icon className="h-3.5 w-3.5" />
                     </div>
-                    <span className="text-[10px] font-semibold text-slate-200">
+                    <span className="whitespace-nowrap text-[9px] font-semibold text-slate-200">
                       {item.label}
                     </span>
                   </Link>
@@ -606,8 +596,8 @@ export default function ThaiLotteryPage() {
                 <div
                   className={`grid gap-2 px-1 text-[10px] font-bold uppercase tracking-[0.18em] text-white/35 ${
                     isComboMode
-                      ? "grid-cols-[1.2fr_1fr_1fr_34px]"
-                      : "grid-cols-[1.35fr_1.1fr_34px]"
+                      ? "grid-cols-[1.2fr_1fr_1fr]"
+                      : "grid-cols-[1.35fr_1.1fr]"
                   }`}
                 >
                   <p className="text-center">Number</p>
@@ -615,7 +605,6 @@ export default function ThaiLotteryPage() {
                     {isComboMode ? "Direct" : "Amount"}
                   </p>
                   {isComboMode ? <p className="text-center">Rumble</p> : null}
-                  <div />
                 </div>
               </div>
             </div>
@@ -632,8 +621,8 @@ export default function ThaiLotteryPage() {
                     key={row.id}
                     className={`grid items-center gap-1 rounded-[16px] border px-0.5 py-0.5 transition-all ${
                       isComboMode
-                        ? "grid-cols-[1.2fr_1fr_1fr_34px]"
-                        : "grid-cols-[1.35fr_1.1fr_34px]"
+                        ? "grid-cols-[1.2fr_1fr_1fr]"
+                        : "grid-cols-[1.35fr_1.1fr]"
                     } ${
                       isFocused
                         ? "border-blue-400/40 bg-blue-500/5 shadow-[0_0_0_1px_rgba(59,130,246,0.08)]"
@@ -655,7 +644,7 @@ export default function ThaiLotteryPage() {
                       }
                       placeholder="Number"
                       disabled={!selectedPlayType}
-                      className="h-8 w-full rounded-[14px] border border-[#16345f] bg-transparent px-2 text-center text-sm font-black text-white outline-none transition-colors placeholder:text-white/35 focus:border-blue-400/50"
+                      className="h-8 w-full rounded-[14px] border border-yellow-400/90 bg-transparent px-2 text-center text-sm font-black text-white outline-none transition-colors placeholder:text-white/80 focus:border-yellow-400"
                     />
 
                     {isComboMode ? (
@@ -675,7 +664,7 @@ export default function ThaiLotteryPage() {
                           }
                           placeholder="Direct"
                           disabled={!selectedPlayType}
-                          className="h-8 w-full rounded-[14px] border border-[#16345f] bg-transparent px-1.5 text-center text-sm font-black text-white outline-none transition-colors placeholder:text-white/35 focus:border-blue-400/50"
+                          className="h-8 w-full rounded-[14px] border border-yellow-400/90 bg-[#0d2545] px-1.5 text-center text-sm font-black text-white outline-none transition-colors placeholder:text-white/80 focus:border-yellow-400 focus:bg-[#112d52]"
                         />
                         <input
                           type="text"
@@ -692,7 +681,7 @@ export default function ThaiLotteryPage() {
                           }
                           placeholder="Rumble"
                           disabled={!selectedPlayType}
-                          className="h-8 w-full rounded-[14px] border border-[#16345f] bg-transparent px-1.5 text-center text-sm font-black text-white outline-none transition-colors placeholder:text-white/35 focus:border-blue-400/50"
+                          className="h-8 w-full rounded-[14px] border border-yellow-400/90 bg-[#0d2545] px-1.5 text-center text-sm font-black text-white outline-none transition-colors placeholder:text-white/80 focus:border-yellow-400 focus:bg-[#112d52]"
                         />
                       </>
                     ) : (
@@ -707,17 +696,9 @@ export default function ThaiLotteryPage() {
                         }
                         placeholder="Amount"
                         disabled={!selectedPlayType}
-                        className="h-8 w-full rounded-[14px] border border-[#16345f] bg-transparent px-1.5 text-center text-sm font-black text-white outline-none transition-colors placeholder:text-white/35 focus:border-blue-400/50"
+                        className="h-8 w-full rounded-[14px] border border-yellow-400/90 bg-[#0d2545] px-1.5 text-center text-sm font-black text-white outline-none transition-colors placeholder:text-white/80 focus:border-yellow-400 focus:bg-[#112d52]"
                       />
                     )}
-
-                    <button
-                      type="button"
-                      onClick={() => removeRow(row.id)}
-                      className="flex h-12 w-[34px] items-center justify-center rounded-2xl border border-[#16345f] bg-[#081428] transition-colors hover:border-red-300/40 hover:bg-red-500/12"
-                    >
-                      <X className="h-4 w-4 text-white/55" />
-                    </button>
                   </div>
                 );
               })}
