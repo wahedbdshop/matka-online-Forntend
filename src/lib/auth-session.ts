@@ -14,6 +14,14 @@ export type RefreshedSessionPayload = SessionSyncPayload & {
   user?: unknown;
 };
 
+export type SessionRefreshResult = {
+  accessToken: string | null;
+  payload: { data: RefreshedSessionPayload } | null;
+  status: number | null;
+  blocked: boolean;
+  redirected: boolean;
+};
+
 export class AuthSessionRequestError extends Error {
   status: number;
 
@@ -26,6 +34,68 @@ export class AuthSessionRequestError extends Error {
 
 async function parseJsonResponse<T>(response: Response): Promise<T> {
   return (await response.json()) as T;
+}
+
+let refreshPromise: Promise<SessionRefreshResult> | null = null;
+let refreshBlockedStatus: number | null = null;
+let hasRedirectedToLogin = false;
+
+function authLog(message: string, details?: Record<string, unknown>) {
+  if (details) {
+    console.info(`[auth] ${message}`, details);
+    return;
+  }
+
+  console.info(`[auth] ${message}`);
+}
+
+function isTerminalRefreshStatus(status: number | null) {
+  return status === 401 || status === 429;
+}
+
+function getLoginPath() {
+  if (typeof window === "undefined") {
+    return "/login";
+  }
+
+  return window.location.pathname.startsWith("/admin")
+    ? "/admin/login"
+    : "/login";
+}
+
+function clearRefreshBlock() {
+  refreshBlockedStatus = null;
+  hasRedirectedToLogin = false;
+}
+
+async function redirectToLoginOnce(trigger: string, status: number | null) {
+  if (typeof window === "undefined") {
+    return false;
+  }
+
+  const loginPath = getLoginPath();
+
+  if (hasRedirectedToLogin) {
+    authLog("login redirect already scheduled", {
+      trigger,
+      status,
+      loginPath,
+    });
+    return true;
+  }
+
+  hasRedirectedToLogin = true;
+  authLog("redirecting to login after refresh failure", {
+    trigger,
+    status,
+    loginPath,
+  });
+
+  if (window.location.pathname !== loginPath) {
+    window.location.replace(loginPath);
+  }
+
+  return true;
 }
 
 export async function syncServerSession(payload: SessionSyncPayload) {
@@ -45,38 +115,114 @@ export async function syncServerSession(payload: SessionSyncPayload) {
   return parseJsonResponse(response);
 }
 
-export async function refreshServerSession() {
+export function logAuthBootstrapStart(details?: Record<string, unknown>) {
+  authLog("auth bootstrap starts", details);
+}
+
+export async function requestSessionRefresh(
+  trigger = "unknown",
+): Promise<SessionRefreshResult> {
+  if (refreshPromise) {
+    authLog("refresh retry blocked because one is already running", {
+      trigger,
+    });
+    return refreshPromise;
+  }
+
+  if (isTerminalRefreshStatus(refreshBlockedStatus)) {
+    authLog("refresh request blocked after terminal failure", {
+      trigger,
+      status: refreshBlockedStatus,
+    });
+    await redirectToLoginOnce(trigger, refreshBlockedStatus);
+    return {
+      accessToken: null,
+      payload: null,
+      status: refreshBlockedStatus,
+      blocked: true,
+      redirected: hasRedirectedToLogin,
+    };
+  }
+
   if (!API_BASE_URL) {
     throw new Error("NEXT_PUBLIC_API_URL is not configured");
   }
 
-  const response = await fetch(`${API_BASE_URL}${REFRESH_ENDPOINT_PATH}`, {
-    method: "POST",
-    credentials: "include",
-  });
+  refreshPromise = (async () => {
+    authLog("refresh-token requested", { trigger });
 
-  if (!response.ok) {
+    try {
+      const response = await fetch(`${API_BASE_URL}${REFRESH_ENDPOINT_PATH}`, {
+        method: "POST",
+        credentials: "include",
+      });
+
+      if (!response.ok) {
+        throw new AuthSessionRequestError(
+          "Failed to refresh auth session",
+          response.status,
+        );
+      }
+
+      const payload = await parseJsonResponse<{ data: RefreshedSessionPayload }>(
+        response,
+      );
+
+      if (payload.data) {
+        applyClientSession(payload.data);
+
+        try {
+          await syncServerSession(payload.data);
+        } catch {
+          // Keep the freshly refreshed client session even if local cookie mirroring fails.
+        }
+      }
+
+      return {
+        accessToken: payload.data?.accessToken ?? null,
+        payload,
+        status: response.status,
+        blocked: false,
+        redirected: false,
+      };
+    } catch (error) {
+      const status =
+        error instanceof AuthSessionRequestError ? error.status : null;
+      const isTerminalFailure = isTerminalRefreshStatus(status);
+
+      if (isTerminalFailure) {
+        refreshBlockedStatus = status;
+        await resetClientSession();
+      }
+
+      return {
+        accessToken: null,
+        payload: null,
+        status,
+        blocked: isTerminalFailure,
+        redirected: isTerminalFailure
+          ? await redirectToLoginOnce(trigger, status)
+          : false,
+      };
+    } finally {
+      refreshPromise = null;
+    }
+  })();
+
+  return refreshPromise;
+}
+
+export async function refreshServerSession(trigger = "unknown") {
+  const result = await requestSessionRefresh(trigger);
+
+  if (!result.payload) {
     throw new AuthSessionRequestError(
       "Failed to refresh auth session",
-      response.status,
+      result.status ?? 500,
     );
   }
 
-  const payload = await parseJsonResponse<{ data: RefreshedSessionPayload }>(
-    response,
-  );
-
-  if (payload.data) {
-    applyClientSession(payload.data);
-
-    try {
-      await syncServerSession(payload.data);
-    } catch {
-      // Keep the freshly refreshed client session even if local cookie mirroring fails.
-    }
-  }
-
-  return payload;
+  return result.payload;
 }
 
 export async function clearServerSession() {
@@ -87,6 +233,10 @@ export async function clearServerSession() {
 }
 
 export function applyClientSession(payload: SessionSyncPayload) {
+  if (payload.accessToken || payload.refreshToken || payload.sessionToken) {
+    clearRefreshBlock();
+  }
+
   setClientAuthCookies(payload);
 
   if (payload.accessToken) {

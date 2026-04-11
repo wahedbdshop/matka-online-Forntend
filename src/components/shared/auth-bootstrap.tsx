@@ -7,10 +7,12 @@ import { UserService } from "@/services/user.service";
 import { useAuthStore } from "@/store/auth.store";
 import { hasClientAuthCookie } from "@/lib/auth-cookie";
 import {
-  AuthSessionRequestError,
-  refreshServerSession,
+  logAuthBootstrapStart,
+  requestSessionRefresh,
   resetClientSession,
 } from "@/lib/auth-session";
+
+let bootstrapPromise: Promise<void> | null = null;
 
 export function AuthBootstrap() {
   const pathname = usePathname();
@@ -24,6 +26,12 @@ export function AuthBootstrap() {
     let cancelled = false;
 
     async function bootstrapAuth() {
+      logAuthBootstrapStart({
+        trigger: "AuthBootstrap",
+        pathname,
+        isAdminRoute,
+      });
+
       if (user) {
         setAuthReady(true);
         return;
@@ -35,14 +43,24 @@ export function AuthBootstrap() {
       }
 
       let refreshedAccessToken: string | null = null;
-      let refreshUnauthorized = false;
+      let refreshFailedTerminal = false;
 
       try {
-        const refreshed = await refreshServerSession();
-        refreshedAccessToken = refreshed.data.accessToken ?? null;
+        const refreshed = await requestSessionRefresh("AuthBootstrap");
+        refreshedAccessToken = refreshed.accessToken;
+        refreshFailedTerminal = refreshed.blocked;
       } catch (error) {
-        refreshUnauthorized =
-          error instanceof AuthSessionRequestError && error.status === 401;
+        console.error("[auth] auth bootstrap refresh failed", {
+          trigger: "AuthBootstrap",
+          error,
+        });
+      }
+
+      if (refreshFailedTerminal) {
+        if (!cancelled) {
+          setAuthReady(true);
+        }
+        return;
       }
 
       try {
@@ -70,7 +88,7 @@ export function AuthBootstrap() {
           "status" in error.response &&
           error.response.status === 401;
 
-        if (refreshUnauthorized && isProfileUnauthorized) {
+        if (refreshFailedTerminal && isProfileUnauthorized) {
           await resetClientSession();
         }
       }
@@ -81,7 +99,13 @@ export function AuthBootstrap() {
     }
 
     if (!isAuthReady) {
-      void bootstrapAuth();
+      if (!bootstrapPromise) {
+        bootstrapPromise = bootstrapAuth().finally(() => {
+          bootstrapPromise = null;
+        });
+      }
+
+      void bootstrapPromise;
     }
 
     return () => {

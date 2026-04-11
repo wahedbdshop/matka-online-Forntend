@@ -2,10 +2,8 @@ import axios from "axios";
 import type { InternalAxiosRequestConfig } from "axios";
 import { toast } from "sonner";
 import {
-  AuthSessionRequestError,
   clearServerSession,
-  refreshServerSession,
-  resetClientSession,
+  requestSessionRefresh,
 } from "@/lib/auth-session";
 import { useAuthStore } from "@/store/auth.store";
 
@@ -30,13 +28,6 @@ export const publicApi = axios.create({
   },
 });
 
-type RefreshResult = {
-  accessToken: string | null;
-  isUnauthorized: boolean;
-};
-
-let refreshPromise: Promise<RefreshResult> | null = null;
-
 function getLoginPath() {
   if (typeof window === "undefined") {
     return "/login";
@@ -48,28 +39,12 @@ function getLoginPath() {
 }
 
 async function refreshAccessToken() {
-  if (!refreshPromise) {
-    refreshPromise = refreshServerSession()
-      .then((response) => {
-        const accessToken = response.data.accessToken ?? null;
-        return { accessToken, isUnauthorized: false };
-      })
-      .catch(async (error) => {
-        const isUnauthorized =
-          error instanceof AuthSessionRequestError && error.status === 401;
-
-        if (isUnauthorized) {
-          await resetClientSession();
-        }
-
-        return { accessToken: null, isUnauthorized };
-      })
-      .finally(() => {
-        refreshPromise = null;
-      });
-  }
-
-  return refreshPromise;
+  const result = await requestSessionRefresh("axios-interceptor");
+  return {
+    accessToken: result.accessToken,
+    status: result.status,
+    blocked: result.blocked,
+  };
 }
 
 api.interceptors.request.use((config) => {
@@ -125,7 +100,10 @@ api.interceptors.response.use(
         return api(requestConfig);
       }
 
-      if (refreshResult.isUnauthorized) {
+      if (
+        refreshResult.blocked &&
+        (refreshResult.status === 401 || refreshResult.status === 429)
+      ) {
         await clearServerSession();
         useAuthStore.getState().clearAuth();
 
