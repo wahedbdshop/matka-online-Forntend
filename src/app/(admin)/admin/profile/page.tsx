@@ -194,7 +194,6 @@ export default function AdminProfilePage() {
     queryKey: ["admin-profile"],
     queryFn: () => AdminService.getAdminProfile(),
     enabled: canRunAdminQuery,
-    retry: 1,
   });
   useEffect(() => {
     const p = (profileData as any)?.data;
@@ -212,7 +211,6 @@ export default function AdminProfilePage() {
     queryKey: ["admin-active-sessions"],
     queryFn: AdminService.getActiveSessions,
     enabled: canRunAdminQuery,
-    retry: 1,
   });
   const sessions: any[] = (sessionsData as any)?.data ?? [];
 
