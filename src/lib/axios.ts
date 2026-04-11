@@ -75,7 +75,15 @@ api.interceptors.request.use((config) => {
 });
 
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    if (response.headers["x-session-limit-reached"] === "true") {
+      toast.warning(
+        "আপনি ৩টি device-এ login আছেন। নতুন session track হচ্ছে না।",
+      );
+    }
+
+    return response;
+  },
   async (error) => {
     const requestConfig = (error.config ?? {}) as RequestConfigWithAuth;
     const skipAuthRedirect = Boolean(
