@@ -7,8 +7,8 @@ export function useAdminAuth() {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const isAuthReady = useAuthStore((state) => state.isAuthReady);
 
-  const isAdmin =
-    user?.role === "ADMIN" || user?.role === "AGENT";
+  const roleUpper = user?.role?.toUpperCase();
+  const isAdmin = roleUpper === "ADMIN" || roleUpper === "AGENT";
 
   return {
     user,

@@ -156,7 +156,8 @@ function pickFirstValue(...values: any[]) {
 function normalizeSessionList(source: any): any[] {
   if (Array.isArray(source)) return source;
 
-  const candidates = [
+  // Check one level deep
+  const level1 = [
     source?.data,
     source?.sessions,
     source?.items,
@@ -165,11 +166,68 @@ function normalizeSessionList(source: any): any[] {
     source?.rows,
   ];
 
-  for (const candidate of candidates) {
+  for (const candidate of level1) {
     if (Array.isArray(candidate)) return candidate;
   }
 
+  // Check two levels deep (e.g. { data: { sessions: [...] } })
+  const inner = source?.data ?? source?.result ?? source?.payload;
+  if (inner && typeof inner === "object") {
+    const level2 = [
+      inner?.sessions,
+      inner?.items,
+      inner?.results,
+      inner?.list,
+      inner?.rows,
+      inner?.data,
+    ];
+    for (const candidate of level2) {
+      if (Array.isArray(candidate)) return candidate;
+    }
+  }
+
   return [];
+}
+
+function parseUserAgent(ua: string): string {
+  if (!ua || ua.length < 5) return ua || "Unknown Device";
+
+  // Detect browser
+  let browser = "Browser";
+  if (ua.includes("Edg/") || ua.includes("EdgA/")) browser = "Edge";
+  else if (ua.includes("OPR/") || ua.includes("Opera")) browser = "Opera";
+  else if (ua.includes("Chrome/") && !ua.includes("Chromium")) browser = "Chrome";
+  else if (ua.includes("Firefox/")) browser = "Firefox";
+  else if (ua.includes("Safari/") && !ua.includes("Chrome")) browser = "Safari";
+  else if (ua.includes("MSIE") || ua.includes("Trident/")) browser = "IE";
+
+  // Detect OS
+  let os = "Unknown OS";
+  if (ua.includes("iPhone")) {
+    const m = ua.match(/OS (\d+[_\d]*)/);
+    os = `iOS ${m ? m[1].replace(/_/g, ".") : ""}`.trim();
+  } else if (ua.includes("iPad")) {
+    const m = ua.match(/OS (\d+[_\d]*)/);
+    os = `iPadOS ${m ? m[1].replace(/_/g, ".") : ""}`.trim();
+  } else if (ua.includes("Android")) {
+    const m = ua.match(/Android ([0-9.]+)/);
+    os = `Android ${m ? m[1] : ""}`.trim();
+  } else if (ua.includes("Windows NT 10.0")) {
+    os = "Windows 10/11";
+  } else if (ua.includes("Windows NT 6.3")) {
+    os = "Windows 8.1";
+  } else if (ua.includes("Windows NT 6.1")) {
+    os = "Windows 7";
+  } else if (ua.includes("Windows")) {
+    os = "Windows";
+  } else if (ua.includes("Mac OS X")) {
+    const m = ua.match(/Mac OS X ([\d_]+)/);
+    os = `macOS ${m ? m[1].replace(/_/g, ".") : ""}`.trim();
+  } else if (ua.includes("Linux")) {
+    os = "Linux";
+  }
+
+  return `${browser} on ${os}`;
 }
 
 function pickSessionValue(session: any, paths: string[]) {
@@ -287,7 +345,7 @@ function SkeletonCard() {
 
 export default function AdminDashboardPage() {
   const { canRunAdminQuery, isAuthReady } = useAdminAuth();
-  const { data, isLoading, refetch, isFetching } = useQuery({
+  const { data, isLoading: isDashboardLoading, refetch, isFetching } = useQuery({
     queryKey: ["admin-dashboard"],
     queryFn: () => AdminService.getDashboardStats(),
     enabled: canRunAdminQuery,
@@ -310,6 +368,9 @@ export default function AdminDashboardPage() {
     refetchInterval: 30_000,
     refetchOnWindowFocus: true,
   });
+
+  // Show skeleton while auth is bootstrapping OR data is fetching for the first time
+  const isLoading = !isAuthReady || isDashboardLoading;
 
   const d = data?.data;
   const smsStats = smsStatsData?.data;
@@ -1063,27 +1124,38 @@ export default function AdminDashboardPage() {
                   "device.isCurrent",
                 ]),
               );
+              const rawDeviceLabel = pickSessionValue(session, [
+                "deviceName",
+                "device.name",
+                "device.label",
+                "device.model",
+                "deviceInfo.deviceName",
+                "deviceInfo.name",
+                "browser",
+                "browserName",
+                "deviceInfo.browser",
+              ]);
+              const rawUserAgent = pickSessionValue(session, [
+                "userAgent",
+                "user_agent",
+                "ua",
+                "device.userAgent",
+                "deviceInfo.userAgent",
+              ]);
               const deviceLabel =
-                pickSessionValue(session, [
-                  "deviceName",
-                  "device.name",
-                  "device.label",
-                  "device.model",
-                  "deviceInfo.deviceName",
-                  "deviceInfo.name",
-                  "browser",
-                  "browserName",
-                  "deviceInfo.browser",
-                  "userAgent",
-                  "user_agent",
-                ]) ?? "Unknown Device";
+                rawDeviceLabel ??
+                (rawUserAgent ? parseUserAgent(String(rawUserAgent)) : "Unknown Device");
               const sessionIp =
                 pickSessionValue(session, [
                   "ipAddress",
                   "ip",
                   "ip_address",
+                  "ipv4",
+                  "client_ip",
+                  "clientIp",
                   "location.ip",
                   "device.ipAddress",
+                  "device.ip",
                   "meta.ip",
                 ]) ?? "—";
               const sessionLocation = [
