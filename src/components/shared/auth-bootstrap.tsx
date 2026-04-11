@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { AdminService } from "@/services/admin.service";
 import { UserService } from "@/services/user.service";
 import { useAuthStore } from "@/store/auth.store";
-import { hasClientAuthCookie } from "@/lib/auth-cookie";
+import { clearClientAuthCookies, hasClientAuthCookie } from "@/lib/auth-cookie";
 import { refreshServerSession } from "@/lib/auth-session";
 
 export function AuthBootstrap() {
@@ -14,8 +14,6 @@ export function AuthBootstrap() {
   const isAuthReady = useAuthStore((state) => state.isAuthReady);
   const setAuth = useAuthStore((state) => state.setAuth);
   const setAuthReady = useAuthStore((state) => state.setAuthReady);
-  const hasAuthCookie =
-    typeof document !== "undefined" && hasClientAuthCookie();
   const isAdminRoute = pathname.startsWith("/admin");
 
   useEffect(() => {
@@ -27,7 +25,7 @@ export function AuthBootstrap() {
         return;
       }
 
-      if (!hasAuthCookie) {
+      if (!hasClientAuthCookie()) {
         setAuthReady(true);
         return;
       }
@@ -38,7 +36,13 @@ export function AuthBootstrap() {
         const refreshed = await refreshServerSession();
         refreshedAccessToken = refreshed.data.accessToken ?? null;
       } catch {
-        // If refresh fails, the axios client will handle redirect on the next protected request.
+        clearClientAuthCookies();
+
+        if (!cancelled) {
+          setAuthReady(true);
+        }
+
+        return;
       }
 
       try {
@@ -75,7 +79,7 @@ export function AuthBootstrap() {
     return () => {
       cancelled = true;
     };
-  }, [hasAuthCookie, isAdminRoute, isAuthReady, pathname, setAuth, setAuthReady, user]);
+  }, [isAdminRoute, isAuthReady, pathname, setAuth, setAuthReady, user]);
 
   return null;
 }

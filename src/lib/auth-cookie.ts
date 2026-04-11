@@ -3,6 +3,7 @@ import Cookies from "js-cookie";
 export const ACCESS_TOKEN_COOKIE_NAMES = ["accessToken", "auth_token"] as const;
 export const REFRESH_TOKEN_COOKIE_NAMES = ["refreshToken", "refresh_token"] as const;
 export const SESSION_COOKIE_NAMES = ["betterAuthSession", "token"] as const;
+export const AUTH_FLAG_COOKIE_NAME = "auth_flag" as const;
 export const AUTH_COOKIE_NAMES = [
   ...ACCESS_TOKEN_COOKIE_NAMES,
   ...REFRESH_TOKEN_COOKIE_NAMES,
@@ -45,12 +46,13 @@ export function clearClientAuthCookies() {
   AUTH_COOKIE_NAMES.forEach((name) => {
     Cookies.remove(name, { path: "/" });
   });
+  Cookies.remove(AUTH_FLAG_COOKIE_NAME, { path: "/" });
 }
 
 export function hasClientAuthCookie() {
   if (typeof document === "undefined") return false;
 
-  if (document.cookie.includes("auth_flag=1")) return true;
+  if (document.cookie.includes(`${AUTH_FLAG_COOKIE_NAME}=1`)) return true;
 
   return AUTH_COOKIE_NAMES.some((name) => document.cookie.includes(`${name}=`));
 }
