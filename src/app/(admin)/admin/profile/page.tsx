@@ -32,6 +32,41 @@ import { AdminService } from "@/services/admin.service";
 import { useAuthStore } from "@/store/auth.store";
 import { cn } from "@/lib/utils";
 
+function extractApiErrorMessage(error: any, fallback: string) {
+  const responseData = error?.response?.data;
+  if (typeof responseData?.message === "string" && responseData.message.trim()) {
+    return responseData.message;
+  }
+  if (Array.isArray(responseData?.errors) && responseData.errors.length > 0) {
+    const firstError = responseData.errors[0];
+    if (typeof firstError === "string" && firstError.trim()) return firstError;
+    if (typeof firstError?.message === "string" && firstError.message.trim()) {
+      return firstError.message;
+    }
+  }
+
+  return fallback;
+}
+
+function normalizeSessionList(source: any): any[] {
+  if (Array.isArray(source)) return source;
+
+  const candidates = [
+    source?.data,
+    source?.sessions,
+    source?.items,
+    source?.results,
+    source?.list,
+    source?.rows,
+  ];
+
+  for (const candidate of candidates) {
+    if (Array.isArray(candidate)) return candidate;
+  }
+
+  return [];
+}
+
 // ─── Active Session Row ────────────────────────────────────────
 function SessionRow({
   session,
@@ -212,27 +247,52 @@ export default function AdminProfilePage() {
     queryFn: AdminService.getActiveSessions,
     enabled: canRunAdminQuery,
   });
-  const sessions: any[] = (sessionsData as any)?.data ?? [];
+  const sessions = normalizeSessionList(sessionsData);
 
   // ── Mutations ──────────────────────────────────────────────
   const { mutate: saveProfile, isPending: savingProfile } = useMutation({
     mutationFn: () => {
-      const fd = new FormData();
-      fd.append("name", name);
-      fd.append("email", email);
-      if (avatarFile) fd.append("avatar", avatarFile);
-      return AdminService.updateAdminProfile(fd);
+      const trimmedName = name.trim();
+      const trimmedEmail = email.trim();
+      const nextPayload: {
+        name?: string;
+        email?: string;
+        image?: File;
+      } = {};
+
+      if (trimmedName && trimmedName !== (user?.name ?? "")) {
+        nextPayload.name = trimmedName;
+      }
+      if (trimmedEmail && trimmedEmail !== (user?.email ?? "")) {
+        nextPayload.email = trimmedEmail;
+      }
+      if (avatarFile) {
+        nextPayload.image = avatarFile;
+      }
+      if (Object.keys(nextPayload).length === 0) {
+        throw new Error("No profile changes to save");
+      }
+
+      return AdminService.updateAdminProfile(nextPayload);
     },
     onSuccess: (data: any) => {
       const p = data?.data;
       updateUser({ name: p?.name, email: p?.email, image: p?.image });
+      setName(p?.name ?? name.trim());
+      setEmail(p?.email ?? email.trim());
+      setAvatarPreview(p?.image ?? avatarPreview);
       queryClient.invalidateQueries({ queryKey: ["admin-profile"] });
       setIsEditing(false);
       setAvatarFile(null);
       toast.success("Profile updated");
     },
     onError: (err: any) => {
-      toast.error(err?.response?.data?.message ?? "Failed to update profile");
+      toast.error(
+        extractApiErrorMessage(
+          err,
+          err?.message ?? "Failed to update profile",
+        ),
+      );
     },
   });
 
@@ -246,7 +306,7 @@ export default function AdminProfilePage() {
       setConfirmPassword("");
     },
     onError: (err: any) => {
-      toast.error(err?.response?.data?.message ?? "Failed to change password");
+      toast.error(extractApiErrorMessage(err, "Failed to change password"));
     },
   });
 
@@ -257,7 +317,7 @@ export default function AdminProfilePage() {
       refetchSessions();
     },
     onError: (err: any) => {
-      toast.error(err?.response?.data?.message ?? "Failed to remove session");
+      toast.error(extractApiErrorMessage(err, "Failed to remove session"));
     },
     onSettled: () => setRevokingId(null),
   });
@@ -269,7 +329,7 @@ export default function AdminProfilePage() {
       refetchSessions();
     },
     onError: (err: any) => {
-      toast.error(err?.response?.data?.message ?? "Failed to remove sessions");
+      toast.error(extractApiErrorMessage(err, "Failed to remove sessions"));
     },
   });
 
@@ -280,7 +340,7 @@ export default function AdminProfilePage() {
       refetchSessions();
     },
     onError: (err: any) => {
-      toast.error(err?.response?.data?.message ?? "Failed to block IP");
+      toast.error(extractApiErrorMessage(err, "Failed to block IP"));
     },
     onSettled: () => setBlockingIpId(null),
   });
@@ -542,9 +602,6 @@ export default function AdminProfilePage() {
               <Monitor className="h-8 w-8 text-slate-700 mx-auto mb-2" />
               <p className="text-xs text-slate-500">
                 No active session data available
-              </p>
-              <p className="text-[11px] text-slate-600 mt-0.5">
-                Backend endpoint not yet connected
               </p>
             </div>
           ) : (

@@ -27,7 +27,9 @@ export interface SmsWebhookLog {
 export const AdminService = {
   // ─── Dashboard ─────────────────────────────────────────────────────────────
   getDashboardStats: async () => {
-    const res = await api.get<ApiResponse<any>>("/admin/dashboard");
+    const res = await api.get<ApiResponse<any>>("/admin/dashboard", {
+      withCredentials: true,
+    });
     return res.data;
   },
 
@@ -817,6 +819,7 @@ export const AdminService = {
     accessToken?: string | null;
   }) => {
     const res = await api.get<ApiResponse<any>>("/admin/profile", {
+      withCredentials: true,
       skipAuthRedirect: options?.silent,
       headers: options?.accessToken
         ? {
@@ -827,9 +830,25 @@ export const AdminService = {
     return res.data;
   },
 
-  updateAdminProfile: async (payload: FormData) => {
-    const res = await api.patch<ApiResponse<any>>("/admin/profile", payload, {
-      headers: { "Content-Type": "multipart/form-data" },
+  updateAdminProfile: async (payload: {
+    name?: string;
+    email?: string;
+    image?: File;
+  }) => {
+    const hasImage = payload.image instanceof File;
+    const requestBody = hasImage
+      ? (() => {
+          const formData = new FormData();
+          if (payload.name !== undefined) formData.append("name", payload.name);
+          if (payload.email !== undefined)
+            formData.append("email", payload.email);
+          if (payload.image) formData.append("image", payload.image);
+          return formData;
+        })()
+      : payload;
+    const res = await api.patch<ApiResponse<any>>("/admin/profile", requestBody, {
+      withCredentials: true,
+      headers: hasImage ? { "Content-Type": "multipart/form-data" } : undefined,
     });
     return res.data;
   },
@@ -847,7 +866,9 @@ export const AdminService = {
 
   // ─── Active Sessions ────────────────────────────────────────────────────────
   getActiveSessions: async () => {
-    const res = await api.get<ApiResponse<any>>("/admin/sessions");
+    const res = await api.get<ApiResponse<any>>("/admin/sessions", {
+      withCredentials: true,
+    });
     return res.data;
   },
 

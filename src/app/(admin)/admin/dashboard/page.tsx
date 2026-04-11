@@ -34,7 +34,7 @@ function pickMetric(source: any, ...paths: string[]) {
     if (value !== undefined && value !== null && value !== "") return value;
   }
 
-  return 0;
+  return undefined;
 }
 
 function normalizeKey(value: string) {
@@ -143,6 +143,33 @@ function pickSectionMetric(
   }
 
   return undefined;
+}
+
+function pickFirstValue(...values: any[]) {
+  for (const value of values) {
+    if (value !== undefined && value !== null && value !== "") return value;
+  }
+
+  return 0;
+}
+
+function normalizeSessionList(source: any): any[] {
+  if (Array.isArray(source)) return source;
+
+  const candidates = [
+    source?.data,
+    source?.sessions,
+    source?.items,
+    source?.results,
+    source?.list,
+    source?.rows,
+  ];
+
+  for (const candidate of candidates) {
+    if (Array.isArray(candidate)) return candidate;
+  }
+
+  return [];
 }
 
 function StatCard({
@@ -266,6 +293,7 @@ export default function AdminDashboardPage() {
 
   const d = data?.data;
   const smsStats = smsStatsData?.data;
+  const sessions = normalizeSessionList(sessionsData);
   const totalDeposit =
     pickMetric(
       d,
@@ -510,6 +538,208 @@ export default function AdminDashboardPage() {
     adminProfitRaw !== ""
       ? Number(adminProfitRaw)
       : Number(totalDeposit ?? 0) - Number(totalWithdrawal ?? 0);
+  const totalUsers = pickFirstValue(
+    pickMetric(
+      d,
+      "users.total",
+      "summary.totalUsers",
+      "summary.users.total",
+      "totals.users",
+      "totals.totalUsers",
+      "totalUsers",
+      "userCount",
+      "usersCount",
+    ),
+    pickSectionMetric(
+      d,
+      ["users", "user", "summary", "totals"],
+      ["total", "count", "totalUsers", "usersTotal", "userCount"],
+      ["totalUsers", "usersCount", "userCount", "registeredUsers"],
+    ),
+    pickMetricFromArray(d?.metrics, ["totalUsers", "users", "registeredUsers"]),
+    pickMetricFromArray(d?.summary, ["totalUsers", "users", "registeredUsers"]),
+  );
+  const activeUsers = pickFirstValue(
+    pickMetric(
+      d,
+      "users.active",
+      "summary.activeUsers",
+      "summary.users.active",
+      "totals.activeUsers",
+      "activeUsers",
+      "usersActive",
+    ),
+    pickSectionMetric(
+      d,
+      ["users", "user", "summary", "totals"],
+      ["active", "activeUsers", "usersActive", "currentlyActive"],
+      ["activeUsers", "usersActive", "currentlyActive"],
+    ),
+    pickMetricFromArray(d?.metrics, ["activeUsers", "usersActive"]),
+    pickMetricFromArray(d?.summary, ["activeUsers", "usersActive"]),
+  );
+  const newUsersToday = pickFirstValue(
+    pickMetric(
+      d,
+      "users.newToday",
+      "users.todayNew",
+      "summary.newUsersToday",
+      "summary.users.newToday",
+      "newUsersToday",
+      "newToday",
+    ),
+    pickSectionMetric(
+      d,
+      ["users", "user", "summary"],
+      ["newToday", "todayNew", "todayCount", "newUsersToday"],
+      ["newUsersToday", "newToday", "todayNew"],
+    ),
+    pickMetricFromArray(d?.metrics, ["newUsersToday", "newToday"]),
+    pickMetricFromArray(d?.summary, ["newUsersToday", "newToday"]),
+  );
+  const pendingDeposits = pickFirstValue(
+    pickMetric(
+      d,
+      "deposits.pending",
+      "deposit.pending",
+      "summary.pendingDeposits",
+      "pendingDeposits",
+    ),
+    pickSectionMetric(
+      d,
+      ["deposits", "deposit", "summary"],
+      ["pending", "pendingCount", "pendingDeposits"],
+      ["pendingDeposits", "pendingCount", "pending"],
+    ),
+    pickMetricFromArray(d?.metrics, ["pendingDeposits", "depositPending"]),
+    pickMetricFromArray(d?.summary, ["pendingDeposits", "depositPending"]),
+  );
+  const pendingWithdrawals = pickFirstValue(
+    pickMetric(
+      d,
+      "withdrawals.pending",
+      "withdrawal.pending",
+      "summary.pendingWithdrawals",
+      "pendingWithdrawals",
+    ),
+    pickSectionMetric(
+      d,
+      ["withdrawals", "withdrawal", "summary"],
+      ["pending", "pendingCount", "pendingWithdrawals"],
+      ["pendingWithdrawals", "pendingCount", "pending"],
+    ),
+    pickMetricFromArray(d?.metrics, ["pendingWithdrawals", "withdrawalPending"]),
+    pickMetricFromArray(d?.summary, ["pendingWithdrawals", "withdrawalPending"]),
+  );
+  const depositsTodayTotal = pickFirstValue(
+    pickMetric(
+      d,
+      "deposits.todayTotal",
+      "deposits.totalToday",
+      "summary.deposits.todayTotal",
+      "summary.todayDepositTotal",
+      "todayDepositTotal",
+    ),
+    pickSectionMetric(
+      d,
+      ["deposits", "deposit", "summary"],
+      ["todayTotal", "totalToday", "todayAmount", "todayDepositTotal"],
+      ["todayDepositTotal", "todayTotal", "todayAmount"],
+    ),
+    pickMetricFromArray(d?.metrics, ["todayDepositTotal", "depositsToday"]),
+    pickMetricFromArray(d?.summary, ["todayDepositTotal", "depositsToday"]),
+  );
+  const depositsTodayCount = pickFirstValue(
+    pickMetric(
+      d,
+      "deposits.todayCount",
+      "deposits.countToday",
+      "summary.deposits.todayCount",
+      "summary.todayDepositCount",
+      "todayDepositCount",
+    ),
+    pickSectionMetric(
+      d,
+      ["deposits", "deposit", "summary"],
+      ["todayCount", "countToday", "todayRequests", "todayDepositCount"],
+      ["todayDepositCount", "todayCount", "countToday"],
+    ),
+    pickMetricFromArray(d?.metrics, ["todayDepositCount", "depositsTodayCount"]),
+    pickMetricFromArray(d?.summary, ["todayDepositCount", "depositsTodayCount"]),
+  );
+  const withdrawalsTodayTotal = pickFirstValue(
+    pickMetric(
+      d,
+      "withdrawals.todayTotal",
+      "withdrawals.totalToday",
+      "summary.withdrawals.todayTotal",
+      "summary.todayWithdrawalTotal",
+      "todayWithdrawalTotal",
+    ),
+    pickSectionMetric(
+      d,
+      ["withdrawals", "withdrawal", "summary"],
+      ["todayTotal", "totalToday", "todayAmount", "todayWithdrawalTotal"],
+      ["todayWithdrawalTotal", "todayTotal", "todayAmount"],
+    ),
+    pickMetricFromArray(d?.metrics, ["todayWithdrawalTotal", "withdrawalsToday"]),
+    pickMetricFromArray(d?.summary, ["todayWithdrawalTotal", "withdrawalsToday"]),
+  );
+  const withdrawalsTodayCount = pickFirstValue(
+    pickMetric(
+      d,
+      "withdrawals.todayCount",
+      "withdrawals.countToday",
+      "summary.withdrawals.todayCount",
+      "summary.todayWithdrawalCount",
+      "todayWithdrawalCount",
+    ),
+    pickSectionMetric(
+      d,
+      ["withdrawals", "withdrawal", "summary"],
+      ["todayCount", "countToday", "todayRequests", "todayWithdrawalCount"],
+      ["todayWithdrawalCount", "todayCount", "countToday"],
+    ),
+    pickMetricFromArray(d?.metrics, ["todayWithdrawalCount", "withdrawalsTodayCount"]),
+    pickMetricFromArray(d?.summary, ["todayWithdrawalCount", "withdrawalsTodayCount"]),
+  );
+  const betsTodayCount = pickFirstValue(
+    pickMetric(
+      d,
+      "bets.todayCount",
+      "bets.totalToday",
+      "summary.bets.todayCount",
+      "summary.todayBetCount",
+      "todayBetCount",
+    ),
+    pickSectionMetric(
+      d,
+      ["bets", "bet", "summary"],
+      ["todayCount", "countToday", "totalToday", "todayBetCount"],
+      ["todayBetCount", "todayCount", "countToday"],
+    ),
+    pickMetricFromArray(d?.metrics, ["todayBetCount", "betsToday"]),
+    pickMetricFromArray(d?.summary, ["todayBetCount", "betsToday"]),
+  );
+  const thaiBetsTodayCount = pickFirstValue(
+    pickMetric(
+      d,
+      "bets.thaiToday",
+      "bets.thai.todayCount",
+      "summary.bets.thaiToday",
+      "summary.thaiBetsToday",
+      "thaiBetsToday",
+      "thaiToday",
+    ),
+    pickSectionMetric(
+      d,
+      ["bets", "bet", "summary"],
+      ["thaiToday", "thaiCountToday", "thaiBetsToday"],
+      ["thaiBetsToday", "thaiToday", "thaiCountToday"],
+    ),
+    pickMetricFromArray(d?.metrics, ["thaiBetsToday", "thaiToday"]),
+    pickMetricFromArray(d?.summary, ["thaiBetsToday", "thaiToday"]),
+  );
 
   return (
     <div className="space-y-6">
@@ -551,7 +781,7 @@ export default function AdminDashboardPage() {
               <StatCard
                 icon={Users}
                 label="Total Users"
-                value={fmt(d?.users?.total ?? 0)}
+                value={fmt(totalUsers)}
                 sub="All registered accounts"
                 color="blue"
                 href="/admin/users"
@@ -559,7 +789,7 @@ export default function AdminDashboardPage() {
               <StatCard
                 icon={UserCheck}
                 label="Active Users"
-                value={fmt(d?.users?.active ?? 0)}
+                value={fmt(activeUsers)}
                 sub="Logged in last 15 days"
                 color="green"
                 href="/admin/users/active"
@@ -567,14 +797,14 @@ export default function AdminDashboardPage() {
               <StatCard
                 icon={Activity}
                 label="New Today"
-                value={fmt(d?.users?.newToday ?? 0)}
+                value={fmt(newUsersToday)}
                 sub="Registered today"
                 color="cyan"
               />
               <StatCard
                 icon={Clock}
                 label="Pending Deposits"
-                value={fmt(d?.deposits?.pending ?? 0)}
+                value={fmt(pendingDeposits)}
                 sub="Awaiting review"
                 color="yellow"
                 href="/admin/deposits"
@@ -582,7 +812,7 @@ export default function AdminDashboardPage() {
               <StatCard
                 icon={Clock}
                 label="Pending Withdrawals"
-                value={fmt(d?.withdrawals?.pending ?? 0)}
+                value={fmt(pendingWithdrawals)}
                 sub="Awaiting approval"
                 color="red"
                 href="/admin/withdrawals"
@@ -675,14 +905,14 @@ export default function AdminDashboardPage() {
               <StatCard
                 icon={ArrowDownToLine}
                 label="Today's Deposits"
-                value={`Rs ${fmt(d?.deposits?.todayTotal ?? 0)}`}
-                sub={`${fmt(d?.deposits?.todayCount ?? 0)} transactions`}
+                value={`Rs ${fmt(depositsTodayTotal)}`}
+                sub={`${fmt(depositsTodayCount)} transactions`}
                 color="green"
               />
               <StatCard
                 icon={CheckCircle}
                 label="Approved Today"
-                value={fmt(d?.deposits?.todayCount ?? 0)}
+                value={fmt(depositsTodayCount)}
                 sub="Deposit requests"
                 color="green"
               />
@@ -716,14 +946,14 @@ export default function AdminDashboardPage() {
               <StatCard
                 icon={ArrowUpFromLine}
                 label="Today's Withdrawals"
-                value={`Rs ${fmt(d?.withdrawals?.todayTotal ?? 0)}`}
-                sub={`${fmt(d?.withdrawals?.todayCount ?? 0)} transactions`}
+                value={`Rs ${fmt(withdrawalsTodayTotal)}`}
+                sub={`${fmt(withdrawalsTodayCount)} transactions`}
                 color="purple"
               />
               <StatCard
                 icon={Wallet}
                 label="Processed Today"
-                value={fmt(d?.withdrawals?.todayCount ?? 0)}
+                value={fmt(withdrawalsTodayCount)}
                 sub="Withdrawal requests"
                 color="purple"
               />
@@ -745,14 +975,14 @@ export default function AdminDashboardPage() {
               <StatCard
                 icon={TrendingUp}
                 label="Total Bets Today"
-                value={fmt(d?.bets?.todayCount ?? 0)}
+                value={fmt(betsTodayCount)}
                 sub="All games combined"
                 color="cyan"
               />
               <StatCard
                 icon={Gamepad2}
                 label="Thai Lottery"
-                value={fmt(d?.bets?.thaiToday ?? 0)}
+                value={fmt(thaiBetsTodayCount)}
                 sub="Bets placed today"
                 color="blue"
                 href="/admin/thai-lottery"
@@ -786,14 +1016,14 @@ export default function AdminDashboardPage() {
               />
             ))}
           </div>
-        ) : !sessionsData?.data?.length ? (
+        ) : sessions.length === 0 ? (
           <div className="rounded-2xl border border-slate-700/40 bg-slate-800/30 px-4 py-6 text-center">
             <ShieldAlert className="h-6 w-6 text-slate-600 mx-auto mb-2" />
             <p className="text-xs text-slate-500">No active session data available</p>
           </div>
         ) : (
           <div className="space-y-2">
-            {sessionsData.data.map((session: any, i: number) => (
+            {sessions.map((session: any, i: number) => (
               <div
                 key={session.id ?? i}
                 className={cn(
