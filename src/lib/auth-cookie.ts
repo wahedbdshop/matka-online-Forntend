@@ -56,3 +56,12 @@ export function hasClientAuthCookie() {
 
   return AUTH_COOKIE_NAMES.some((name) => document.cookie.includes(`${name}=`));
 }
+
+export function getClientAccessTokenCookie() {
+  for (const name of ACCESS_TOKEN_COOKIE_NAMES) {
+    const value = Cookies.get(name);
+    if (value) return value;
+  }
+
+  return null;
+}

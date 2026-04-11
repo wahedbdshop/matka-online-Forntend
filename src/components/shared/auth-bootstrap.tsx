@@ -5,7 +5,10 @@ import { usePathname } from "next/navigation";
 import { AdminService } from "@/services/admin.service";
 import { UserService } from "@/services/user.service";
 import { useAuthStore } from "@/store/auth.store";
-import { hasClientAuthCookie } from "@/lib/auth-cookie";
+import {
+  getClientAccessTokenCookie,
+  hasClientAuthCookie,
+} from "@/lib/auth-cookie";
 import {
   logAuthBootstrapStart,
   requestSessionRefresh,
@@ -17,6 +20,7 @@ let bootstrapPromise: Promise<void> | null = null;
 export function AuthBootstrap() {
   const pathname = usePathname();
   const user = useAuthStore((state) => state.user);
+  const token = useAuthStore((state) => state.token);
   const isAuthReady = useAuthStore((state) => state.isAuthReady);
   const setAuth = useAuthStore((state) => state.setAuth);
   const setAuthReady = useAuthStore((state) => state.setAuthReady);
@@ -42,12 +46,42 @@ export function AuthBootstrap() {
         return;
       }
 
-      let refreshedAccessToken: string | null = null;
+      const existingAccessToken = token ?? getClientAccessTokenCookie();
+      let resolvedAccessToken: string | null = existingAccessToken;
       let refreshFailedTerminal = false;
+
+      if (existingAccessToken) {
+        try {
+          const profile = isAdminRoute
+            ? await AdminService.getAdminProfile({
+                silent: true,
+                accessToken: existingAccessToken,
+              })
+            : await UserService.getProfile({
+                silent: true,
+                accessToken: existingAccessToken,
+              });
+
+          if (!cancelled && profile.data) {
+            console.info("[auth] bootstrap recovered session from existing token", {
+              trigger: "AuthBootstrap",
+              pathname,
+              isAdminRoute,
+            });
+            setAuth(profile.data, existingAccessToken);
+            return;
+          }
+        } catch (error) {
+          console.error("[auth] bootstrap profile fetch failed before refresh", {
+            trigger: "AuthBootstrap",
+            error,
+          });
+        }
+      }
 
       try {
         const refreshed = await requestSessionRefresh("AuthBootstrap");
-        refreshedAccessToken = refreshed.accessToken;
+        resolvedAccessToken = refreshed.accessToken;
         refreshFailedTerminal = refreshed.blocked;
       } catch (error) {
         console.error("[auth] auth bootstrap refresh failed", {
@@ -67,15 +101,15 @@ export function AuthBootstrap() {
         const profile = isAdminRoute
           ? await AdminService.getAdminProfile({
               silent: true,
-              accessToken: refreshedAccessToken,
+              accessToken: resolvedAccessToken,
             })
           : await UserService.getProfile({
               silent: true,
-              accessToken: refreshedAccessToken,
+              accessToken: resolvedAccessToken,
             });
 
         if (!cancelled && profile.data) {
-          setAuth(profile.data, refreshedAccessToken);
+          setAuth(profile.data, resolvedAccessToken);
           return;
         }
       } catch (error) {
@@ -111,7 +145,7 @@ export function AuthBootstrap() {
     return () => {
       cancelled = true;
     };
-  }, [isAdminRoute, isAuthReady, pathname, setAuth, setAuthReady, user]);
+  }, [isAdminRoute, isAuthReady, pathname, setAuth, setAuthReady, token, user]);
 
   return null;
 }
