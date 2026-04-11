@@ -55,6 +55,12 @@ function isForcePasswordResetResponse(
   return "requiresPasswordChange" in data && data.requiresPasswordChange === true;
 }
 
+function isAuthenticatedLoginResponse(
+  data: LoginResponseData,
+): data is AuthenticatedLoginResponse {
+  return "user" in data;
+}
+
 export const useRegister = () => {
   const router = useRouter();
 
@@ -139,9 +145,6 @@ export const useLoginWithCaptcha = () => {
 };
 
 export const useAdminLoginWithCaptcha = () => {
-  const router = useRouter();
-  const setAuth = useAuthStore((s) => s.setAuth);
-
   return useMutation({
     mutationFn: AuthService.loginWithCaptcha,
     onSuccess: async (data) => {
@@ -150,23 +153,19 @@ export const useAdminLoginWithCaptcha = () => {
       }
 
       if (isForcePasswordResetResponse(data.data)) {
-        const { userId, email } = data.data;
-        setForcedPasswordResetSession({ userId, email });
-        router.replace("/force-password-reset");
         return;
       }
 
-      const userRole = (data.data as AuthenticatedLoginResponse).user?.role;
+      if (!isAuthenticatedLoginResponse(data.data)) {
+        toast.error("Admin login response is invalid");
+        return;
+      }
+
+      const userRole = data.data.user?.role;
       if (userRole !== "ADMIN" && userRole !== "AGENT") {
         toast.error("Access denied. This portal is for admins only.");
         return;
       }
-
-      const user = await completeLogin(data.data, setAuth);
-      if (!user) return;
-
-      toast.success("Login successful!");
-      router.push("/admin");
     },
     onError: (error: any) => {
       toast.error(error.response?.data?.message || "Login failed");
@@ -189,6 +188,23 @@ export const useVerifyAdminLoginOtp = () => {
     },
     onError: (error: any) => {
       toast.error(error.response?.data?.message || "OTP verification failed");
+    },
+  });
+};
+
+export const useResendAdminLoginOtp = () => {
+  return useMutation({
+    mutationFn: AuthService.login,
+    onSuccess: (data) => {
+      if (isAdminOtpRequiredResponse(data.data)) {
+        toast.success("A new verification code has been sent to your email");
+        return;
+      }
+
+      toast.error("Unable to resend the admin verification code");
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.message || "Failed to resend code");
     },
   });
 };

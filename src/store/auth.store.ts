@@ -1,6 +1,6 @@
 import { create } from "zustand";
 
-interface User {
+export interface User {
   id: string;
   name: string;
   username: string;
@@ -44,7 +44,7 @@ export const useAuthStore = create<AuthState>()((set) => ({
       user: state.user,
       token,
       isAuthenticated: Boolean(state.user || token),
-      isAuthReady: true,
+      isAuthReady: state.isAuthReady,
     }));
   },
 

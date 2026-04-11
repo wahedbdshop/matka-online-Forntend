@@ -37,6 +37,7 @@ import {
 } from "@/components/ui/card";
 import {
   useAdminLoginWithCaptcha,
+  useResendAdminLoginOtp,
   useVerifyAdminLoginOtp,
 } from "@/hooks/use-auth";
 import { AuthService } from "@/services/auth.service";
@@ -92,6 +93,10 @@ export default function AdminLoginPage() {
     email: string;
     expiresInSeconds: number;
   } | null>(null);
+  const [lastAdminCredentials, setLastAdminCredentials] = useState<{
+    identifier: string;
+    password: string;
+  } | null>(null);
   const [otpErrorMessage, setOtpErrorMessage] = useState<string | null>(null);
   const [showExpiredCta, setShowExpiredCta] = useState(false);
 
@@ -130,6 +135,8 @@ export default function AdminLoginPage() {
   }, [refetchCaptcha, form]);
 
   const { mutate: loginWithCaptcha, isPending } = useAdminLoginWithCaptcha();
+  const { mutate: resendAdminOtp, isPending: isResendingAdminOtp } =
+    useResendAdminLoginOtp();
   const { mutate: verifyAdminOtp, isPending: isOtpPending } =
     useVerifyAdminLoginOtp();
 
@@ -152,6 +159,10 @@ export default function AdminLoginPage() {
   const onSubmit = (data: LoginForm) => {
     setOtpErrorMessage(null);
     setShowExpiredCta(false);
+    setLastAdminCredentials({
+      identifier: data.identifier.trim(),
+      password: data.password,
+    });
 
     loginWithCaptcha(
       {
@@ -172,12 +183,75 @@ export default function AdminLoginPage() {
               expiresInSeconds: response.data.expiresInSeconds,
             });
             otpForm.reset({ otp: "" });
+            return;
+          }
+
+          if (
+            "user" in response.data &&
+            (response.data.user?.role === "ADMIN" ||
+              response.data.user?.role === "AGENT")
+          ) {
+            resendAdminOtp(
+              {
+                emailOrUsername: data.identifier.trim(),
+                password: data.password,
+              },
+              {
+                onSuccess: (otpResponse) => {
+                  if (
+                    "requiresAdminOtp" in otpResponse.data &&
+                    otpResponse.data.requiresAdminOtp === true
+                  ) {
+                    setPendingAdminOtp({
+                      pendingToken: otpResponse.data.pendingToken,
+                      email: otpResponse.data.email,
+                      expiresInSeconds: otpResponse.data.expiresInSeconds,
+                    });
+                    otpForm.reset({ otp: "" });
+                    return;
+                  }
+
+                  setOtpErrorMessage(
+                    "Admin OTP is not enabled in backend response yet.",
+                  );
+                },
+              },
+            );
           }
         },
         onError: () => handleRefreshCaptcha(),
       },
     );
   };
+
+  const handleResendAdminOtp = useCallback(() => {
+    if (!lastAdminCredentials) return;
+
+    setOtpErrorMessage(null);
+    setShowExpiredCta(false);
+
+    resendAdminOtp(
+      {
+        emailOrUsername: lastAdminCredentials.identifier,
+        password: lastAdminCredentials.password,
+      },
+      {
+        onSuccess: (response) => {
+          if (
+            "requiresAdminOtp" in response.data &&
+            response.data.requiresAdminOtp === true
+          ) {
+            setPendingAdminOtp({
+              pendingToken: response.data.pendingToken,
+              email: response.data.email,
+              expiresInSeconds: response.data.expiresInSeconds,
+            });
+            otpForm.reset({ otp: "" });
+          }
+        },
+      },
+    );
+  }, [lastAdminCredentials, otpForm, resendAdminOtp]);
 
   const onSubmitAdminOtp = (data: AdminOtpForm) => {
     if (!pendingAdminOtp) return;
@@ -308,9 +382,18 @@ export default function AdminLoginPage() {
                   .
                 </p>
 
+                <button
+                  type="button"
+                  onClick={handleResendAdminOtp}
+                  disabled={isResendingAdminOtp || !lastAdminCredentials}
+                  className="text-sm font-medium text-purple-300 transition-colors hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {isResendingAdminOtp ? "Resending code..." : "Resend code"}
+                </button>
+
                 <Button
                   type="submit"
-                  disabled={isOtpPending}
+                  disabled={isOtpPending || isResendingAdminOtp}
                   className="w-full bg-purple-600 hover:bg-purple-700"
                 >
                   {isOtpPending ? (

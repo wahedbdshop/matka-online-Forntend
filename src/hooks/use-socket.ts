@@ -35,17 +35,7 @@ export const useSocket = () => {
     });
 
     socket.on("connect_error", (err: SocketConnectError) => {
-      const transport = socket.io.engine?.transport?.name ?? "unknown";
-      const description =
-        typeof err.description === "string"
-          ? err.description
-          : err.description
-            ? JSON.stringify(err.description)
-            : "no description";
-
-      console.error(
-        `Socket connection error: ${err.message || "unknown error"} | url=${socketUrl} | transport=${transport} | details=${description}`,
-      );
+      void err;
     });
 
     return () => {
@@ -56,7 +46,6 @@ export const useSocket = () => {
 
   const joinSession = useCallback((sessionId: string) => {
     if (!socketRef.current?.connected) {
-      console.warn("Socket not connected, cannot join session");
       return;
     }
     socketRef.current.emit("join_session", sessionId);

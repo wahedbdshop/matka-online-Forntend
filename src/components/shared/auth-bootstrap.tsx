@@ -27,8 +27,6 @@ export function AuthBootstrap() {
   const isAdminRoute = pathname.startsWith("/admin");
 
   useEffect(() => {
-    let cancelled = false;
-
     async function bootstrapAuth() {
       logAuthBootstrapStart({
         trigger: "AuthBootstrap",
@@ -62,20 +60,11 @@ export function AuthBootstrap() {
                 accessToken: existingAccessToken,
               });
 
-          if (!cancelled && profile.data) {
-            console.info("[auth] bootstrap recovered session from existing token", {
-              trigger: "AuthBootstrap",
-              pathname,
-              isAdminRoute,
-            });
+          if (profile.data) {
             setAuth(profile.data, existingAccessToken);
             return;
           }
-        } catch (error) {
-          console.error("[auth] bootstrap profile fetch failed before refresh", {
-            trigger: "AuthBootstrap",
-            error,
-          });
+        } catch {
         }
       }
 
@@ -83,17 +72,11 @@ export function AuthBootstrap() {
         const refreshed = await requestSessionRefresh("AuthBootstrap");
         resolvedAccessToken = refreshed.accessToken;
         refreshFailedTerminal = refreshed.blocked;
-      } catch (error) {
-        console.error("[auth] auth bootstrap refresh failed", {
-          trigger: "AuthBootstrap",
-          error,
-        });
+      } catch {
       }
 
       if (refreshFailedTerminal) {
-        if (!cancelled) {
-          setAuthReady(true);
-        }
+        setAuthReady(true);
         return;
       }
 
@@ -108,7 +91,7 @@ export function AuthBootstrap() {
               accessToken: resolvedAccessToken,
             });
 
-        if (!cancelled && profile.data) {
+        if (profile.data) {
           setAuth(profile.data, resolvedAccessToken);
           return;
         }
@@ -127,9 +110,7 @@ export function AuthBootstrap() {
         }
       }
 
-      if (!cancelled) {
-        setAuthReady(true);
-      }
+      setAuthReady(true);
     }
 
     if (!isAuthReady) {
@@ -142,10 +123,7 @@ export function AuthBootstrap() {
       void bootstrapPromise;
     }
 
-    return () => {
-      cancelled = true;
-    };
-  }, [isAdminRoute, isAuthReady, pathname, setAuth, setAuthReady, token, user]);
+  }, [isAdminRoute, isAuthReady, pathname, setAuth, setAuthReady, user]);
 
   return null;
 }

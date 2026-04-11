@@ -269,7 +269,6 @@ export default function ChatPage() {
       setMessages((prev) =>
         prev.filter((m) => !m.isLoading && m.createdAt !== userMessage.createdAt),
       );
-      console.error("Chat send failed:", error?.response?.data || error);
       toast.error(error?.response?.data?.message || "Failed to send message");
     }
   };

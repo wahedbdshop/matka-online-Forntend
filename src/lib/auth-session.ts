@@ -40,15 +40,6 @@ let refreshPromise: Promise<SessionRefreshResult> | null = null;
 let refreshBlockedStatus: number | null = null;
 let hasRedirectedToLogin = false;
 
-function authLog(message: string, details?: Record<string, unknown>) {
-  if (details) {
-    console.info(`[auth] ${message}`, details);
-    return;
-  }
-
-  console.info(`[auth] ${message}`);
-}
-
 function isTerminalRefreshStatus(status: number | null) {
   return status === 401 || status === 429;
 }
@@ -76,20 +67,10 @@ async function redirectToLoginOnce(trigger: string, status: number | null) {
   const loginPath = getLoginPath();
 
   if (hasRedirectedToLogin) {
-    authLog("login redirect already scheduled", {
-      trigger,
-      status,
-      loginPath,
-    });
     return true;
   }
 
   hasRedirectedToLogin = true;
-  authLog("redirecting to login after refresh failure", {
-    trigger,
-    status,
-    loginPath,
-  });
 
   if (window.location.pathname !== loginPath) {
     window.location.replace(loginPath);
@@ -115,25 +96,16 @@ export async function syncServerSession(payload: SessionSyncPayload) {
   return parseJsonResponse(response);
 }
 
-export function logAuthBootstrapStart(details?: Record<string, unknown>) {
-  authLog("auth bootstrap starts", details);
-}
+export function logAuthBootstrapStart(_details?: Record<string, unknown>) {}
 
 export async function requestSessionRefresh(
   trigger = "unknown",
 ): Promise<SessionRefreshResult> {
   if (refreshPromise) {
-    authLog("refresh retry blocked because one is already running", {
-      trigger,
-    });
     return refreshPromise;
   }
 
   if (isTerminalRefreshStatus(refreshBlockedStatus)) {
-    authLog("refresh request blocked after terminal failure", {
-      trigger,
-      status: refreshBlockedStatus,
-    });
     await redirectToLoginOnce(trigger, refreshBlockedStatus);
     return {
       accessToken: null,
@@ -149,8 +121,6 @@ export async function requestSessionRefresh(
   }
 
   refreshPromise = (async () => {
-    authLog("refresh-token requested", { trigger });
-
     try {
       const response = await fetch(`${API_BASE_URL}${REFRESH_ENDPOINT_PATH}`, {
         method: "POST",

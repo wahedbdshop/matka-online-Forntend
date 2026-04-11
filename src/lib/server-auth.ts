@@ -62,8 +62,11 @@ export function applySessionCookies(
   tokens: SessionTokens,
 ) {
   if (tokens.accessToken) {
-    cookieStore.set("accessToken", tokens.accessToken, serverAuthCookieOptions);
-    cookieStore.set("auth_token", tokens.accessToken, serverAuthCookieOptions);
+    // Keep accessToken non-httpOnly so client-side JS (getClientAccessTokenCookie)
+    // can read it on page refresh and skip the full token-refresh round-trip.
+    const accessTokenOptions = { ...serverAuthCookieOptions, httpOnly: false };
+    cookieStore.set("accessToken", tokens.accessToken, accessTokenOptions);
+    cookieStore.set("auth_token", tokens.accessToken, accessTokenOptions);
   }
 
   if (tokens.refreshToken) {
