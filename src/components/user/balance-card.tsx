@@ -7,15 +7,19 @@ import { useCurrency } from "@/hooks/use-currency";
 import Link from "next/link";
 import { useProfileQuery } from "@/hooks/use-profile-query";
 import { UserService } from "@/services/user.service";
+import { useAuthStore } from "@/store/auth.store";
 
 export const BalanceCard = () => {
   const [showBalance, setShowBalance] = useState(true);
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const isAuthReady = useAuthStore((state) => state.isAuthReady);
 
   const { data } = useProfileQuery();
 
   const { data: bonusHistoryData } = useQuery({
     queryKey: ["bonus-history-summary"],
     queryFn: UserService.getBonusHistory,
+    enabled: isAuthReady && isAuthenticated,
   });
 
   const { fmt } = useCurrency();

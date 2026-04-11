@@ -9,7 +9,7 @@ import {
   ADMIN_LOGIN_AS_MAX_AGE_MS,
   LoginAsTransferPayload,
 } from "@/lib/admin-login-as";
-import { setClientAuthCookies } from "@/lib/auth-cookie";
+import { applyClientSession, syncServerSession } from "@/lib/auth-session";
 
 function AdminLoginAsContent() {
   const router = useRouter();
@@ -33,7 +33,9 @@ function AdminLoginAsContent() {
       router.push("/login");
     }, 15_000);
 
-    channel.onmessage = (event: MessageEvent<{ type?: string; payload?: LoginAsTransferPayload }>) => {
+    channel.onmessage = async (
+      event: MessageEvent<{ type?: string; payload?: LoginAsTransferPayload }>,
+    ) => {
       if (event.data?.type !== "auth-payload") return;
 
       const payload = event.data.payload;
@@ -59,7 +61,10 @@ function AdminLoginAsContent() {
         JSON.stringify(payload.adminBackup),
       );
 
-      setClientAuthCookies({
+      applyClientSession({
+        accessToken: payload.token,
+      });
+      await syncServerSession({
         accessToken: payload.token,
       });
 

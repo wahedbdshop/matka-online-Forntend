@@ -2,16 +2,21 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { UserService } from "@/services/user.service";
+import { useAuthStore } from "@/store/auth.store";
 
 export const useProfileQuery = (options?: {
   enabled?: boolean;
   silent?: boolean;
-}) =>
-  useQuery({
+}) => {
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const isAuthReady = useAuthStore((state) => state.isAuthReady);
+
+  return useQuery({
     queryKey: ["profile"],
     queryFn: () => UserService.getProfile({ silent: options?.silent }),
-    enabled: options?.enabled,
-    refetchInterval: 10000,
+    enabled: options?.enabled ?? (isAuthReady && isAuthenticated),
+    refetchInterval: isAuthReady && isAuthenticated ? 10000 : false,
     refetchIntervalInBackground: true,
-    refetchOnWindowFocus: true,
+    refetchOnWindowFocus: isAuthReady && isAuthenticated,
   });
+};

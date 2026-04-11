@@ -1,5 +1,10 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import {
+  applySessionCookies,
+  createClearedAuthRedirect,
+  refreshBackendSession,
+} from "@/lib/server-auth";
 
 const protectedRoutes = [
   "/dashboard",
@@ -105,9 +110,12 @@ async function getSessionUser(token: string) {
 }
 
 export async function proxy(request: NextRequest) {
-  const token =
+  let token =
     request.cookies.get("accessToken")?.value ??
     request.cookies.get("auth_token")?.value;
+  const refreshToken =
+    request.cookies.get("refreshToken")?.value ??
+    request.cookies.get("refresh_token")?.value;
   const pathname = request.nextUrl.pathname;
 
   const isAdminPublicPath = adminPublicPaths.some(
@@ -120,30 +128,62 @@ export async function proxy(request: NextRequest) {
       (route) => pathname === route || pathname.startsWith(route + "/"),
     );
 
+  let refreshedSession:
+    | Awaited<ReturnType<typeof refreshBackendSession>>
+    | null = null;
+
+  const finalizeResponse = (response: NextResponse) => {
+    if (refreshedSession?.accessToken) {
+      applySessionCookies(response.cookies, refreshedSession);
+    }
+
+    return withSecurityHeaders(response);
+  };
+
+  if (!token && refreshToken) {
+    refreshedSession = await refreshBackendSession({
+      cookieHeader: request.headers.get("cookie"),
+      refreshToken,
+    });
+
+    if (refreshedSession?.accessToken) {
+      token = refreshedSession.accessToken;
+    }
+  }
+
   if (!token && isProtectedRoute) {
     const loginPath = pathname.startsWith("/admin") ? "/admin/login" : "/login";
     return withSecurityHeaders(
-      NextResponse.redirect(new URL(loginPath, request.url)),
+      createClearedAuthRedirect(new URL(loginPath, request.url)),
     );
   }
 
   if (!token) {
-    return withSecurityHeaders(NextResponse.next());
+    return finalizeResponse(NextResponse.next());
   }
 
-  const sessionUser = await getSessionUser(token);
+  let sessionUser = await getSessionUser(token);
+
+  if (!sessionUser && refreshToken) {
+    refreshedSession = await refreshBackendSession({
+      cookieHeader: request.headers.get("cookie"),
+      refreshToken,
+    });
+
+    if (refreshedSession?.accessToken) {
+      token = refreshedSession.accessToken;
+      sessionUser = await getSessionUser(token);
+    }
+  }
 
   if (!sessionUser) {
     const loginPath = pathname.startsWith("/admin") ? "/admin/login" : "/login";
-    const response = NextResponse.redirect(new URL(loginPath, request.url));
-    response.cookies.delete("accessToken");
-    response.cookies.delete("auth_token");
-    response.cookies.delete("refreshToken");
-    response.cookies.delete("refresh_token");
-    response.cookies.delete("betterAuthSession");
-    response.cookies.delete("token");
-    return withSecurityHeaders(response);
+    return withSecurityHeaders(
+      createClearedAuthRedirect(new URL(loginPath, request.url)),
+    );
   }
+
+  const response = NextResponse.next();
 
   const isAdmin = sessionUser.role === "ADMIN" || sessionUser.role === "AGENT";
 
@@ -154,14 +194,14 @@ export async function proxy(request: NextRequest) {
     pathname !== "/profile" &&
     !pathname.startsWith("/profile/")
   ) {
-    return withSecurityHeaders(
+    return finalizeResponse(
       NextResponse.redirect(new URL("/profile", request.url)),
     );
   }
 
   // Non-admin trying to access admin-only paths (excluding admin/login)
   if (pathname.startsWith("/admin") && !isAdminPublicPath && !isAdmin) {
-    return withSecurityHeaders(
+    return finalizeResponse(
       NextResponse.redirect(new URL("/dashboard", request.url)),
     );
   }
@@ -173,19 +213,19 @@ export async function proxy(request: NextRequest) {
     pathname === "/admin/login"
   ) {
     const redirectTo = isAdmin ? "/admin" : "/dashboard";
-    return withSecurityHeaders(
+    return finalizeResponse(
       NextResponse.redirect(new URL(redirectTo, request.url)),
     );
   }
 
   if (pathname === "/") {
     const redirectTo = isAdmin ? "/admin" : "/dashboard";
-    return withSecurityHeaders(
+    return finalizeResponse(
       NextResponse.redirect(new URL(redirectTo, request.url)),
     );
   }
 
-  return withSecurityHeaders(NextResponse.next());
+  return finalizeResponse(response);
 }
 
 export const config = {

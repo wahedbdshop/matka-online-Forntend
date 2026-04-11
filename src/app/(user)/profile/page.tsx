@@ -81,6 +81,8 @@ const menuItems = [
 
 export default function ProfilePage() {
   const clearAuth = useAuthStore((state) => state.clearAuth);
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const isAuthReady = useAuthStore((state) => state.isAuthReady);
   const userStatus = useAuthStore((state) => state.user?.status);
   const router = useRouter();
   const isBanned = userStatus === "BANNED";
@@ -93,6 +95,7 @@ export default function ProfilePage() {
   const { data: bonusHistoryData } = useQuery({
     queryKey: ["bonus-history-summary"],
     queryFn: UserService.getBonusHistory,
+    enabled: isAuthReady && isAuthenticated,
   });
   const { mutate: logout } = useMutation({
     mutationFn: AuthService.logout,

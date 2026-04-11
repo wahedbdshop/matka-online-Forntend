@@ -1,6 +1,17 @@
 import axios from "axios";
+import type { InternalAxiosRequestConfig } from "axios";
 import { toast } from "sonner";
+import {
+  clearServerSession,
+  refreshServerSession,
+  resetClientSession,
+} from "@/lib/auth-session";
 import { useAuthStore } from "@/store/auth.store";
+
+type RequestConfigWithAuth = InternalAxiosRequestConfig & {
+  skipAuthRedirect?: boolean;
+  _retry?: boolean;
+};
 
 export const api = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_URL,
@@ -12,11 +23,45 @@ export const api = axios.create({
 
 export const publicApi = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_URL,
-  withCredentials: false,
+  withCredentials: true,
   headers: {
     "Content-Type": "application/json",
   },
 });
+
+let refreshPromise: Promise<string | null> | null = null;
+
+function getLoginPath() {
+  if (typeof window === "undefined") {
+    return "/login";
+  }
+
+  return window.location.pathname.startsWith("/admin")
+    ? "/admin/login"
+    : "/login";
+}
+
+async function refreshAccessToken() {
+  if (!refreshPromise) {
+    refreshPromise = refreshServerSession()
+      .then((response) => {
+        const accessToken = response.data.accessToken ?? null;
+
+        useAuthStore.getState().setToken(accessToken);
+
+        return accessToken;
+      })
+      .catch(async () => {
+        await resetClientSession();
+        return null;
+      })
+      .finally(() => {
+        refreshPromise = null;
+      });
+  }
+
+  return refreshPromise;
+}
 
 api.interceptors.request.use((config) => {
   const token = useAuthStore.getState().token;
@@ -31,19 +76,49 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
+    const requestConfig = (error.config ?? {}) as RequestConfigWithAuth;
     const skipAuthRedirect = Boolean(
-      (error.config as { skipAuthRedirect?: boolean } | undefined)
-        ?.skipAuthRedirect,
+      requestConfig.skipAuthRedirect,
     );
 
-    if (error.response?.status === 401 && !skipAuthRedirect) {
+    const isUnauthorized = error.response?.status === 401;
+    const isRefreshRequest = requestConfig.url?.includes("/auth/refresh");
+    const isLocalRefreshRequest =
+      requestConfig.url?.includes("/api/auth/refresh");
+    const isAuthLoginRequest =
+      requestConfig.url?.includes("/auth/login") ||
+      requestConfig.url?.includes("/auth/login-with-captcha") ||
+      requestConfig.url?.includes("/auth/admin-login/verify-otp");
+
+    if (
+      isUnauthorized &&
+      !requestConfig._retry &&
+      !isRefreshRequest &&
+      !isLocalRefreshRequest &&
+      !isAuthLoginRequest
+    ) {
+      requestConfig._retry = true;
+
+      const accessToken = await refreshAccessToken();
+
+      if (accessToken) {
+        requestConfig.headers = requestConfig.headers ?? {};
+        requestConfig.headers.Authorization = `Bearer ${accessToken}`;
+
+        return api(requestConfig);
+      }
+    }
+
+    if (isUnauthorized) {
+      await clearServerSession();
       useAuthStore.getState().clearAuth();
 
       if (typeof window !== "undefined") {
-        const isAdminPath = window.location.pathname.startsWith("/admin");
-        const loginPath = isAdminPath ? "/admin/login" : "/login";
+        const loginPath = getLoginPath();
         if (window.location.pathname !== loginPath) {
-          window.location.href = loginPath;
+          if (!skipAuthRedirect) {
+            window.location.href = loginPath;
+          }
         }
       }
     }

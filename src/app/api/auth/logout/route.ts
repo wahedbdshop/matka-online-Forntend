@@ -1,19 +1,9 @@
 import { cookies } from "next/headers";
+import { clearSessionCookies } from "@/lib/server-auth";
 
 export async function POST() {
   const cookieStore = await cookies();
-
-  [
-    "accessToken",
-    "auth_token",
-    "refreshToken",
-    "refresh_token",
-    "betterAuthSession",
-    "token",
-    "auth_flag",
-  ].forEach((name) => {
-    cookieStore.delete(name);
-  });
+  clearSessionCookies(cookieStore);
 
   return Response.json({
     success: true,

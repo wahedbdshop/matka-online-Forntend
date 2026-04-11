@@ -12,7 +12,6 @@ import { SITE_LOGO_SRC } from "@/lib/branding";
 import { useProfileQuery } from "@/hooks/use-profile-query";
 import { useAuthStore } from "@/store/auth.store";
 import { hasClientAuthCookie } from "@/lib/auth-cookie";
-import { useEffect, useState } from "react";
 
 const protectedUserRoutes = [
   "/dashboard",
@@ -37,30 +36,32 @@ export const TopHeader = ({
 }) => {
   const pathname = usePathname();
   const isAuthStore = useAuthStore((s) => s.isAuthenticated);
-  const [hasCookie, setHasCookie] = useState(initialIsAuthenticated);
-
-  useEffect(() => {
-    setHasCookie(hasClientAuthCookie());
-  }, []);
+  const isAuthReady = useAuthStore((s) => s.isAuthReady);
+  const hasCookie =
+    typeof document === "undefined"
+      ? initialIsAuthenticated
+      : hasClientAuthCookie();
 
   const isProtectedRoute = protectedUserRoutes.some(
     (route) => pathname === route || pathname.startsWith(route + "/"),
   );
-  const isAuthenticated = isAuthStore || hasCookie || isProtectedRoute;
+  const isAuthenticated = isAuthStore;
+  const showAuthenticatedUi =
+    isAuthStore || (!isAuthReady && (hasCookie || isProtectedRoute));
 
   const {
     data: profileData,
     refetch: refetchProfile,
     isFetching,
   } = useProfileQuery({
-    enabled: isAuthenticated,
+    enabled: isAuthReady && isAuthenticated,
     silent: true,
   });
 
   const { data: notifData } = useQuery({
     queryKey: ["notifications"],
     queryFn: () => NotificationService.getAll(1, 20),
-    enabled: isAuthenticated,
+    enabled: isAuthReady && isAuthenticated,
     refetchInterval: 30000,
   });
 
@@ -72,7 +73,7 @@ export const TopHeader = ({
   return (
     <header className="sticky top-0 z-40 bg-slate-900/95 backdrop-blur border-b border-slate-700">
       <div className="relative max-w-lg mx-auto flex items-center justify-between px-4 h-[58px]">
-        {isAuthenticated ? (
+        {showAuthenticatedUi ? (
           <Link href="/profile" className="min-w-0 max-w-[calc(50%-52px)]">
             <div className="flex items-center gap-2">
               <div className="flex items-center gap-1.5 min-w-0 rounded-xl border border-slate-700 bg-slate-800/80 px-2 py-1.5">
@@ -123,7 +124,7 @@ export const TopHeader = ({
         <div className="flex items-center gap-1">
           <ThemeToggle />
 
-          {isAuthenticated ? (
+          {showAuthenticatedUi ? (
             <Link href="/notifications" className="relative">
               <Button
                 variant="ghost"

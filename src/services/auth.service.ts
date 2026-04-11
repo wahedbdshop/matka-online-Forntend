@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { api, publicApi } from "@/lib/axios";
+import { clearServerSession } from "@/lib/auth-session";
 import { ApiResponse } from "@/types";
 
 export interface RegisterPayload {
@@ -86,7 +87,7 @@ export const AuthService = {
   },
 
   loginWithCaptcha: async (payload: LoginWithCaptchaPayload) => {
-    const res = await api.post<ApiResponse<LoginResponseData>>(
+    const res = await publicApi.post<ApiResponse<LoginResponseData>>(
       "/auth/login-with-captcha",
       payload,
     );
@@ -94,12 +95,12 @@ export const AuthService = {
   },
 
   register: async (payload: RegisterPayload) => {
-    const res = await api.post<ApiResponse<any>>("/auth/register", payload);
+    const res = await publicApi.post<ApiResponse<any>>("/auth/register", payload);
     return res.data;
   },
 
   login: async (payload: LoginPayload) => {
-    const res = await api.post<ApiResponse<LoginResponseData>>(
+    const res = await publicApi.post<ApiResponse<LoginResponseData>>(
       "/auth/login",
       payload,
     );
@@ -107,7 +108,7 @@ export const AuthService = {
   },
 
   verifyAdminLoginOtp: async (payload: VerifyAdminLoginOtpPayload) => {
-    const res = await api.post<ApiResponse<AuthenticatedLoginResponse>>(
+    const res = await publicApi.post<ApiResponse<AuthenticatedLoginResponse>>(
       "/auth/admin-login/verify-otp",
       payload,
     );
@@ -154,25 +155,19 @@ export const AuthService = {
   },
 
   logout: async () => {
-    const [backendResult, localResult] = await Promise.allSettled([
+    const [backendResult] = await Promise.allSettled([
       api.post<ApiResponse<null>>("/auth/logout"),
-      fetch("/api/auth/logout", {
-        method: "POST",
-        credentials: "same-origin",
-      }),
+      clearServerSession(),
     ]);
-
-    if (
-      localResult.status === "fulfilled" &&
-      localResult.value.ok
-    ) {
-      return (await localResult.value.json()) as ApiResponse<null>;
-    }
 
     if (backendResult.status === "fulfilled") {
       return backendResult.value.data;
     }
 
-    throw backendResult.reason;
+    return {
+      success: true,
+      message: "Logged out locally",
+      data: null,
+    } as ApiResponse<null>;
   },
 };

@@ -20,7 +20,10 @@ interface AuthState {
   user: User | null;
   token: string | null;
   isAuthenticated: boolean;
+  isAuthReady: boolean;
   setAuth: (user: User, token?: string | null) => void;
+  setToken: (token?: string | null) => void;
+  setAuthReady: (value: boolean) => void;
   hydrateUser: (user: User) => void;
   updateUser: (user: Partial<User>) => void;
   clearAuth: () => void;
@@ -30,9 +33,23 @@ export const useAuthStore = create<AuthState>()((set) => ({
   user: null,
   token: null,
   isAuthenticated: false,
+  isAuthReady: false,
 
   setAuth: (user, token = null) => {
-    set({ user, token, isAuthenticated: true });
+    set({ user, token, isAuthenticated: true, isAuthReady: true });
+  },
+
+  setToken: (token = null) => {
+    set((state) => ({
+      user: state.user,
+      token,
+      isAuthenticated: Boolean(state.user || token),
+      isAuthReady: true,
+    }));
+  },
+
+  setAuthReady: (value) => {
+    set({ isAuthReady: value });
   },
 
   hydrateUser: (user) => {
@@ -40,6 +57,7 @@ export const useAuthStore = create<AuthState>()((set) => ({
       user,
       token: state.token,
       isAuthenticated: true,
+      isAuthReady: true,
     }));
   },
 
@@ -50,6 +68,6 @@ export const useAuthStore = create<AuthState>()((set) => ({
   },
 
   clearAuth: () => {
-    set({ user: null, token: null, isAuthenticated: false });
+    set({ user: null, token: null, isAuthenticated: false, isAuthReady: true });
   },
 }));

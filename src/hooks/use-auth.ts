@@ -8,7 +8,7 @@ import {
   LoginResponseData,
 } from "@/services/auth.service";
 import { useAuthStore } from "@/store/auth.store";
-import { setClientAuthCookies } from "@/lib/auth-cookie";
+import { applyClientSession, syncServerSession } from "@/lib/auth-session";
 import {
   clearForcedPasswordResetSession,
   setForcedPasswordResetSession,
@@ -27,22 +27,15 @@ async function completeLogin(
   }
 
   clearForcedPasswordResetSession();
-  setClientAuthCookies({
+  applyClientSession({
     accessToken,
     refreshToken,
     sessionToken: token,
   });
-  await fetch("/api/auth/session", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    credentials: "same-origin",
-    body: JSON.stringify({
-      accessToken,
-      refreshToken,
-      sessionToken: token,
-    }),
+  await syncServerSession({
+    accessToken,
+    refreshToken,
+    sessionToken: token,
   });
 
   setAuth(user, accessToken);

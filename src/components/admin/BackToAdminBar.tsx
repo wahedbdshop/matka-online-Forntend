@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation";
 import { Shield } from "lucide-react";
 import { useEffect, useState } from "react";
 import { ADMIN_BACKUP_SESSION_KEY } from "@/lib/admin-login-as";
-import { setClientAuthCookies } from "@/lib/auth-cookie";
+import { applyClientSession, syncServerSession } from "@/lib/auth-session";
 
 export function BackToAdminBar() {
   const router = useRouter();
@@ -33,7 +33,7 @@ export function BackToAdminBar() {
 
   if (!show || user?.role === "ADMIN") return null;
 
-  const handleBackToAdmin = () => {
+  const handleBackToAdmin = async () => {
     const adminBackupRaw = sessionStorage.getItem(ADMIN_BACKUP_SESSION_KEY);
     if (!adminBackupRaw) return;
 
@@ -44,7 +44,10 @@ export function BackToAdminBar() {
         return;
       }
 
-      setClientAuthCookies({
+      applyClientSession({
+        accessToken: adminBackup.token,
+      });
+      await syncServerSession({
         accessToken: adminBackup.token,
       });
       setAuth(adminBackup.user, adminBackup.token);
