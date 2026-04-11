@@ -5,8 +5,12 @@ import { usePathname } from "next/navigation";
 import { AdminService } from "@/services/admin.service";
 import { UserService } from "@/services/user.service";
 import { useAuthStore } from "@/store/auth.store";
-import { clearClientAuthCookies, hasClientAuthCookie } from "@/lib/auth-cookie";
-import { refreshServerSession } from "@/lib/auth-session";
+import { hasClientAuthCookie } from "@/lib/auth-cookie";
+import {
+  AuthSessionRequestError,
+  refreshServerSession,
+  resetClientSession,
+} from "@/lib/auth-session";
 
 export function AuthBootstrap() {
   const pathname = usePathname();
@@ -31,18 +35,14 @@ export function AuthBootstrap() {
       }
 
       let refreshedAccessToken: string | null = null;
+      let refreshUnauthorized = false;
 
       try {
         const refreshed = await refreshServerSession();
         refreshedAccessToken = refreshed.data.accessToken ?? null;
-      } catch {
-        clearClientAuthCookies();
-
-        if (!cancelled) {
-          setAuthReady(true);
-        }
-
-        return;
+      } catch (error) {
+        refreshUnauthorized =
+          error instanceof AuthSessionRequestError && error.status === 401;
       }
 
       try {
@@ -60,11 +60,19 @@ export function AuthBootstrap() {
           setAuth(profile.data, refreshedAccessToken);
           return;
         }
-      } catch {
-        if (!cancelled) {
-          setAuthReady(true);
+      } catch (error) {
+        const isProfileUnauthorized =
+          typeof error === "object" &&
+          error !== null &&
+          "response" in error &&
+          typeof error.response === "object" &&
+          error.response !== null &&
+          "status" in error.response &&
+          error.response.status === 401;
+
+        if (refreshUnauthorized && isProfileUnauthorized) {
+          await resetClientSession();
         }
-        return;
       }
 
       if (!cancelled) {

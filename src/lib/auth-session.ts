@@ -1,6 +1,9 @@
 import { clearClientAuthCookies, setClientAuthCookies } from "@/lib/auth-cookie";
 import { useAuthStore } from "@/store/auth.store";
 
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL?.replace(/\/+$/, "");
+const REFRESH_ENDPOINT_PATH = "/auth/refresh-token";
+
 export type SessionSyncPayload = {
   accessToken?: string | null;
   refreshToken?: string | null;
@@ -10,6 +13,16 @@ export type SessionSyncPayload = {
 export type RefreshedSessionPayload = SessionSyncPayload & {
   user?: unknown;
 };
+
+export class AuthSessionRequestError extends Error {
+  status: number;
+
+  constructor(message: string, status: number) {
+    super(message);
+    this.name = "AuthSessionRequestError";
+    this.status = status;
+  }
+}
 
 async function parseJsonResponse<T>(response: Response): Promise<T> {
   return (await response.json()) as T;
@@ -33,16 +46,37 @@ export async function syncServerSession(payload: SessionSyncPayload) {
 }
 
 export async function refreshServerSession() {
-  const response = await fetch("/api/auth/refresh", {
+  if (!API_BASE_URL) {
+    throw new Error("NEXT_PUBLIC_API_URL is not configured");
+  }
+
+  const response = await fetch(`${API_BASE_URL}${REFRESH_ENDPOINT_PATH}`, {
     method: "POST",
     credentials: "include",
   });
 
   if (!response.ok) {
-    throw new Error("Failed to refresh auth session");
+    throw new AuthSessionRequestError(
+      "Failed to refresh auth session",
+      response.status,
+    );
   }
 
-  return parseJsonResponse<{ data: RefreshedSessionPayload }>(response);
+  const payload = await parseJsonResponse<{ data: RefreshedSessionPayload }>(
+    response,
+  );
+
+  if (payload.data) {
+    applyClientSession(payload.data);
+
+    try {
+      await syncServerSession(payload.data);
+    } catch {
+      // Keep the freshly refreshed client session even if local cookie mirroring fails.
+    }
+  }
+
+  return payload;
 }
 
 export async function clearServerSession() {

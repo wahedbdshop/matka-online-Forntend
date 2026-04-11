@@ -2,6 +2,7 @@ import axios from "axios";
 import type { InternalAxiosRequestConfig } from "axios";
 import { toast } from "sonner";
 import {
+  AuthSessionRequestError,
   clearServerSession,
   refreshServerSession,
   resetClientSession,
@@ -29,7 +30,12 @@ export const publicApi = axios.create({
   },
 });
 
-let refreshPromise: Promise<string | null> | null = null;
+type RefreshResult = {
+  accessToken: string | null;
+  isUnauthorized: boolean;
+};
+
+let refreshPromise: Promise<RefreshResult> | null = null;
 
 function getLoginPath() {
   if (typeof window === "undefined") {
@@ -46,14 +52,17 @@ async function refreshAccessToken() {
     refreshPromise = refreshServerSession()
       .then((response) => {
         const accessToken = response.data.accessToken ?? null;
-
-        useAuthStore.getState().setToken(accessToken);
-
-        return accessToken;
+        return { accessToken, isUnauthorized: false };
       })
-      .catch(async () => {
-        await resetClientSession();
-        return null;
+      .catch(async (error) => {
+        const isUnauthorized =
+          error instanceof AuthSessionRequestError && error.status === 401;
+
+        if (isUnauthorized) {
+          await resetClientSession();
+        }
+
+        return { accessToken: null, isUnauthorized };
       })
       .finally(() => {
         refreshPromise = null;
@@ -91,9 +100,8 @@ api.interceptors.response.use(
     );
 
     const isUnauthorized = error.response?.status === 401;
-    const isRefreshRequest = requestConfig.url?.includes("/auth/refresh");
-    const isLocalRefreshRequest =
-      requestConfig.url?.includes("/api/auth/refresh");
+    const isRefreshRequest =
+      requestConfig.url?.includes("/auth/refresh-token");
     const isAuthLoginRequest =
       requestConfig.url?.includes("/auth/login") ||
       requestConfig.url?.includes("/auth/login-with-captcha") ||
@@ -103,12 +111,12 @@ api.interceptors.response.use(
       isUnauthorized &&
       !requestConfig._retry &&
       !isRefreshRequest &&
-      !isLocalRefreshRequest &&
       !isAuthLoginRequest
     ) {
       requestConfig._retry = true;
 
-      const accessToken = await refreshAccessToken();
+      const refreshResult = await refreshAccessToken();
+      const accessToken = refreshResult.accessToken;
 
       if (accessToken) {
         requestConfig.headers = requestConfig.headers ?? {};
@@ -116,18 +124,31 @@ api.interceptors.response.use(
 
         return api(requestConfig);
       }
+
+      if (refreshResult.isUnauthorized) {
+        await clearServerSession();
+        useAuthStore.getState().clearAuth();
+
+        if (typeof window !== "undefined") {
+          const loginPath = getLoginPath();
+
+          if (window.location.pathname !== loginPath && !skipAuthRedirect) {
+            window.location.href = loginPath;
+          }
+        }
+      }
+
+      return Promise.reject(error);
     }
 
-    if (isUnauthorized) {
+    if (isUnauthorized && isRefreshRequest) {
       await clearServerSession();
       useAuthStore.getState().clearAuth();
 
       if (typeof window !== "undefined") {
         const loginPath = getLoginPath();
-        if (window.location.pathname !== loginPath) {
-          if (!skipAuthRedirect) {
-            window.location.href = loginPath;
-          }
+        if (window.location.pathname !== loginPath && !skipAuthRedirect) {
+          window.location.href = loginPath;
         }
       }
     }

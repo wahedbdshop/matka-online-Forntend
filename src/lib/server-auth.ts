@@ -22,7 +22,7 @@ export type RefreshedSession = SessionTokens & {
   user?: SessionUser | null;
 };
 
-const REFRESH_PATH_CANDIDATES = ["/auth/refresh-token", "/auth/refresh"];
+const REFRESH_PATH_CANDIDATES = ["/auth/refresh-token"];
 const isProduction = process.env.NODE_ENV === "production";
 
 export const serverAuthCookieOptions = {
@@ -118,10 +118,8 @@ export async function refreshBackendSession(options: {
       const response = await fetch(`${apiUrl}${path}`, {
         method: "POST",
         headers: {
-          "Content-Type": "application/json",
           ...(options.cookieHeader ? { Cookie: options.cookieHeader } : {}),
         },
-        body: JSON.stringify({ refreshToken: options.refreshToken }),
         cache: "no-store",
       });
 
