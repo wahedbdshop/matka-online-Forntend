@@ -3,9 +3,17 @@ import { api } from "@/lib/axios";
 import { ApiResponse } from "@/types";
 
 export const UserService = {
-  getProfile: async (options?: { silent?: boolean }) => {
+  getProfile: async (options?: {
+    silent?: boolean;
+    accessToken?: string | null;
+  }) => {
     const res = await api.get<ApiResponse<any>>("/user/profile", {
       skipAuthRedirect: options?.silent,
+      headers: options?.accessToken
+        ? {
+            Authorization: `Bearer ${options.accessToken}`,
+          }
+        : undefined,
     } as any);
     return res.data;
   },

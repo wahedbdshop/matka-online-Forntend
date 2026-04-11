@@ -27,6 +27,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useAdminAuth } from "@/hooks/use-admin-auth";
 import { AdminService } from "@/services/admin.service";
 import { useAuthStore } from "@/store/auth.store";
 import { cn } from "@/lib/utils";
@@ -160,6 +161,7 @@ function SessionRow({
 
 // ─── Page ─────────────────────────────────────────────────────
 export default function AdminProfilePage() {
+  const { canRunAdminQuery } = useAdminAuth();
   const { user, updateUser } = useAuthStore();
   const queryClient = useQueryClient();
   const fileRef = useRef<HTMLInputElement>(null);
@@ -190,7 +192,8 @@ export default function AdminProfilePage() {
   // Fetch profile from backend (optional — hydrates store)
   const { data: profileData } = useQuery({
     queryKey: ["admin-profile"],
-    queryFn: AdminService.getAdminProfile,
+    queryFn: () => AdminService.getAdminProfile(),
+    enabled: canRunAdminQuery,
     retry: 1,
   });
   useEffect(() => {
@@ -208,6 +211,7 @@ export default function AdminProfilePage() {
   } = useQuery({
     queryKey: ["admin-active-sessions"],
     queryFn: AdminService.getActiveSessions,
+    enabled: canRunAdminQuery,
     retry: 1,
   });
   const sessions: any[] = (sessionsData as any)?.data ?? [];

@@ -1,18 +1,22 @@
 "use client";
 
 import { useEffect } from "react";
+import { usePathname } from "next/navigation";
+import { AdminService } from "@/services/admin.service";
 import { UserService } from "@/services/user.service";
 import { useAuthStore } from "@/store/auth.store";
 import { hasClientAuthCookie } from "@/lib/auth-cookie";
 import { refreshServerSession } from "@/lib/auth-session";
 
 export function AuthBootstrap() {
+  const pathname = usePathname();
   const user = useAuthStore((state) => state.user);
   const isAuthReady = useAuthStore((state) => state.isAuthReady);
-  const hydrateUser = useAuthStore((state) => state.hydrateUser);
+  const setAuth = useAuthStore((state) => state.setAuth);
   const setAuthReady = useAuthStore((state) => state.setAuthReady);
   const hasAuthCookie =
     typeof document !== "undefined" && hasClientAuthCookie();
+  const isAdminRoute = pathname.startsWith("/admin");
 
   useEffect(() => {
     let cancelled = false;
@@ -28,17 +32,28 @@ export function AuthBootstrap() {
         return;
       }
 
+      let refreshedAccessToken: string | null = null;
+
       try {
-        await refreshServerSession();
+        const refreshed = await refreshServerSession();
+        refreshedAccessToken = refreshed.data.accessToken ?? null;
       } catch {
         // If refresh fails, the axios client will handle redirect on the next protected request.
       }
 
       try {
-        const profile = await UserService.getProfile({ silent: true });
+        const profile = isAdminRoute
+          ? await AdminService.getAdminProfile({
+              silent: true,
+              accessToken: refreshedAccessToken,
+            })
+          : await UserService.getProfile({
+              silent: true,
+              accessToken: refreshedAccessToken,
+            });
 
         if (!cancelled && profile.data) {
-          hydrateUser(profile.data);
+          setAuth(profile.data, refreshedAccessToken);
           return;
         }
       } catch {
@@ -60,7 +75,7 @@ export function AuthBootstrap() {
     return () => {
       cancelled = true;
     };
-  }, [hasAuthCookie, hydrateUser, isAuthReady, setAuthReady, user]);
+  }, [hasAuthCookie, isAdminRoute, isAuthReady, pathname, setAuth, setAuthReady, user]);
 
   return null;
 }

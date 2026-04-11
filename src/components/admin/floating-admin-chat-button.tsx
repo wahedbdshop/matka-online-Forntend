@@ -3,15 +3,18 @@
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { Headphones, MessageCircle } from "lucide-react";
+import { useAdminAuth } from "@/hooks/use-admin-auth";
 import { api } from "@/lib/axios";
 
 export function FloatingAdminChatButton() {
+  const { canRunAdminQuery } = useAdminAuth();
   const { data } = useQuery({
     queryKey: ["admin-waiting-chat-sessions"],
     queryFn: async () => {
       const res = await api.get("/chat/agent/waiting");
       return res.data?.data ?? [];
     },
+    enabled: canRunAdminQuery,
     refetchInterval: 10000,
     refetchOnWindowFocus: true,
   });

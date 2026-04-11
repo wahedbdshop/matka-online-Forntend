@@ -22,6 +22,7 @@ import {
   Wifi,
   ShieldAlert,
 } from "lucide-react";
+import { useAdminAuth } from "@/hooks/use-admin-auth";
 import { AdminService } from "@/services/admin.service";
 import { cn } from "@/lib/utils";
 
@@ -238,9 +239,11 @@ function SkeletonCard() {
 }
 
 export default function AdminDashboardPage() {
+  const { canRunAdminQuery } = useAdminAuth();
   const { data, isLoading, refetch, isFetching } = useQuery({
     queryKey: ["admin-dashboard"],
     queryFn: () => AdminService.getDashboardStats(),
+    enabled: canRunAdminQuery,
     refetchInterval: 10_000,
     refetchIntervalInBackground: true,
     refetchOnWindowFocus: true,
@@ -248,6 +251,7 @@ export default function AdminDashboardPage() {
   const { data: smsStatsData, isLoading: smsStatsLoading } = useQuery({
     queryKey: ["sms-webhook-stats"],
     queryFn: () => AdminService.getSmsWebhookStats(),
+    enabled: canRunAdminQuery,
     refetchInterval: 10_000,
     refetchIntervalInBackground: true,
     refetchOnWindowFocus: true,
@@ -255,6 +259,7 @@ export default function AdminDashboardPage() {
   const { data: sessionsData, isLoading: sessionsLoading, refetch: refetchSessions } = useQuery({
     queryKey: ["admin-active-sessions"],
     queryFn: () => AdminService.getActiveSessions(),
+    enabled: canRunAdminQuery,
     refetchInterval: 30_000,
     refetchOnWindowFocus: true,
   });

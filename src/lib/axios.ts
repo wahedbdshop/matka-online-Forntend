@@ -14,7 +14,7 @@ type RequestConfigWithAuth = InternalAxiosRequestConfig & {
 };
 
 export const api = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL,
+  baseURL: process.env.NEXT_PUBLIC_API_URL?.replace(/\/+$/, ""),
   withCredentials: true,
   headers: {
     "Content-Type": "application/json",
@@ -22,7 +22,7 @@ export const api = axios.create({
 });
 
 export const publicApi = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL,
+  baseURL: process.env.NEXT_PUBLIC_API_URL?.replace(/\/+$/, ""),
   withCredentials: true,
   headers: {
     "Content-Type": "application/json",
@@ -65,8 +65,9 @@ async function refreshAccessToken() {
 
 api.interceptors.request.use((config) => {
   const token = useAuthStore.getState().token;
+  const existingAuthorization = config.headers?.Authorization;
 
-  if (token) {
+  if (token && !existingAuthorization) {
     config.headers.Authorization = `Bearer ${token}`;
   }
 
@@ -141,9 +142,9 @@ api.interceptors.response.use(
       error.response?.status === 403 &&
       error.response?.data?.code === "MAX_SESSIONS_REACHED"
     ) {
-      toast.error("সর্বোচ্চ ২টি ডিভাইসে লগইন করা আছে", {
+      toast.error("Maximum 3 devices are already logged in", {
         description:
-          "নতুন ডিভাইসে access পেতে Profile › Sessions থেকে একটি ডিভাইস সরিয়ে দিন।",
+          "To get access on a new device, remove one device from Profile › Sessions.",
         duration: 10000,
         action: {
           label: "Manage Sessions",

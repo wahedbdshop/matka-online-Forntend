@@ -812,8 +812,18 @@ export const AdminService = {
   },
 
   // ─── Admin Profile ─────────────────────────────────────────────────────────
-  getAdminProfile: async () => {
-    const res = await api.get<ApiResponse<any>>("/admin/profile");
+  getAdminProfile: async (options?: {
+    silent?: boolean;
+    accessToken?: string | null;
+  }) => {
+    const res = await api.get<ApiResponse<any>>("/admin/profile", {
+      skipAuthRedirect: options?.silent,
+      headers: options?.accessToken
+        ? {
+            Authorization: `Bearer ${options.accessToken}`,
+          }
+        : undefined,
+    } as any);
     return res.data;
   },
 
