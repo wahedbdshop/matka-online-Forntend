@@ -145,6 +145,42 @@ export const useLoginWithCaptcha = () => {
   });
 };
 
+export const useAdminLoginWithCaptcha = () => {
+  const router = useRouter();
+  const setAuth = useAuthStore((s) => s.setAuth);
+
+  return useMutation({
+    mutationFn: AuthService.loginWithCaptcha,
+    onSuccess: async (data) => {
+      if (isAdminOtpRequiredResponse(data.data)) {
+        return;
+      }
+
+      if (isForcePasswordResetResponse(data.data)) {
+        const { userId, email } = data.data;
+        setForcedPasswordResetSession({ userId, email });
+        router.replace("/force-password-reset");
+        return;
+      }
+
+      const userRole = (data.data as AuthenticatedLoginResponse).user?.role;
+      if (userRole !== "ADMIN" && userRole !== "AGENT") {
+        toast.error("Access denied. This portal is for admins only.");
+        return;
+      }
+
+      const user = await completeLogin(data.data, setAuth);
+      if (!user) return;
+
+      toast.success("Login successful!");
+      router.push("/admin");
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.message || "Login failed");
+    },
+  });
+};
+
 export const useVerifyAdminLoginOtp = () => {
   const router = useRouter();
   const setAuth = useAuthStore((s) => s.setAuth);

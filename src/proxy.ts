@@ -12,6 +12,9 @@ const protectedRoutes = [
   "/admin",
 ];
 
+// These paths under /admin are public (no token required)
+const adminPublicPaths = ["/admin/login"];
+
 type SessionUser = {
   role?: string;
 };
@@ -106,13 +109,20 @@ export async function proxy(request: NextRequest) {
     request.cookies.get("auth_token")?.value;
   const pathname = request.nextUrl.pathname;
 
-  const isProtectedRoute = protectedRoutes.some(
-    (route) => pathname === route || pathname.startsWith(route + "/"),
+  const isAdminPublicPath = adminPublicPaths.some(
+    (p) => pathname === p || pathname.startsWith(p + "/"),
   );
 
+  const isProtectedRoute =
+    !isAdminPublicPath &&
+    protectedRoutes.some(
+      (route) => pathname === route || pathname.startsWith(route + "/"),
+    );
+
   if (!token && isProtectedRoute) {
+    const loginPath = pathname.startsWith("/admin") ? "/admin/login" : "/login";
     return withSecurityHeaders(
-      NextResponse.redirect(new URL("/login", request.url)),
+      NextResponse.redirect(new URL(loginPath, request.url)),
     );
   }
 
@@ -123,7 +133,8 @@ export async function proxy(request: NextRequest) {
   const sessionUser = await getSessionUser(token);
 
   if (!sessionUser) {
-    const response = NextResponse.redirect(new URL("/login", request.url));
+    const loginPath = pathname.startsWith("/admin") ? "/admin/login" : "/login";
+    const response = NextResponse.redirect(new URL(loginPath, request.url));
     response.cookies.delete("accessToken");
     response.cookies.delete("auth_token");
     response.cookies.delete("refreshToken");
@@ -133,21 +144,29 @@ export async function proxy(request: NextRequest) {
     return withSecurityHeaders(response);
   }
 
-  if (pathname.startsWith("/admin") && sessionUser.role !== "ADMIN") {
+  const isAdmin = sessionUser.role === "ADMIN" || sessionUser.role === "AGENT";
+
+  // Non-admin trying to access admin-only paths (excluding admin/login)
+  if (pathname.startsWith("/admin") && !isAdminPublicPath && !isAdmin) {
     return withSecurityHeaders(
       NextResponse.redirect(new URL("/dashboard", request.url)),
     );
   }
 
-  if (pathname === "/login" || pathname === "/register") {
-    const redirectTo = sessionUser.role === "ADMIN" ? "/admin" : "/dashboard";
+  // Already logged-in users sent away from auth pages
+  if (
+    pathname === "/login" ||
+    pathname === "/register" ||
+    pathname === "/admin/login"
+  ) {
+    const redirectTo = isAdmin ? "/admin" : "/dashboard";
     return withSecurityHeaders(
       NextResponse.redirect(new URL(redirectTo, request.url)),
     );
   }
 
   if (pathname === "/") {
-    const redirectTo = sessionUser.role === "ADMIN" ? "/admin" : "/dashboard";
+    const redirectTo = isAdmin ? "/admin" : "/dashboard";
     return withSecurityHeaders(
       NextResponse.redirect(new URL(redirectTo, request.url)),
     );

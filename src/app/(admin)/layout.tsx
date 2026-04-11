@@ -319,7 +319,7 @@ function AdminProfileMenu() {
     mutationFn: AuthService.logout,
     onSettled: () => {
       useAuthStore.getState().clearAuth();
-      router.push("/login");
+      router.push("/admin/login");
     },
   });
   const [open, setOpen] = useState(false);
@@ -636,7 +636,7 @@ function Sidebar({ onClose }: { onClose?: () => void }) {
     mutationFn: AuthService.logout,
     onSettled: () => {
       clearAuth();
-      router.push("/login");
+      router.push("/admin/login");
     },
     onError: (error: any) => {
       toast.error(error?.response?.data?.message || "Failed to log out");

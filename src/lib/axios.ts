@@ -39,11 +39,12 @@ api.interceptors.response.use(
     if (error.response?.status === 401 && !skipAuthRedirect) {
       useAuthStore.getState().clearAuth();
 
-      if (
-        typeof window !== "undefined" &&
-        window.location.pathname !== "/login"
-      ) {
-        window.location.href = "/login";
+      if (typeof window !== "undefined") {
+        const isAdminPath = window.location.pathname.startsWith("/admin");
+        const loginPath = isAdminPath ? "/admin/login" : "/login";
+        if (window.location.pathname !== loginPath) {
+          window.location.href = loginPath;
+        }
       }
     }
 
