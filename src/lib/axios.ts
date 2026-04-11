@@ -50,6 +50,20 @@ api.interceptors.response.use(
 
     if (
       error.response?.status === 403 &&
+      typeof error.response?.data?.message === "string" &&
+      (error.response.data.message as string).toLowerCase().includes("banned")
+    ) {
+      toast.error("Your account is banned. Contact support.");
+      if (typeof window !== "undefined") {
+        if (window.location.pathname !== "/profile") {
+          window.location.href = "/profile";
+        }
+      }
+      return Promise.reject(error);
+    }
+
+    if (
+      error.response?.status === 403 &&
       error.response?.data?.code === "MAX_SESSIONS_REACHED"
     ) {
       toast.error("সর্বোচ্চ ২টি ডিভাইসে লগইন করা আছে", {

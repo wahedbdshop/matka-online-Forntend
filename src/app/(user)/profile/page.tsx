@@ -81,7 +81,9 @@ const menuItems = [
 
 export default function ProfilePage() {
   const clearAuth = useAuthStore((state) => state.clearAuth);
+  const userStatus = useAuthStore((state) => state.user?.status);
   const router = useRouter();
+  const isBanned = userStatus === "BANNED";
   const [currency, setCurrency] = useState<"BDT" | "USD">("BDT");
 
   const { usdToBdt } = useCurrency();
@@ -160,6 +162,11 @@ export default function ProfilePage() {
 
   return (
     <div className="space-y-4 pb-6">
+      {isBanned && (
+        <div className="bg-red-600 text-white text-center py-3 font-semibold rounded-lg">
+          ⛔ Your account has been banned. Please contact support.
+        </div>
+      )}
       {/* Profile Header Card */}
       <div className="relative overflow-hidden rounded-[24px] bg-gradient-to-br from-[#1a0a3e] via-[#2d1060] to-[#1a0a3e] p-5 shadow-[0_0_40px_rgba(139,92,246,0.2)]">
         <div className="pointer-events-none absolute -top-10 -right-10 h-40 w-40 rounded-full bg-purple-600/20 blur-3xl" />

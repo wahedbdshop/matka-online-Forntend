@@ -17,6 +17,7 @@ const adminPublicPaths = ["/admin/login"];
 
 type SessionUser = {
   role?: string;
+  status?: string;
 };
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
@@ -145,6 +146,18 @@ export async function proxy(request: NextRequest) {
   }
 
   const isAdmin = sessionUser.role === "ADMIN" || sessionUser.role === "AGENT";
+
+  // Banned user can only access /profile
+  if (
+    sessionUser.status === "BANNED" &&
+    !isAdmin &&
+    pathname !== "/profile" &&
+    !pathname.startsWith("/profile/")
+  ) {
+    return withSecurityHeaders(
+      NextResponse.redirect(new URL("/profile", request.url)),
+    );
+  }
 
   // Non-admin trying to access admin-only paths (excluding admin/login)
   if (pathname.startsWith("/admin") && !isAdminPublicPath && !isAdmin) {

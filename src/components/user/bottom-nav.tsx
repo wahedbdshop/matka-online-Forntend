@@ -11,6 +11,7 @@ import {
   User,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useAuthStore } from "@/store/auth.store";
 
 const navItems = [
   { href: "/dashboard", icon: LayoutDashboard, label: "Home" },
@@ -23,6 +24,7 @@ const navItems = [
 
 export const BottomNav = () => {
   const pathname = usePathname();
+  const isBanned = useAuthStore((state) => state.user?.status === "BANNED");
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 bg-slate-900 dark:bg-slate-900 light:bg-white border-t border-slate-700 dark:border-slate-700 light:border-slate-200">
@@ -30,15 +32,21 @@ export const BottomNav = () => {
         {navItems.map((item) => {
           const isActive =
             pathname === item.href || pathname.startsWith(item.href + "/");
+          const isProfileItem = item.href === "/profile";
+          const disabled = isBanned && !isProfileItem;
+
           return (
             <Link
               key={item.href}
-              href={item.href}
+              href={disabled ? "#" : item.href}
+              aria-disabled={disabled}
               className={cn(
                 "flex flex-col items-center gap-1 px-3 py-1 rounded-lg transition-colors",
-                isActive
-                  ? "text-purple-500"
-                  : "text-slate-400 hover:text-slate-200",
+                disabled
+                  ? "opacity-50 pointer-events-none cursor-not-allowed"
+                  : isActive
+                    ? "text-purple-500"
+                    : "text-slate-400 hover:text-slate-200",
               )}
             >
               <item.icon className="h-5 w-5" />
