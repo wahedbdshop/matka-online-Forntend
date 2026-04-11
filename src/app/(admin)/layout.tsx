@@ -4,7 +4,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   LayoutDashboard,
   Users,
@@ -53,6 +53,7 @@ import { useAuthStore } from "@/store/auth.store";
 import { cn } from "@/lib/utils";
 import { FloatingAdminChatButton } from "@/components/admin/floating-admin-chat-button";
 import { AuthService } from "@/services/auth.service";
+import { clearClientAuthCookies } from "@/lib/auth-cookie";
 
 // ─── Types ────────────────────────────────────────────────────
 interface NavChild {
@@ -315,9 +316,12 @@ const navItems: NavItem[] = [
 function AdminProfileMenu() {
   const { user } = useAuthStore();
   const router = useRouter();
+  const queryClient = useQueryClient();
   const { mutate: logout, isPending: isLoggingOut } = useMutation({
     mutationFn: AuthService.logout,
     onSettled: () => {
+      clearClientAuthCookies();
+      queryClient.clear();
       useAuthStore.getState().clearAuth();
       router.push("/admin/login");
     },

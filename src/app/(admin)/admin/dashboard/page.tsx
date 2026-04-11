@@ -172,6 +172,26 @@ function normalizeSessionList(source: any): any[] {
   return [];
 }
 
+function pickSessionValue(session: any, paths: string[]) {
+  for (const path of paths) {
+    const value = path.split(".").reduce<any>((acc, key) => acc?.[key], session);
+    if (value !== undefined && value !== null && value !== "") return value;
+  }
+
+  return undefined;
+}
+
+function normalizeBoolean(value: unknown) {
+  if (typeof value === "boolean") return value;
+  if (typeof value === "number") return value === 1;
+  if (typeof value === "string") {
+    const normalized = value.trim().toLowerCase();
+    return normalized === "true" || normalized === "1" || normalized === "current";
+  }
+
+  return false;
+}
+
 function StatCard({
   label,
   value,
@@ -266,7 +286,7 @@ function SkeletonCard() {
 }
 
 export default function AdminDashboardPage() {
-  const { canRunAdminQuery } = useAdminAuth();
+  const { canRunAdminQuery, isAuthReady } = useAdminAuth();
   const { data, isLoading, refetch, isFetching } = useQuery({
     queryKey: ["admin-dashboard"],
     queryFn: () => AdminService.getDashboardStats(),
@@ -741,6 +761,14 @@ export default function AdminDashboardPage() {
     pickMetricFromArray(d?.summary, ["thaiBetsToday", "thaiToday"]),
   );
 
+  if (!isAuthReady) {
+    return <div className="space-y-6" />;
+  }
+
+  if (!canRunAdminQuery) {
+    return null;
+  }
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -1023,12 +1051,70 @@ export default function AdminDashboardPage() {
           </div>
         ) : (
           <div className="space-y-2">
-            {sessions.map((session: any, i: number) => (
+            {sessions.map((session: any, i: number) => {
+              const sessionId =
+                pickSessionValue(session, ["id", "_id", "sessionId", "session_id", "sid"]) ?? i;
+              const isCurrent = normalizeBoolean(
+                pickSessionValue(session, [
+                  "isCurrent",
+                  "is_current",
+                  "current",
+                  "isThisDevice",
+                  "device.isCurrent",
+                ]),
+              );
+              const deviceLabel =
+                pickSessionValue(session, [
+                  "deviceName",
+                  "device.name",
+                  "device.label",
+                  "device.model",
+                  "deviceInfo.deviceName",
+                  "deviceInfo.name",
+                  "browser",
+                  "browserName",
+                  "deviceInfo.browser",
+                  "userAgent",
+                  "user_agent",
+                ]) ?? "Unknown Device";
+              const sessionIp =
+                pickSessionValue(session, [
+                  "ipAddress",
+                  "ip",
+                  "ip_address",
+                  "location.ip",
+                  "device.ipAddress",
+                  "meta.ip",
+                ]) ?? "—";
+              const sessionLocation = [
+                pickSessionValue(session, ["city", "cityName", "location.city", "geo.city"]),
+                pickSessionValue(session, [
+                  "country",
+                  "countryName",
+                  "countryCode",
+                  "location.country",
+                  "location.countryName",
+                  "geo.country",
+                ]),
+              ]
+                .filter(Boolean)
+                .join(", ");
+              const sessionLastActive = pickSessionValue(session, [
+                "lastActive",
+                "lastSeenAt",
+                "last_seen_at",
+                "updatedAt",
+                "updated_at",
+                "createdAt",
+                "created_at",
+              ]);
+
+              return (
               <div
-                key={session.id ?? i}
+                key={sessionId}
                 className={cn(
                   "flex items-center gap-3 rounded-2xl border bg-slate-800/50 px-4 py-3",
-                  session.isCurrent
+                  isCurrent
                     ? "border-purple-500/30"
                     : "border-slate-700/40",
                 )}
@@ -1036,7 +1122,7 @@ export default function AdminDashboardPage() {
                 <div
                   className={cn(
                     "flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border",
-                    session.isCurrent
+                    isCurrent
                       ? "bg-purple-500/10 border-purple-500/30 text-purple-400"
                       : "bg-slate-700/40 border-slate-600/30 text-slate-400",
                   )}
@@ -1046,9 +1132,9 @@ export default function AdminDashboardPage() {
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
                     <p className="text-xs font-semibold text-white truncate">
-                      {session.deviceName ?? session.userAgent ?? "Unknown Device"}
+                      {deviceLabel}
                     </p>
-                    {session.isCurrent && (
+                    {isCurrent && (
                       <span className="shrink-0 rounded-full bg-green-500/15 border border-green-500/30 px-1.5 py-0.5 text-[9px] font-bold text-green-400">
                         CURRENT
                       </span>
@@ -1057,21 +1143,23 @@ export default function AdminDashboardPage() {
                   <div className="flex items-center gap-3 mt-0.5">
                     <span className="flex items-center gap-1 text-[10px] text-slate-500">
                       <Wifi className="h-2.5 w-2.5" />
-                      {session.ipAddress ?? "—"}
+                      {sessionIp === "::1"
+                        ? "127.0.0.1 (localhost)"
+                        : String(sessionIp).startsWith("::ffff:")
+                          ? String(sessionIp).replace("::ffff:", "")
+                          : sessionIp}
                     </span>
-                    {(session.city || session.country) && (
+                    {sessionLocation && (
                       <span className="flex items-center gap-1 text-[10px] text-slate-500">
                         <MapPin className="h-2.5 w-2.5" />
-                        {[session.city, session.country]
-                          .filter(Boolean)
-                          .join(", ")}
+                        {sessionLocation}
                       </span>
                     )}
                   </div>
                 </div>
                 <p className="shrink-0 text-[10px] text-slate-600">
-                  {session.lastActive
-                    ? new Date(session.lastActive).toLocaleString("en-BD", {
+                  {sessionLastActive
+                    ? new Date(sessionLastActive).toLocaleString("en-BD", {
                         month: "short",
                         day: "numeric",
                         hour: "2-digit",
@@ -1080,7 +1168,8 @@ export default function AdminDashboardPage() {
                     : "—"}
                 </p>
               </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </section>

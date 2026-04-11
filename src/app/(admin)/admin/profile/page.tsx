@@ -67,6 +67,26 @@ function normalizeSessionList(source: any): any[] {
   return [];
 }
 
+function pickSessionValue(session: any, paths: string[]) {
+  for (const path of paths) {
+    const value = path.split(".").reduce<any>((acc, key) => acc?.[key], session);
+    if (value !== undefined && value !== null && value !== "") return value;
+  }
+
+  return undefined;
+}
+
+function normalizeBoolean(value: unknown) {
+  if (typeof value === "boolean") return value;
+  if (typeof value === "number") return value === 1;
+  if (typeof value === "string") {
+    const normalized = value.trim().toLowerCase();
+    return normalized === "true" || normalized === "1" || normalized === "current";
+  }
+
+  return false;
+}
+
 // ─── Active Session Row ────────────────────────────────────────
 function SessionRow({
   session,
@@ -81,7 +101,41 @@ function SessionRow({
   onBlockIp: (id: string) => void;
   blockingIp: boolean;
 }) {
-  const rawIp = session.ipAddress ?? session.ip ?? session.ip_address ?? "";
+  const sessionId = String(
+    pickSessionValue(session, ["id", "_id", "sessionId", "session_id", "sid"]) ?? "",
+  );
+  const isCurrent = normalizeBoolean(
+    pickSessionValue(session, [
+      "isCurrent",
+      "is_current",
+      "current",
+      "isThisDevice",
+      "device.isCurrent",
+    ]),
+  );
+  const deviceLabel =
+    pickSessionValue(session, [
+      "deviceName",
+      "device.name",
+      "device.label",
+      "device.model",
+      "deviceInfo.deviceName",
+      "deviceInfo.name",
+      "browser",
+      "browserName",
+      "deviceInfo.browser",
+      "userAgent",
+      "user_agent",
+    ]) ?? "Unknown Device";
+  const rawIp =
+    pickSessionValue(session, [
+      "ipAddress",
+      "ip",
+      "ip_address",
+      "location.ip",
+      "device.ipAddress",
+      "meta.ip",
+    ]) ?? "";
   // ::ffff:x.x.x.x → x.x.x.x, ::1 → 127.0.0.1 (localhost)
   const ip = rawIp === "::1"
     ? "127.0.0.1 (localhost)"
@@ -89,18 +143,34 @@ function SessionRow({
       ? rawIp.replace("::ffff:", "")
       : rawIp || "—";
   const location = [
-    session.city ?? session.cityName,
-    session.region ?? session.regionName,
-    session.country ?? session.countryName ?? session.countryCode,
+    pickSessionValue(session, ["city", "cityName", "location.city", "geo.city"]),
+    pickSessionValue(session, ["region", "regionName", "state", "location.region", "geo.region"]),
+    pickSessionValue(session, [
+      "country",
+      "countryName",
+      "countryCode",
+      "location.country",
+      "location.countryName",
+      "geo.country",
+    ]),
   ]
     .filter(Boolean)
     .join(", ");
+  const lastActive = pickSessionValue(session, [
+    "lastActive",
+    "lastSeenAt",
+    "last_seen_at",
+    "updatedAt",
+    "updated_at",
+    "createdAt",
+    "created_at",
+  ]);
 
   return (
     <div
       className={cn(
         "flex items-center gap-3 rounded-xl border bg-slate-900/60 px-4 py-3",
-        session.isCurrent
+        isCurrent
           ? "border-purple-500/30"
           : "border-slate-700/40",
       )}
@@ -109,7 +179,7 @@ function SessionRow({
       <div
         className={cn(
           "flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border",
-          session.isCurrent
+          isCurrent
             ? "bg-purple-500/10 border-purple-500/30 text-purple-400"
             : "bg-slate-800 border-slate-700/60 text-slate-400",
         )}
@@ -122,9 +192,14 @@ function SessionRow({
         {/* Device name + badge */}
         <div className="flex items-center gap-2 flex-wrap">
           <p className="text-xs font-semibold text-white truncate">
-            {session.deviceName ?? session.browser ?? session.userAgent ?? "Unknown Device"}
+            {deviceLabel}
           </p>
-          {session.isCurrent && (
+          {sessionId && (
+            <span className="shrink-0 rounded-full border border-slate-600/60 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-slate-400">
+              {sessionId}
+            </span>
+          )}
+          {isCurrent && (
             <span className="shrink-0 rounded-full bg-green-500/15 border border-green-500/30 px-2 py-0.5 text-[9px] font-bold text-green-400 uppercase tracking-wide">
               Current
             </span>
@@ -147,9 +222,9 @@ function SessionRow({
           ) : (
             <span className="text-[11px] text-slate-600 italic">Unknown location</span>
           )}
-          {session.lastActive && (
+          {lastActive && (
             <span className="ml-2 text-[10px] text-slate-600">
-              · {new Date(session.lastActive).toLocaleString("en-BD", {
+              · {new Date(lastActive).toLocaleString("en-BD", {
                 month: "short",
                 day: "numeric",
                 hour: "2-digit",
@@ -161,10 +236,10 @@ function SessionRow({
       </div>
 
       {/* Action buttons */}
-      {!session.isCurrent && (
+      {!isCurrent && sessionId && (
         <div className="shrink-0 flex items-center gap-1.5">
           <button
-            onClick={() => onBlockIp(session.id)}
+            onClick={() => onBlockIp(sessionId)}
             disabled={blockingIp}
             title="Block this IP address"
             className="flex items-center gap-1.5 rounded-lg border border-orange-500/20 bg-orange-500/10 px-2.5 py-1.5 text-[11px] font-medium text-orange-400 hover:bg-orange-500/20 hover:border-orange-500/40 transition-all disabled:opacity-40"
@@ -177,7 +252,7 @@ function SessionRow({
             Block IP
           </button>
           <button
-            onClick={() => onRevoke(session.id)}
+            onClick={() => onRevoke(sessionId)}
             disabled={revoking}
             className="flex items-center gap-1.5 rounded-lg border border-red-500/20 bg-red-500/10 px-2.5 py-1.5 text-[11px] font-medium text-red-400 hover:bg-red-500/20 hover:border-red-500/40 transition-all disabled:opacity-40"
           >
@@ -196,7 +271,7 @@ function SessionRow({
 
 // ─── Page ─────────────────────────────────────────────────────
 export default function AdminProfilePage() {
-  const { canRunAdminQuery } = useAdminAuth();
+  const { canRunAdminQuery, isAuthReady } = useAdminAuth();
   const { user, updateUser } = useAuthStore();
   const queryClient = useQueryClient();
   const fileRef = useRef<HTMLInputElement>(null);
@@ -385,7 +460,26 @@ export default function AdminProfilePage() {
     changePassword();
   };
 
-  const otherSessions = sessions.filter((s) => !s.isCurrent);
+  const otherSessions = sessions.filter(
+    (s) =>
+      !normalizeBoolean(
+        pickSessionValue(s, [
+          "isCurrent",
+          "is_current",
+          "current",
+          "isThisDevice",
+          "device.isCurrent",
+        ]),
+      ),
+  );
+
+  if (!isAuthReady) {
+    return <div className="max-w-2xl mx-auto space-y-6" />;
+  }
+
+  if (!canRunAdminQuery) {
+    return null;
+  }
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
