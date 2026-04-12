@@ -2,7 +2,6 @@
 
 import { useEffect } from "react";
 import { usePathname } from "next/navigation";
-import { AdminService } from "@/services/admin.service";
 import { UserService } from "@/services/user.service";
 import { useAuthStore } from "@/store/auth.store";
 import {
@@ -16,6 +15,10 @@ import {
 } from "@/lib/auth-session";
 
 let bootstrapPromise: Promise<void> | null = null;
+
+function isAdminRole(role?: string | null) {
+  return role === "ADMIN" || role === "AGENT";
+}
 
 export function AuthBootstrap() {
   const pathname = usePathname();
@@ -35,6 +38,12 @@ export function AuthBootstrap() {
       });
 
       if (user) {
+        const isAdminUser = isAdminRole(user.role);
+        if (isAdminRoute !== isAdminUser && typeof window !== "undefined") {
+          window.location.replace(isAdminUser ? "/admin" : "/dashboard");
+          return;
+        }
+
         setAuthReady(true);
         return;
       }
@@ -50,18 +59,19 @@ export function AuthBootstrap() {
 
       if (existingAccessToken) {
         try {
-          const profile = isAdminRoute
-            ? await AdminService.getAdminProfile({
-                silent: true,
-                accessToken: existingAccessToken,
-              })
-            : await UserService.getProfile({
-                silent: true,
-                accessToken: existingAccessToken,
-              });
+          const profile = await UserService.getProfile({
+            silent: true,
+            accessToken: existingAccessToken,
+          });
 
           if (profile.data) {
+            const isAdminUser = isAdminRole(profile.data.role);
             setAuth(profile.data, existingAccessToken);
+
+            if (isAdminRoute !== isAdminUser && typeof window !== "undefined") {
+              window.location.replace(isAdminUser ? "/admin" : "/dashboard");
+            }
+
             return;
           }
         } catch {
@@ -81,18 +91,19 @@ export function AuthBootstrap() {
       }
 
       try {
-        const profile = isAdminRoute
-          ? await AdminService.getAdminProfile({
-              silent: true,
-              accessToken: resolvedAccessToken,
-            })
-          : await UserService.getProfile({
-              silent: true,
-              accessToken: resolvedAccessToken,
-            });
+        const profile = await UserService.getProfile({
+          silent: true,
+          accessToken: resolvedAccessToken,
+        });
 
         if (profile.data) {
+          const isAdminUser = isAdminRole(profile.data.role);
           setAuth(profile.data, resolvedAccessToken);
+
+          if (isAdminRoute !== isAdminUser && typeof window !== "undefined") {
+            window.location.replace(isAdminUser ? "/admin" : "/dashboard");
+          }
+
           return;
         }
       } catch (error) {

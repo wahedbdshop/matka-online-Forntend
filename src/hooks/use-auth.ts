@@ -14,6 +14,10 @@ import {
   setForcedPasswordResetSession,
 } from "@/lib/forced-password-reset";
 
+function isAdminRole(role?: string | null) {
+  return role === "ADMIN" || role === "AGENT";
+}
+
 async function completeLogin(
   data: AuthenticatedLoginResponse,
   setAuth: (user: any, token?: string | null) => void,
@@ -84,6 +88,8 @@ export const useLogin = () => {
     mutationFn: AuthService.login,
     onSuccess: async (data) => {
       if (isAdminOtpRequiredResponse(data.data)) {
+        toast.error("Admin accounts must sign in from the admin login page.");
+        router.push("/admin/login");
         return;
       }
 
@@ -94,15 +100,20 @@ export const useLogin = () => {
         return;
       }
 
+      if (
+        isAuthenticatedLoginResponse(data.data) &&
+        isAdminRole(data.data.user?.role)
+      ) {
+        toast.error("Admin accounts must sign in from the admin login page.");
+        router.push("/admin/login");
+        return;
+      }
+
       const user = await completeLogin(data.data, setAuth);
       if (!user) return;
 
       toast.success("Login successful!");
-      if (user.role === "ADMIN" || user.role === "AGENT") {
-        router.push("/admin");
-      } else {
-        router.push("/dashboard");
-      }
+      router.push("/dashboard");
     },
     onError: (error: any) => {
       toast.error(error.response?.data?.message || "Login failed");
@@ -118,6 +129,8 @@ export const useLoginWithCaptcha = () => {
     mutationFn: AuthService.loginWithCaptcha,
     onSuccess: async (data) => {
       if (isAdminOtpRequiredResponse(data.data)) {
+        toast.error("Admin accounts must sign in from the admin login page.");
+        router.push("/admin/login");
         return;
       }
 
@@ -128,15 +141,20 @@ export const useLoginWithCaptcha = () => {
         return;
       }
 
+      if (
+        isAuthenticatedLoginResponse(data.data) &&
+        isAdminRole(data.data.user?.role)
+      ) {
+        toast.error("Admin accounts must sign in from the admin login page.");
+        router.push("/admin/login");
+        return;
+      }
+
       const user = await completeLogin(data.data, setAuth);
       if (!user) return;
 
       toast.success("Login successful!");
-      if (user.role === "ADMIN" || user.role === "AGENT") {
-        router.push("/admin");
-      } else {
-        router.push("/dashboard");
-      }
+      router.push("/dashboard");
     },
     onError: (error: any) => {
       toast.error(error.response?.data?.message || "Login failed");
@@ -173,6 +191,34 @@ export const useAdminLoginWithCaptcha = () => {
   });
 };
 
+export const useAdminLogin = () => {
+  return useMutation({
+    mutationFn: AuthService.login,
+    onSuccess: async (data) => {
+      if (isAdminOtpRequiredResponse(data.data)) {
+        return;
+      }
+
+      if (isForcePasswordResetResponse(data.data)) {
+        return;
+      }
+
+      if (!isAuthenticatedLoginResponse(data.data)) {
+        toast.error("Admin login response is invalid");
+        return;
+      }
+
+      const userRole = data.data.user?.role;
+      if (!isAdminRole(userRole)) {
+        toast.error("Access denied. This portal is for admins only.");
+      }
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.message || "Login failed");
+    },
+  });
+};
+
 export const useVerifyAdminLoginOtp = () => {
   const router = useRouter();
   const setAuth = useAuthStore((s) => s.setAuth);
@@ -182,6 +228,12 @@ export const useVerifyAdminLoginOtp = () => {
     onSuccess: async (data) => {
       const user = await completeLogin(data.data, setAuth);
       if (!user) return;
+
+      if (!isAdminRole(user.role)) {
+        toast.error("Access denied. This portal is for admins only.");
+        router.push("/login");
+        return;
+      }
 
       toast.success("Login successful!");
       router.push("/admin");
@@ -280,7 +332,7 @@ export const useForceChangePassword = () => {
       if (!user) return;
 
       toast.success("Password updated successfully!");
-      if (user.role === "ADMIN" || user.role === "AGENT") {
+      if (isAdminRole(user.role)) {
         router.push("/admin");
       } else {
         router.push("/dashboard");

@@ -23,6 +23,8 @@
 # misc
 .DS_Store
 *.pem
+/matka-online-frontend@0.1.0
+/next
 
 # debug
 npm-debug.log*
