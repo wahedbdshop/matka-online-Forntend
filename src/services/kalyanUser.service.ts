@@ -4,6 +4,7 @@ import { ApiResponse } from "@/types";
 import { useAuthStore } from "@/store/auth.store";
 
 const BASE = "/kalyan";
+const MARKET_LIST_LIMIT = 1000;
 
 const DEFAULT_KALYAN_RATES = [
   { playType: "GAME_TOTAL", rate: 90, status: "ACTIVE" },
@@ -152,7 +153,14 @@ const sortMarketsByOldest = <T extends { createdAt?: string }>(markets: T[]) =>
   [...markets].sort((left, right) => {
     const leftTime = left?.createdAt ? new Date(left.createdAt).getTime() : 0;
     const rightTime = right?.createdAt ? new Date(right.createdAt).getTime() : 0;
-    return leftTime - rightTime;
+
+    if (leftTime !== rightTime) {
+      return leftTime - rightTime;
+    }
+
+    return String((left as { id?: string })?.id ?? "").localeCompare(
+      String((right as { id?: string })?.id ?? ""),
+    );
   });
 
 const normalizeResultText = (value?: string) =>
@@ -246,8 +254,11 @@ const normalizePublishedResults = (items: any[] = []) => {
 
 export const KalyanUserService = {
   // ─── Markets ──────────────────────────────────────────────────────────────
-  getActiveMarkets: async () => {
-    const res = await api.get<ApiResponse<any>>(`${BASE}/markets/public`);
+  getActiveMarkets: async (params?: { limit?: number }) => {
+    const q = new URLSearchParams({
+      limit: String(params?.limit ?? MARKET_LIST_LIMIT),
+    });
+    const res = await api.get<ApiResponse<any>>(`${BASE}/markets/public?${q}`);
     const markets = Array.isArray(res.data?.data)
       ? sortMarketsByOldest(res.data.data.map(normalizeMarket))
       : Array.isArray(res.data?.data?.markets)

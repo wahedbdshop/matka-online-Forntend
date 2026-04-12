@@ -8,7 +8,7 @@ import { Trash2, Search, Gamepad2, AlertCircle } from "lucide-react";
 import { KalyanAdminService } from "@/services/kalyanAdmin.service";
 import { MARKET_STATUS_STYLE } from "@/types/kalyan";
 
-const LIMIT = 20;
+const MARKET_LIST_LIMIT = 1000;
 
 function sortMarketsByOldest<T extends { createdAt?: string; id?: string }>(items: T[]) {
   return [...items].sort((left, right) => {
@@ -34,25 +34,33 @@ export default function KalyanLotteryGamesPage() {
   const [search, setSearch] = useState("");
   const [searchInput, setSearchInput] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
-  const [page, setPage] = useState(1);
   const [deleteTarget, setDeleteTarget] = useState<any>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const { data, isLoading } = useQuery({
-    queryKey: ["kalyan-markets", search, statusFilter, page],
+    queryKey: ["kalyan-markets"],
     queryFn: () =>
       KalyanAdminService.getMarkets({
-        search: search || undefined,
-        status: statusFilter || undefined,
-        page,
-        limit: LIMIT,
+        limit: MARKET_LIST_LIMIT,
       }),
   });
 
-  const markets = useMemo<any[]>(
-    () => sortMarketsByOldest(data?.data?.markets ?? data?.data ?? []),
-    [data],
-  );
+  const markets = useMemo<any[]>(() => {
+    const allMarkets = sortMarketsByOldest(data?.data?.markets ?? data?.data ?? []);
+
+    return allMarkets.filter((market: any) => {
+      const matchesSearch = search
+        ? String(market?.name ?? "")
+            .toLowerCase()
+            .includes(search.toLowerCase())
+        : true;
+      const matchesStatus = statusFilter
+        ? String(market?.status ?? "").toUpperCase() === statusFilter
+        : true;
+
+      return matchesSearch && matchesStatus;
+    });
+  }, [data, search, statusFilter]);
   const timingQueries = useQueries({
     queries: markets.map((market: any) => ({
       queryKey: ["kalyan-timing", market.id],
@@ -70,9 +78,6 @@ export default function KalyanLotteryGamesPage() {
       ),
     [markets, timingQueries],
   );
-  const total: number = data?.data?.total ?? markets.length;
-  const totalPages = Math.max(1, Math.ceil(total / LIMIT));
-
   const [togglingId, setTogglingId] = useState<string | null>(null);
   const { mutate: toggleStatus } = useMutation({
     mutationFn: async ({ market, timing }: { market: any; timing: any | null }) => {
@@ -165,7 +170,6 @@ export default function KalyanLotteryGamesPage() {
             onKeyDown={(event) => {
               if (event.key === "Enter") {
                 setSearch(searchInput);
-                setPage(1);
               }
             }}
             className="w-52 rounded-lg border border-slate-600 bg-slate-800 px-3 py-1.5 text-xs text-white outline-none placeholder:text-slate-500 focus:border-purple-500"
@@ -174,7 +178,6 @@ export default function KalyanLotteryGamesPage() {
             type="button"
             onClick={() => {
               setSearch(searchInput);
-              setPage(1);
             }}
             className="rounded-lg border border-slate-600 bg-slate-700 px-2.5 transition-colors hover:bg-slate-600"
           >
@@ -186,7 +189,6 @@ export default function KalyanLotteryGamesPage() {
           value={statusFilter}
           onChange={(event) => {
             setStatusFilter(event.target.value);
-            setPage(1);
           }}
           className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-1.5 text-xs text-white outline-none"
         >
@@ -229,7 +231,7 @@ export default function KalyanLotteryGamesPage() {
 
                 return (
                 <tr key={market.id} className="border-b border-slate-700/50 transition-colors hover:bg-slate-700/20">
-                  <td className="border-r border-slate-700/40 px-4 py-3 text-center text-xs text-slate-500 last:border-r-0">{(page - 1) * LIMIT + index + 1}</td>
+                  <td className="border-r border-slate-700/40 px-4 py-3 text-center text-xs text-slate-500 last:border-r-0">{index + 1}</td>
                   <td className="border-r border-slate-700/40 px-4 py-3 text-center last:border-r-0">
                     <div className="flex items-center justify-center gap-2">
                       <span className="font-medium text-white">{market.name}</span>
@@ -275,14 +277,6 @@ export default function KalyanLotteryGamesPage() {
           </tbody>
         </table>
       </div>
-
-      {totalPages > 1 ? (
-        <div className="flex items-center justify-between">
-          <button type="button" disabled={page <= 1} onClick={() => setPage((current) => current - 1)} className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-1.5 text-xs text-slate-300 disabled:opacity-40">Prev</button>
-          <p className="text-xs text-slate-500">{page} / {totalPages}</p>
-          <button type="button" disabled={page >= totalPages} onClick={() => setPage((current) => current + 1)} className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-1.5 text-xs text-slate-300 disabled:opacity-40">Next</button>
-        </div>
-      ) : null}
 
       {deleteTarget ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4" onClick={(event) => {

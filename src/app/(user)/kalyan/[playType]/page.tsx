@@ -14,6 +14,8 @@ import { SessionCard } from "@/components/kalyan/user/SessionCard";
 import { ErrorState } from "@/components/kalyan/user/ErrorState";
 import { EmptyState } from "@/components/kalyan/user/EmptyState";
 
+const MARKET_LIST_LIMIT = 1000;
+
 // ─── Flat item shape ──────────────────────────────────────────────────────────
 interface SessionItem {
   key: string;
@@ -72,7 +74,9 @@ export default function MarketSelectionPage() {
     setLoading(true);
     setError(null);
     try {
-      const marketsRes = await KalyanUserService.getActiveMarkets();
+      const marketsRes = await KalyanUserService.getActiveMarkets({
+        limit: MARKET_LIST_LIMIT,
+      });
       const markets: Market[] = sortMarketsByOldest(
         Array.isArray(marketsRes.data)
         ? marketsRes.data

@@ -10,6 +10,8 @@ import { toast } from "sonner";
 import { Clock3, Pencil, Plus, X } from "lucide-react";
 import { KalyanAdminService } from "@/services/kalyanAdmin.service";
 
+const MARKET_LIST_LIMIT = 1000;
+
 const timingSchema = z.object({
   marketId: z.string().min(1, "Game is required"),
   gameName: z.string().min(1, "Game name is required"),
@@ -113,7 +115,7 @@ export default function KalyanGameTimePage() {
 
   const { data: marketsData, isLoading: loadingMarkets } = useQuery({
     queryKey: ["kalyan-markets-all"],
-    queryFn: () => KalyanAdminService.getMarkets({ limit: 100 }),
+    queryFn: () => KalyanAdminService.getMarkets({ limit: MARKET_LIST_LIMIT }),
   });
 
   const markets = useMemo<any[]>(
