@@ -86,6 +86,42 @@ function getErrorMessage(error: unknown, fallback: string) {
   return fallback;
 }
 
+function getErrorStatus(error: unknown) {
+  if (
+    typeof error === "object" &&
+    error !== null &&
+    "response" in error &&
+    typeof error.response === "object" &&
+    error.response !== null &&
+    "status" in error.response &&
+    typeof error.response.status === "number"
+  ) {
+    return error.response.status;
+  }
+
+  return null;
+}
+
+function shouldFallbackToPlainAdminLogin(error: unknown) {
+  const status = getErrorStatus(error);
+  const message = getErrorMessage(error, "").toLowerCase();
+
+  if (status === 404 || status === 405) {
+    return true;
+  }
+
+  if (status === 400) {
+    return (
+      message.includes("captcha") &&
+      (message.includes("not required") ||
+        message.includes("unsupported") ||
+        message.includes("not supported"))
+    );
+  }
+
+  return false;
+}
+
 export default function AdminLoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [captchaId, setCaptchaId] = useState<string>("");
@@ -236,18 +272,7 @@ export default function AdminLoginPage() {
       {
         onSuccess: handleAdminLoginResponse,
         onError: (error: unknown) => {
-          const status =
-            typeof error === "object" &&
-            error !== null &&
-            "response" in error &&
-            typeof error.response === "object" &&
-            error.response !== null &&
-            "status" in error.response &&
-            typeof error.response.status === "number"
-              ? error.response.status
-              : null;
-
-          if (status === 401) {
+          if (shouldFallbackToPlainAdminLogin(error)) {
             login(
               {
                 emailOrUsername: data.identifier.trim(),
