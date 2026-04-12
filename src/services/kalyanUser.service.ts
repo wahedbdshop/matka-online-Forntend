@@ -255,10 +255,39 @@ const normalizePublishedResults = (items: any[] = []) => {
 export const KalyanUserService = {
   // ─── Markets ──────────────────────────────────────────────────────────────
   getActiveMarkets: async (params?: { limit?: number }) => {
-    const q = new URLSearchParams({
-      limit: String(params?.limit ?? MARKET_LIST_LIMIT),
-    });
-    const res = await api.get<ApiResponse<any>>(`${BASE}/markets/public?${q}`);
+    const requestMarkets = async (withLimit: boolean) => {
+      const q = withLimit
+        ? new URLSearchParams({
+            limit: String(params?.limit ?? MARKET_LIST_LIMIT),
+          }).toString()
+        : "";
+
+      const path = q ? `${BASE}/markets/public?${q}` : `${BASE}/markets/public`;
+      return publicApi.get<ApiResponse<any>>(path);
+    };
+
+    let res: Awaited<ReturnType<typeof requestMarkets>>;
+
+    try {
+      res = await requestMarkets(true);
+    } catch (error) {
+      const status =
+        typeof error === "object" &&
+        error !== null &&
+        "response" in error &&
+        typeof error.response === "object" &&
+        error.response !== null &&
+        "status" in error.response
+          ? error.response.status
+          : null;
+
+      if (status !== 400 && status !== 404 && status !== 422) {
+        throw error;
+      }
+
+      res = await requestMarkets(false);
+    }
+
     const markets = Array.isArray(res.data?.data)
       ? sortMarketsByOldest(res.data.data.map(normalizeMarket))
       : Array.isArray(res.data?.data?.markets)
@@ -286,7 +315,7 @@ export const KalyanUserService = {
   },
 
   getMarketTiming: async (marketId: string) => {
-    const res = await api.get<ApiResponse<any>>(
+    const res = await publicApi.get<ApiResponse<any>>(
       `${BASE}/markets/${marketId}/timing/public`,
     );
     return res.data;

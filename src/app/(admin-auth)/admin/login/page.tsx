@@ -61,6 +61,20 @@ const adminOtpSchema = z.object({
 
 type AdminOtpForm = z.infer<typeof adminOtpSchema>;
 
+type AdminLoginResponse =
+  | {
+      requiresAdminOtp?: boolean;
+      pendingToken?: string;
+      email?: string;
+      expiresInSeconds?: number;
+    }
+  | {
+      user?: { role?: string };
+      accessToken?: string;
+      refreshToken?: string;
+      token?: string;
+    };
+
 function maskEmail(email: string) {
   const [localPart = "", domain = ""] = email.split("@");
   if (!localPart || !domain) return email;
@@ -126,6 +140,14 @@ function shouldFallbackToPlainAdminLogin(error: unknown) {
   }
 
   return false;
+}
+
+function hasEstablishedAdminSession(data: AdminLoginResponse) {
+  if (!("user" in data)) {
+    return false;
+  }
+
+  return Boolean(data.accessToken || data.refreshToken || data.token);
 }
 
 export default function AdminLoginPage() {
@@ -210,18 +232,7 @@ export default function AdminLoginPage() {
       password: data.password,
     });
 
-    const handleAdminLoginResponse = (response: {
-      data:
-        | {
-            requiresAdminOtp?: boolean;
-            pendingToken?: string;
-            email?: string;
-            expiresInSeconds?: number;
-          }
-        | {
-            user?: { role?: string };
-          };
-    }) => {
+    const handleAdminLoginResponse = (response: { data: AdminLoginResponse }) => {
       if (
         "requiresAdminOtp" in response.data &&
         response.data.requiresAdminOtp === true
@@ -232,6 +243,10 @@ export default function AdminLoginPage() {
           expiresInSeconds: response.data.expiresInSeconds ?? 0,
         });
         otpForm.reset({ otp: "" });
+        return;
+      }
+
+      if (hasEstablishedAdminSession(response.data)) {
         return;
       }
 

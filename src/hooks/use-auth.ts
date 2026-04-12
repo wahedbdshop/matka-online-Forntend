@@ -165,6 +165,9 @@ export const useLoginWithCaptcha = () => {
 };
 
 export const useAdminLoginWithCaptcha = () => {
+  const router = useRouter();
+  const setAuth = useAuthStore((s) => s.setAuth);
+
   return useMutation({
     mutationFn: AuthService.loginWithCaptcha,
     onSuccess: async (data) => {
@@ -173,6 +176,9 @@ export const useAdminLoginWithCaptcha = () => {
       }
 
       if (isForcePasswordResetResponse(data.data)) {
+        const { userId, email } = data.data;
+        setForcedPasswordResetSession({ userId, email });
+        router.replace("/force-password-reset");
         return;
       }
 
@@ -186,6 +192,12 @@ export const useAdminLoginWithCaptcha = () => {
         toast.error("Access denied. This portal is for admins only.");
         return;
       }
+
+      const user = await completeLogin(data.data, setAuth);
+      if (!user) return;
+
+      toast.success("Login successful!");
+      router.push("/admin");
     },
     onError: (error: any) => {
       toast.error(error.response?.data?.message || "Login failed");
@@ -194,6 +206,9 @@ export const useAdminLoginWithCaptcha = () => {
 };
 
 export const useAdminLogin = () => {
+  const router = useRouter();
+  const setAuth = useAuthStore((s) => s.setAuth);
+
   return useMutation({
     mutationFn: AuthService.login,
     onSuccess: async (data) => {
@@ -202,6 +217,9 @@ export const useAdminLogin = () => {
       }
 
       if (isForcePasswordResetResponse(data.data)) {
+        const { userId, email } = data.data;
+        setForcedPasswordResetSession({ userId, email });
+        router.replace("/force-password-reset");
         return;
       }
 
@@ -213,7 +231,14 @@ export const useAdminLogin = () => {
       const userRole = data.data.user?.role;
       if (!isAdminRole(userRole)) {
         toast.error("Access denied. This portal is for admins only.");
+        return;
       }
+
+      const user = await completeLogin(data.data, setAuth);
+      if (!user) return;
+
+      toast.success("Login successful!");
+      router.push("/admin");
     },
     onError: (error: any) => {
       toast.error(error.response?.data?.message || "Login failed");

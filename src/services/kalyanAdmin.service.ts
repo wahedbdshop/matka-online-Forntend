@@ -8,8 +8,6 @@ import {
 } from "@/types/kalyan";
 
 const BASE = "/kalyan";
-const MARKET_LIST_LIMIT = 1000;
-
 const DEFAULT_KALYAN_RATES = [
   { playType: "GAME_TOTAL", rate: 90, status: "ACTIVE" },
   { playType: "SINGLE_PATTI", rate: 140, status: "ACTIVE" },
@@ -183,16 +181,16 @@ const normalizeMarketListResponse = (response: ApiResponse<any>) => {
   return response;
 };
 
+
 export const KalyanAdminService = {
   // ─── Markets ───────────────────────────────────────────────────────────────
   getMarkets: async (params?: MarketFilterParams) => {
     const q = new URLSearchParams({
-      page: String(params?.page || 1),
-      limit: String(params?.limit || MARKET_LIST_LIMIT),
       ...(params?.search ? { search: params.search } : {}),
       ...(params?.status ? { status: params.status } : {}),
-    });
-    const res = await api.get<ApiResponse<any>>(`${BASE}/markets?${q}`);
+    }).toString();
+    const path = q ? `${BASE}/markets?${q}` : `${BASE}/markets`;
+    const res = await api.get<ApiResponse<any>>(path);
     return normalizeMarketListResponse(res.data);
   },
 
