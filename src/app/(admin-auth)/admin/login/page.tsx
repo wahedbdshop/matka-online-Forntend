@@ -12,9 +12,12 @@ import {
   Loader2,
   UserCircle2,
   Lock,
+  RefreshCw,
+  ShieldCheck,
   ArrowLeft,
   Mail,
 } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -33,15 +36,21 @@ import {
   CardDescription,
 } from "@/components/ui/card";
 import {
+  useAdminLoginWithCaptcha,
   useAdminLogin,
   useResendAdminLoginOtp,
   useVerifyAdminLoginOtp,
 } from "@/hooks/use-auth";
+import { AuthService } from "@/services/auth.service";
 import { getForcedPasswordResetSession } from "@/lib/forced-password-reset";
 
 const loginSchema = z.object({
   identifier: z.string().min(1, "Email or username is required").trim(),
   password: z.string().min(6, "Password must be at least 6 characters"),
+  captchaCode: z
+    .string()
+    .length(4, "Enter the 4-character code shown above")
+    .toUpperCase(),
 });
 
 type LoginForm = z.infer<typeof loginSchema>;
@@ -79,6 +88,7 @@ function getErrorMessage(error: unknown, fallback: string) {
 
 export default function AdminLoginPage() {
   const [showPassword, setShowPassword] = useState(false);
+  const [captchaId, setCaptchaId] = useState<string>("");
   const [pendingAdminOtp, setPendingAdminOtp] = useState<{
     pendingToken: string;
     email: string;
@@ -91,16 +101,43 @@ export default function AdminLoginPage() {
   const [otpErrorMessage, setOtpErrorMessage] = useState<string | null>(null);
   const [showExpiredCta, setShowExpiredCta] = useState(false);
 
+  const {
+    data: captchaData,
+    refetch: refetchCaptcha,
+    isFetching: isCaptchaLoading,
+    isError: isCaptchaError,
+    error: captchaError,
+  } = useQuery({
+    queryKey: ["admin-login-captcha"],
+    queryFn: async () => {
+      const res = await AuthService.getCaptcha();
+      setCaptchaId(res.data.captchaId);
+      return res.data;
+    },
+    staleTime: Infinity,
+    retry: false,
+  });
+
+  const captchaErrorMessage =
+    captchaError instanceof Error ? captchaError.message : "Unknown";
+
   const form = useForm<LoginForm>({
     resolver: zodResolver(loginSchema),
-    defaultValues: { identifier: "", password: "" },
+    defaultValues: { identifier: "", password: "", captchaCode: "" },
   });
   const otpForm = useForm<AdminOtpForm>({
     resolver: zodResolver(adminOtpSchema),
     defaultValues: { otp: "" },
   });
 
-  const { mutate: login, isPending } = useAdminLogin();
+  const handleRefreshCaptcha = useCallback(async () => {
+    form.resetField("captchaCode");
+    await refetchCaptcha();
+  }, [refetchCaptcha, form]);
+
+  const { mutate: loginWithCaptcha, isPending: isCaptchaLoginPending } =
+    useAdminLoginWithCaptcha();
+  const { mutate: login, isPending: isLoginPending } = useAdminLogin();
   const { mutate: resendAdminOtp, isPending: isResendingAdminOtp } =
     useResendAdminLoginOtp();
   const { mutate: verifyAdminOtp, isPending: isOtpPending } =
@@ -119,7 +156,8 @@ export default function AdminLoginPage() {
     setOtpErrorMessage(null);
     setShowExpiredCta(false);
     otpForm.reset();
-  }, [otpForm]);
+    handleRefreshCaptcha();
+  }, [handleRefreshCaptcha, otpForm]);
 
   const onSubmit = (data: LoginForm) => {
     setOtpErrorMessage(null);
@@ -129,58 +167,101 @@ export default function AdminLoginPage() {
       password: data.password,
     });
 
-    login(
+    const handleAdminLoginResponse = (response: {
+      data:
+        | {
+            requiresAdminOtp?: boolean;
+            pendingToken?: string;
+            email?: string;
+            expiresInSeconds?: number;
+          }
+        | {
+            user?: { role?: string };
+          };
+    }) => {
+      if (
+        "requiresAdminOtp" in response.data &&
+        response.data.requiresAdminOtp === true
+      ) {
+        setPendingAdminOtp({
+          pendingToken: response.data.pendingToken ?? "",
+          email: response.data.email ?? "",
+          expiresInSeconds: response.data.expiresInSeconds ?? 0,
+        });
+        otpForm.reset({ otp: "" });
+        return;
+      }
+
+      if (
+        "user" in response.data &&
+        (response.data.user?.role === "ADMIN" ||
+          response.data.user?.role === "AGENT")
+      ) {
+        resendAdminOtp(
+          {
+            emailOrUsername: data.identifier.trim(),
+            password: data.password,
+          },
+          {
+            onSuccess: (otpResponse) => {
+              if (
+                "requiresAdminOtp" in otpResponse.data &&
+                otpResponse.data.requiresAdminOtp === true
+              ) {
+                setPendingAdminOtp({
+                  pendingToken: otpResponse.data.pendingToken,
+                  email: otpResponse.data.email,
+                  expiresInSeconds: otpResponse.data.expiresInSeconds,
+                });
+                otpForm.reset({ otp: "" });
+                return;
+              }
+
+              setOtpErrorMessage(
+                "Admin OTP is not enabled in backend response yet.",
+              );
+            },
+          },
+        );
+      }
+    };
+
+    loginWithCaptcha(
       {
-        emailOrUsername: data.identifier.trim(),
+        identifier: data.identifier.trim(),
         password: data.password,
+        captchaId,
+        captchaCode: data.captchaCode.toUpperCase(),
       },
       {
-        onSuccess: (response) => {
-          if (
-            "requiresAdminOtp" in response.data &&
-            response.data.requiresAdminOtp === true
-          ) {
-            setPendingAdminOtp({
-              pendingToken: response.data.pendingToken,
-              email: response.data.email,
-              expiresInSeconds: response.data.expiresInSeconds,
-            });
-            otpForm.reset({ otp: "" });
-            return;
-          }
+        onSuccess: handleAdminLoginResponse,
+        onError: (error: unknown) => {
+          const status =
+            typeof error === "object" &&
+            error !== null &&
+            "response" in error &&
+            typeof error.response === "object" &&
+            error.response !== null &&
+            "status" in error.response &&
+            typeof error.response.status === "number"
+              ? error.response.status
+              : null;
 
-          if (
-            "user" in response.data &&
-            (response.data.user?.role === "ADMIN" ||
-              response.data.user?.role === "AGENT")
-          ) {
-            resendAdminOtp(
+          if (status === 401) {
+            login(
               {
                 emailOrUsername: data.identifier.trim(),
                 password: data.password,
               },
               {
-                onSuccess: (otpResponse) => {
-                  if (
-                    "requiresAdminOtp" in otpResponse.data &&
-                    otpResponse.data.requiresAdminOtp === true
-                  ) {
-                    setPendingAdminOtp({
-                      pendingToken: otpResponse.data.pendingToken,
-                      email: otpResponse.data.email,
-                      expiresInSeconds: otpResponse.data.expiresInSeconds,
-                    });
-                    otpForm.reset({ otp: "" });
-                    return;
-                  }
-
-                  setOtpErrorMessage(
-                    "Admin OTP is not enabled in backend response yet.",
-                  );
-                },
+                onSuccess: handleAdminLoginResponse,
+                onError: () => handleRefreshCaptcha(),
               },
             );
+            return;
           }
+
+          handleRefreshCaptcha();
         },
       },
     );
@@ -442,12 +523,78 @@ export default function AdminLoginPage() {
                 )}
               />
 
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="flex items-center gap-1.5 text-sm font-medium text-slate-300">
+                    <ShieldCheck className="h-4 w-4 text-purple-400" />
+                    Validation Code
+                  </span>
+                  <button
+                    type="button"
+                    onClick={handleRefreshCaptcha}
+                    disabled={isCaptchaLoading}
+                    className="inline-flex items-center gap-1 text-xs text-purple-400 transition-colors hover:text-purple-300 disabled:opacity-50"
+                    aria-label="Refresh captcha"
+                  >
+                    <RefreshCw
+                      className={`h-3.5 w-3.5 ${isCaptchaLoading ? "animate-spin" : ""}`}
+                    />
+                    Refresh
+                  </button>
+                </div>
+
+                <div className="flex min-h-[52px] items-center justify-center rounded-lg border border-slate-600/60 bg-slate-900/60 px-4 py-3">
+                  {isCaptchaLoading ? (
+                    <Loader2 className="h-5 w-5 animate-spin text-slate-400" />
+                  ) : captchaData?.captchaSvg ? (
+                    <div
+                      className="select-none"
+                      dangerouslySetInnerHTML={{ __html: captchaData.captchaSvg }}
+                    />
+                  ) : (
+                    <span className="text-center text-xs leading-snug text-red-400">
+                      {isCaptchaError
+                        ? `Error: ${captchaErrorMessage} - click Refresh`
+                        : "Click Refresh to load"}
+                    </span>
+                  )}
+                </div>
+
+                <FormField
+                  control={form.control}
+                  name="captchaCode"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormControl>
+                        <Input
+                          {...field}
+                          type="text"
+                          maxLength={4}
+                          placeholder="Type the code above"
+                          autoComplete="off"
+                          onChange={(e) =>
+                            field.onChange(e.target.value.toUpperCase())
+                          }
+                          className="border-slate-600 bg-slate-700/50 text-center font-mono tracking-widest text-white uppercase placeholder:text-slate-500"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
               <Button
                 type="submit"
-                disabled={isPending}
+                disabled={
+                  isCaptchaLoginPending ||
+                  isLoginPending ||
+                  isCaptchaLoading ||
+                  !captchaId
+                }
                 className="w-full bg-purple-600 hover:bg-purple-700"
               >
-                {isPending ? (
+                {isCaptchaLoginPending || isLoginPending ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     Logging in...

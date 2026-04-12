@@ -56,7 +56,9 @@ function isAdminOtpRequiredResponse(
 function isForcePasswordResetResponse(
   data: LoginResponseData,
 ): data is Extract<LoginResponseData, { requiresPasswordChange: true }> {
-  return "requiresPasswordChange" in data && data.requiresPasswordChange === true;
+  return (
+    "requiresPasswordChange" in data && data.requiresPasswordChange === true
+  );
 }
 
 function isAuthenticatedLoginResponse(
@@ -226,14 +228,15 @@ export const useVerifyAdminLoginOtp = () => {
   return useMutation({
     mutationFn: AuthService.verifyAdminLoginOtp,
     onSuccess: async (data) => {
-      const user = await completeLogin(data.data, setAuth);
-      if (!user) return;
-
-      if (!isAdminRole(user.role)) {
+      const responseUser = data.data.user;
+      if (!isAdminRole(responseUser?.role)) {
         toast.error("Access denied. This portal is for admins only.");
         router.push("/login");
         return;
       }
+
+      const user = await completeLogin(data.data, setAuth);
+      if (!user) return;
 
       toast.success("Login successful!");
       router.push("/admin");
