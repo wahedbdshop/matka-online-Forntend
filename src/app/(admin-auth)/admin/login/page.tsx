@@ -150,7 +150,8 @@ export default function AdminLoginPage() {
       setCaptchaId(res.data.captchaId);
       return res.data;
     },
-    staleTime: Infinity,
+    staleTime: 0,
+    refetchOnMount: "always",
     retry: false,
   });
 
