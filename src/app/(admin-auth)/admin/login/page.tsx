@@ -110,6 +110,12 @@ function shouldFallbackToPlainAdminLogin(error: unknown) {
     return true;
   }
 
+  // Some backend deployments still reject admin auth on the captcha endpoint
+  // with a 401, while the legacy admin login + OTP flow remains valid.
+  if (status === 401) {
+    return true;
+  }
+
   if (status === 400) {
     return (
       message.includes("captcha") &&
