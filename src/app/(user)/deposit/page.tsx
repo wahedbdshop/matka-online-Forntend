@@ -538,6 +538,9 @@ export default function DepositPage() {
     queryFn: () => DepositService.getMyDeposits(1, 20),
   });
   const deposits = historyData?.data?.deposits ?? [];
+  const hasPendingDeposit = deposits.some(
+    (d: any) => d.status === "PENDING",
+  );
 
   // ── Bonus preview (debounced) ─────────────────────────────────────────────
   useEffect(() => {
@@ -1202,10 +1205,18 @@ export default function DepositPage() {
                         className="w-full rounded-xl border border-slate-600 bg-slate-700/50 px-4 py-3 text-white text-sm outline-none focus:border-purple-500 placeholder:text-slate-500"
                       />
                     </div>
+                    {hasPendingDeposit && (
+                      <div className="flex items-center gap-2 rounded-xl border border-yellow-500/30 bg-yellow-500/10 px-3 py-2.5">
+                        <Clock className="h-3.5 w-3.5 text-yellow-400 shrink-0" />
+                        <p className="text-yellow-400 text-xs font-medium">
+                          আপনার একটি ডিপোজিট রিকোয়েস্ট ইতিমধ্যে পেন্ডিং আছে। অনুমোদনের পর নতুন ডিপোজিট করুন।
+                        </p>
+                      </div>
+                    )}
                     <button
                       onClick={handleSubmit}
-                      disabled={isPending}
-                      className="w-full py-3 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-sm font-semibold disabled:opacity-50 transition-all hover:scale-[1.01] active:scale-[0.99] flex items-center justify-center gap-2"
+                      disabled={isPending || hasPendingDeposit}
+                      className="w-full py-3 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed transition-all hover:scale-[1.01] active:scale-[0.99] flex items-center justify-center gap-2"
                     >
                       {isPending ? (
                         <>

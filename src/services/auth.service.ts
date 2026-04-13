@@ -104,6 +104,14 @@ export const AuthService = {
     return res.data;
   },
 
+  adminLoginWithCaptcha: async (payload: LoginWithCaptchaPayload) => {
+    const res = await publicApi.post<ApiResponse<LoginResponseData>>(
+      "/auth/admin-login-with-captcha",
+      payload,
+    );
+    return res.data;
+  },
+
   register: async (payload: RegisterPayload) => {
     const res = await publicApi.post<ApiResponse<any>>("/auth/register", payload);
     return res.data;

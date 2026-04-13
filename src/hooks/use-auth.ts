@@ -169,7 +169,7 @@ export const useAdminLoginWithCaptcha = () => {
   const setAuth = useAuthStore((s) => s.setAuth);
 
   return useMutation({
-    mutationFn: AuthService.loginWithCaptcha,
+    mutationFn: AuthService.adminLoginWithCaptcha,
     onSuccess: async (data) => {
       if (isAdminOtpRequiredResponse(data.data)) {
         return;
