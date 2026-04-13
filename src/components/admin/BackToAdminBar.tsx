@@ -3,14 +3,12 @@
 "use client";
 
 import { useAuthStore } from "@/store/auth.store";
-import { useRouter } from "next/navigation";
 import { Shield } from "lucide-react";
 import { useEffect, useState } from "react";
 import { ADMIN_BACKUP_SESSION_KEY } from "@/lib/admin-login-as";
 import { applyClientSession, syncServerSession } from "@/lib/auth-session";
 
 export function BackToAdminBar() {
-  const router = useRouter();
   const { setAuth, user } = useAuthStore();
   const [show, setShow] = useState(false);
 
@@ -53,10 +51,10 @@ export function BackToAdminBar() {
       setAuth(adminBackup.user, adminBackup.token);
       sessionStorage.removeItem(ADMIN_BACKUP_SESSION_KEY);
 
-      setTimeout(() => router.push("/admin/dashboard"), 300);
+      window.location.replace("/admin/dashboard");
     } catch {
       sessionStorage.removeItem(ADMIN_BACKUP_SESSION_KEY);
-      router.push("/login");
+      window.location.replace("/login");
     }
   };
 

@@ -21,6 +21,7 @@ import {
   CheckCircle,
   X,
 } from "lucide-react";
+import { ResetUserPasswordAction } from "@/components/admin/reset-user-password-action";
 import { AdminService } from "@/services/admin.service";
 import { useAuthStore } from "@/store/auth.store";
 import { ADMIN_LOGIN_AS_CHANNEL_PREFIX } from "@/lib/admin-login-as";
@@ -130,34 +131,45 @@ export default function UserDetailPage({
   });
 
   const { mutate: loginAsUser, isPending: loggingIn } = useMutation({
-    mutationFn: () => AdminService.loginAsUser(id),
-    onSuccess: (res) => {
+    mutationFn: ({
+      popup,
+      flowId,
+    }: {
+      popup: Window | null;
+      flowId: string;
+    }) =>
+      AdminService.loginAsUser(id).then((res) => ({
+        res,
+        popup,
+        flowId,
+      })),
+    onSuccess: ({ res, popup, flowId }) => {
       const token = res.data.token;
       const userData = res.data.user;
 
       if (!token || !userData || !adminToken || adminUser?.role !== "ADMIN") {
+        popup?.close();
         toast.error("Could not prepare a secure admin session handoff");
         return;
       }
 
-      const flowId = crypto.randomUUID();
       const channel = new BroadcastChannel(
         `${ADMIN_LOGIN_AS_CHANNEL_PREFIX}:${flowId}`,
       );
-      const impersonationWindow = window.open(
-        `/admin-login-as?flow=${encodeURIComponent(flowId)}`,
-        "_blank",
-        "noopener",
-      );
 
-      if (!impersonationWindow) {
+      if (!popup || popup.closed) {
         channel.close();
         toast.error("Pop-up blocked. Please allow pop-ups and try again.");
         return;
       }
 
+      popup.location.href = `/admin-login-as?flow=${encodeURIComponent(flowId)}`;
+
       const timeout = window.setTimeout(() => {
         channel.close();
+        if (!popup.closed && popup.location.pathname === "/blank") {
+          popup.close();
+        }
       }, 15_000);
 
       channel.onmessage = (event: MessageEvent<{ type?: string }>) => {
@@ -181,8 +193,37 @@ export default function UserDetailPage({
         toast.success("Opening the user account in a new tab...");
       };
     },
-    onError: (e: any) => toast.error(e?.response?.data?.message || "Failed"),
+    onError: (e: any, variables) => {
+      variables.popup?.close();
+      toast.error(e?.response?.data?.message || "Failed");
+    },
   });
+
+  const handleLoginAsUser = () => {
+    const flowId = crypto.randomUUID();
+    const popup = window.open("", "_blank");
+
+    if (!popup) {
+      toast.error("Pop-up blocked. Please allow pop-ups and try again.");
+      return;
+    }
+
+    popup.document.write(`
+      <html>
+        <head><title>Logging in...</title></head>
+        <body style="margin:0;background:#050b1f;color:#cbd5e1;font-family:sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;">
+          <div style="text-align:center;">
+            <div style="width:32px;height:32px;border:2px solid rgba(168,85,247,.35);border-top-color:#a855f7;border-radius:9999px;animation:spin 1s linear infinite;margin:0 auto 12px;"></div>
+            <p style="margin:0;font-size:14px;">Preparing secure login...</p>
+          </div>
+          <style>@keyframes spin { to { transform: rotate(360deg); } }</style>
+        </body>
+      </html>
+    `);
+    popup.document.close();
+
+    loginAsUser({ popup, flowId });
+  };
 
   if (isLoading) {
     return (
@@ -272,7 +313,7 @@ export default function UserDetailPage({
       label: "Login as User",
       color: "bg-blue-600 hover:bg-blue-700",
       icon: LogIn,
-      onClick: () => loginAsUser(),
+      onClick: handleLoginAsUser,
       loading: loggingIn,
     },
     {
@@ -292,6 +333,17 @@ export default function UserDetailPage({
       color: "bg-cyan-700 hover:bg-cyan-800",
       icon: LogIn,
       onClick: () => router.push(`/admin/users/${id}/login-history`),
+    },
+    {
+      label: "Change Password",
+      render: () => (
+        <ResetUserPasswordAction
+          userId={id}
+          userName={user.name}
+          buttonLabel="Change Password"
+          buttonClassName="flex items-center gap-2 rounded-lg bg-amber-500/15 px-4 py-2 text-xs font-semibold text-amber-300 ring-1 ring-inset ring-amber-500/30 transition-colors hover:bg-amber-500/25"
+        />
+      ),
     },
     {
       label: "KYC Data",
@@ -389,6 +441,10 @@ export default function UserDetailPage({
       {/* ── Action Buttons ── */}
       <div className="flex flex-wrap gap-2">
         {actionBtns.map((btn) => {
+          if ((btn as any).render) {
+            return <div key={btn.label}>{(btn as any).render()}</div>;
+          }
+
           const Icon = btn.icon;
           return (
             <button
@@ -397,7 +453,7 @@ export default function UserDetailPage({
               disabled={(btn as any).loading}
               className={`flex items-center gap-2 rounded-lg px-4 py-2 text-xs font-semibold text-white transition-colors disabled:opacity-60 ${btn.color}`}
             >
-              <Icon className="h-3.5 w-3.5" />
+              {Icon ? <Icon className="h-3.5 w-3.5" /> : null}
               {btn.label}
             </button>
           );

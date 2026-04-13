@@ -54,13 +54,21 @@ function resolveCategoryLabel(entry: EntrySlip, item?: EntryItem) {
 function getDisplayStatus(entry: EntrySlip, item?: EntryItem) {
   const itemMeta = item as (EntryItem & { status?: string; gameStatus?: string }) | undefined;
 
-  return String(
+  const resolved = String(
     itemMeta?.gameStatus ??
       itemMeta?.status ??
       entry.gameStatus ??
       (entry as EntrySlip & { status?: string }).status ??
       "ACTIVE",
   ).toUpperCase();
+
+  // Game session closed but result not yet published → keep ACTIVE
+  // When result IS published, gameStatus becomes undefined and status = WON/LOST
+  if (resolved === "CLOSE") {
+    return "ACTIVE";
+  }
+
+  return resolved;
 }
 
 export default function BetHistoryPage() {
@@ -126,7 +134,7 @@ export default function BetHistoryPage() {
       entry.market?.name ||
       `Market #${entry.marketId.slice(-6)}`;
     const sessionLabel =
-      entry.sessionType === "CLOSE" ? " (Close)" : entry.sessionType === "OPEN" ? " (Open)" : "";
+      entry.sessionType === "CLOSE" ? " Close" : entry.sessionType === "OPEN" ? " Open" : "";
     const gameName = `${baseGameName}${sessionLabel}`;
 
     if (items.length === 0) {

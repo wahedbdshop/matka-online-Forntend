@@ -8,6 +8,7 @@ const EXTRA_STYLES: Record<string, string> = {
   ACTIVE: "bg-green-500/15 text-green-400 border-green-500/30",
   INACTIVE: "bg-slate-500/15 text-slate-300 border-slate-500/30",
   PUBLISHED: "bg-green-500/15 text-green-400 border-green-500/30",
+  WAITING: "bg-amber-500/15 text-amber-400 border-amber-500/30",
   PENDING: "bg-yellow-500/15 text-yellow-400 border-yellow-500/30",
   CANCELLED: "bg-slate-500/15 text-slate-300 border-slate-500/30",
   WON: "bg-emerald-500/15 text-emerald-400 border-emerald-500/30",

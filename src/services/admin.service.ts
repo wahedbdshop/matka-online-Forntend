@@ -143,6 +143,14 @@ export const AdminService = {
     return res.data;
   },
 
+  resetUserPassword: async (userId: string, newPassword: string) => {
+    const res = await api.patch<ApiResponse<any>>(
+      `/admin/users/${userId}/reset-password`,
+      { newPassword },
+    );
+    return res.data;
+  },
+
   toggleUserTransfer: async (userId: string, canTransfer: boolean) => {
     const res = await api.patch<ApiResponse<any>>(
       `/admin/users/${userId}/toggle-transfer`,
