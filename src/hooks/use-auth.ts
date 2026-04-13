@@ -13,6 +13,7 @@ import {
   clearForcedPasswordResetSession,
   setForcedPasswordResetSession,
 } from "@/lib/forced-password-reset";
+import { markLoginPopupPending } from "@/lib/login-popup";
 
 function isAdminRole(role?: string | null) {
   return role === "ADMIN" || role === "AGENT";
@@ -114,6 +115,7 @@ export const useLogin = () => {
       const user = await completeLogin(data.data, setAuth);
       if (!user) return;
 
+      markLoginPopupPending();
       toast.success("Login successful!");
       router.push("/dashboard");
     },
@@ -155,6 +157,7 @@ export const useLoginWithCaptcha = () => {
       const user = await completeLogin(data.data, setAuth);
       if (!user) return;
 
+      markLoginPopupPending();
       toast.success("Login successful!");
       router.push("/dashboard");
     },
@@ -363,6 +366,7 @@ export const useForceChangePassword = () => {
       if (isAdminRole(user.role)) {
         router.push("/admin");
       } else {
+        markLoginPopupPending();
         router.push("/dashboard");
       }
     },

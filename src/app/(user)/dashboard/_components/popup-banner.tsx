@@ -3,14 +3,19 @@
 "use client";
 import { useState } from "react";
 import Link from "next/link";
+import { consumePendingLoginPopup } from "@/lib/login-popup";
 
 export function PopupBanner({ popup }: { popup: any }) {
   const [show, setShow] = useState<boolean>(() => {
     if (!popup) return false;
     if (typeof window === "undefined") return false;
+
+    const shouldForceShow = consumePendingLoginPopup();
     const key = `popup_seen_${popup.id}`;
-    if (sessionStorage.getItem(key)) return false;
+
+    if (sessionStorage.getItem(key) && !shouldForceShow) return false;
     sessionStorage.setItem(key, "1");
+
     return true;
   });
 
