@@ -254,13 +254,12 @@ const normalizePublishedResults = (items: any[] = []) => {
 
 export const KalyanUserService = {
   // ─── Markets ──────────────────────────────────────────────────────────────
-  getActiveMarkets: async (params?: { limit?: number }) => {
+  getActiveMarkets: async (params?: { limit?: number; includeInactive?: boolean }) => {
     const requestMarkets = async (withLimit: boolean) => {
-      const q = withLimit
-        ? new URLSearchParams({
-            limit: String(params?.limit ?? MARKET_LIST_LIMIT),
-          }).toString()
-        : "";
+      const queryParams: Record<string, string> = {};
+      if (withLimit) queryParams.limit = String(params?.limit ?? MARKET_LIST_LIMIT);
+      if (params?.includeInactive) queryParams.status = "all";
+      const q = new URLSearchParams(queryParams).toString();
 
       const path = q ? `${BASE}/markets/public?${q}` : `${BASE}/markets/public`;
       return publicApi.get<ApiResponse<any>>(path);

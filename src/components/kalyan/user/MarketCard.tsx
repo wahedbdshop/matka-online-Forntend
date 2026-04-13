@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Clock, PlayCircle, TimerOff } from "lucide-react";
+import { CircleSlash, Clock, PlayCircle, TimerOff } from "lucide-react";
 import { KalyanUserService } from "@/services/kalyanUser.service";
 import { Market, MarketTiming } from "@/types/kalyan";
 
@@ -62,10 +62,14 @@ export function MarketCard({ market, playTypeSlug }: MarketCardProps) {
     timing?: MarketTiming;
     sessionType: "OPEN" | "CLOSE";
   }) => {
+    const isDayOff =
+      market.status === "INACTIVE" || timing?.status === "INACTIVE";
+
     const active =
+      !isDayOff &&
       timing?.status === "ACTIVE" &&
-      timing?.openTime &&
-      timing?.closeTime &&
+      !!timing?.openTime &&
+      !!timing?.closeTime &&
       isWithinWindow(timing.openTime, timing.closeTime);
 
     return (
@@ -91,6 +95,11 @@ export function MarketCard({ market, playTypeSlug }: MarketCardProps) {
             <PlayCircle className="h-3 w-3" />
             Play Now
           </button>
+        ) : isDayOff ? (
+          <span className="flex items-center gap-1 rounded-lg border border-red-500/40 bg-red-500/20 px-3 py-1.5 text-[11px] font-semibold text-red-200 cursor-not-allowed">
+            <CircleSlash className="h-3 w-3" />
+            Day Off
+          </span>
         ) : (
           <span className="flex items-center gap-1 rounded-lg bg-slate-700/60 border border-slate-600/40 px-3 py-1.5 text-[11px] font-semibold text-slate-500 cursor-not-allowed">
             <TimerOff className="h-3 w-3" />

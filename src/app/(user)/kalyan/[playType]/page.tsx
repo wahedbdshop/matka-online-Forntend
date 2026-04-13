@@ -76,6 +76,7 @@ export default function MarketSelectionPage() {
     try {
       const marketsRes = await KalyanUserService.getActiveMarkets({
         limit: MARKET_LIST_LIMIT,
+        includeInactive: true,
       });
       const markets: Market[] = sortMarketsByOldest(
         Array.isArray(marketsRes.data)

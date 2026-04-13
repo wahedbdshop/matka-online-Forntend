@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
-import { Loader2, SendHorizonal } from "lucide-react";
+import { Loader2, SendHorizonal, TimerOff } from "lucide-react";
 import { KalyanUserService } from "@/services/kalyanUser.service";
 import {
   GAME_TOTAL_NUMBERS,
@@ -101,6 +101,9 @@ export default function GamePlayPage() {
   const { register, watch, handleSubmit, reset } = useForm<Record<string, string>>();
   const values = watch();
   const [submitting, setSubmitting] = useState(false);
+  const [closeTime, setCloseTime] = useState<string | null>(null);
+  const [isTimeOver, setIsTimeOver] = useState(false);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
     let mounted = true;
@@ -158,6 +161,47 @@ export default function GamePlayPage() {
     };
   }, [playTypeEnum]);
 
+  // ── Fetch timing for this session and track time expiry ─────────────────
+  useEffect(() => {
+    let mounted = true;
+
+    KalyanUserService.getMarketTiming(marketId)
+      .then((res) => {
+        if (!mounted) return;
+        const timings = Array.isArray(res.data) ? res.data : res.data ? [res.data] : [];
+        const timing = timings.find((t: { sessionType: string }) => t.sessionType === sessionType);
+        if (timing?.closeTime) {
+          setCloseTime(timing.closeTime);
+        }
+      })
+      .catch(() => {/* silently ignore — no timing available */});
+
+    return () => { mounted = false; };
+  }, [marketId, sessionType]);
+
+  const checkTimeOver = useCallback(() => {
+    if (!closeTime) return;
+    const now = new Date();
+    const nowMin = now.getHours() * 60 + now.getMinutes();
+    const [h, m] = closeTime.split(":").map(Number);
+    const closeMin = h * 60 + m;
+    if (nowMin >= closeMin) {
+      setIsTimeOver(true);
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
+    }
+  }, [closeTime]);
+
+  useEffect(() => {
+    checkTimeOver();
+    intervalRef.current = setInterval(checkTimeOver, 1000);
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    };
+  }, [checkTimeOver]);
+
   const headerSubtitle = useMemo(() => {
     const normalizedTitle = toTitleCase(marketTitle || "Game");
     const sessionLabel = sessionType === "CLOSE" ? "Close" : "Open";
@@ -178,6 +222,19 @@ export default function GamePlayPage() {
   const payableAmount = Number((total - discountAmount).toFixed(2));
 
   const onSubmit = async (data: Record<string, string>) => {
+    // Re-validate time before every submission
+    if (isTimeOver || (() => {
+      if (!closeTime) return false;
+      const now = new Date();
+      const nowMin = now.getHours() * 60 + now.getMinutes();
+      const [h, m] = closeTime.split(":").map(Number);
+      return nowMin >= h * 60 + m;
+    })()) {
+      toast.error("Time is over! You cannot place this bet.");
+      router.push("/kalyan");
+      return;
+    }
+
     if (!playTypeEnum) {
       toast.error("Invalid play type selected.");
       return;
@@ -356,23 +413,30 @@ export default function GamePlayPage() {
           discountAmount={discountAmount}
           payableAmount={payableAmount}
         />
-        <button
-          type="submit"
-          disabled={submitting || total === 0}
-          className="mt-2 flex w-full items-center justify-center gap-2 rounded-2xl bg-purple-600 py-2.5 text-sm font-bold text-white transition-colors hover:bg-purple-700 disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          {submitting ? (
-            <>
-              <Loader2 className="h-4 w-4 animate-spin" />
-              Placing Bet...
-            </>
-          ) : (
-            <>
-              <SendHorizonal className="h-4 w-4" />
-              Submit Bet - Rs. {payableAmount.toLocaleString("en-IN")}
-            </>
-          )}
-        </button>
+        {isTimeOver ? (
+          <div className="mt-2 flex w-full cursor-not-allowed items-center justify-center gap-2 rounded-2xl border border-red-500/40 bg-red-500/20 py-2.5 text-sm font-bold text-red-200">
+            <TimerOff className="h-4 w-4" />
+            Time Over — Betting Closed
+          </div>
+        ) : (
+          <button
+            type="submit"
+            disabled={submitting || total === 0}
+            className="mt-2 flex w-full items-center justify-center gap-2 rounded-2xl bg-purple-600 py-2.5 text-sm font-bold text-white transition-colors hover:bg-purple-700 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {submitting ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Placing Bet...
+              </>
+            ) : (
+              <>
+                <SendHorizonal className="h-4 w-4" />
+                Submit Bet - Rs. {payableAmount.toLocaleString("en-IN")}
+              </>
+            )}
+          </button>
+        )}
       </div>
     </form>
   );
