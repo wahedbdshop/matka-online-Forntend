@@ -1,11 +1,11 @@
 "use client";
 
-import { Suspense } from "react";
+import { Suspense, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useSearchParams } from "next/navigation";
-import { Loader2, Lock } from "lucide-react";
+import { Eye, EyeOff, Loader2, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -42,6 +42,8 @@ function ResetPasswordContent() {
   const searchParams = useSearchParams();
   const email = searchParams.get("email") || "";
   const { mutate: resetPassword, isPending } = useResetPassword();
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const form = useForm<ResetForm>({
     resolver: zodResolver(resetSchema),
@@ -99,10 +101,18 @@ function ResetPasswordContent() {
                       <Lock className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
                       <Input
                         {...field}
-                        type="password"
+                        type={showNewPassword ? "text" : "password"}
                         placeholder="••••••••"
-                        className="pl-10 bg-slate-700/50 border-slate-600 text-white placeholder:text-slate-500"
+                        className="pl-10 pr-10 bg-slate-700/50 border-slate-600 text-white placeholder:text-slate-500"
                       />
+                      <button
+                        type="button"
+                        onClick={() => setShowNewPassword((v) => !v)}
+                        className="absolute right-3 top-2.5 text-slate-400 transition-colors hover:text-white"
+                        aria-label={showNewPassword ? "Hide password" : "Show password"}
+                      >
+                        {showNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </button>
                     </div>
                   </FormControl>
                   <FormMessage />
@@ -123,10 +133,18 @@ function ResetPasswordContent() {
                       <Lock className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
                       <Input
                         {...field}
-                        type="password"
+                        type={showConfirmPassword ? "text" : "password"}
                         placeholder="••••••••"
-                        className="pl-10 bg-slate-700/50 border-slate-600 text-white placeholder:text-slate-500"
+                        className="pl-10 pr-10 bg-slate-700/50 border-slate-600 text-white placeholder:text-slate-500"
                       />
+                      <button
+                        type="button"
+                        onClick={() => setShowConfirmPassword((v) => !v)}
+                        className="absolute right-3 top-2.5 text-slate-400 transition-colors hover:text-white"
+                        aria-label={showConfirmPassword ? "Hide password" : "Show password"}
+                      >
+                        {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </button>
                     </div>
                   </FormControl>
                   <FormMessage />

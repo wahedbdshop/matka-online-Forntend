@@ -136,16 +136,16 @@ export default function RegisterPage() {
     <Card className="border-slate-700 bg-slate-800/50 backdrop-blur">
       {/* Header */}
       <CardHeader className="px-4 pt-2 pb-2 text-center space-y-0">
-        <div className="flex justify-start mb-1">
-          <button
-            type="button"
-            onClick={() => router.push(hasClientAuthCookie() ? "/dashboard" : "/")}
-            className="inline-flex items-center gap-1 text-sm text-slate-400 hover:text-white transition-colors"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Back
-          </button>
-        </div>
+        <button
+          type="button"
+          onClick={() =>
+            router.push(hasClientAuthCookie() ? "/dashboard" : "/")
+          }
+          className="w-full flex justify-start items-center gap-1 text-sm text-slate-400 hover:text-white transition-colors mb-2 group py-1"
+        >
+          <ArrowLeft className="h-4 w-4 transition-transform group-hover:-translate-x-1" />
+          <span>Back</span>
+        </button>
         <div className="flex justify-center -mt-6 -mb-5">
           <div className="h-20 w-20 sm:h-24 sm:w-24 overflow-hidden drop-shadow-[0_0_12px_rgba(168,85,247,0.5)]">
             <Image
@@ -158,7 +158,9 @@ export default function RegisterPage() {
             />
           </div>
         </div>
-        <CardTitle className="text-lg sm:text-2xl text-white">Create account</CardTitle>
+        <CardTitle className="text-lg sm:text-2xl text-white">
+          Create account
+        </CardTitle>
         <p className="text-xs text-slate-400">Join Matka Online 24 today</p>
       </CardHeader>
 
@@ -173,7 +175,9 @@ export default function RegisterPage() {
                 name="name"
                 render={({ field }) => (
                   <FormItem className="space-y-1">
-                    <FormLabel className="text-slate-300 text-xs">Full Name</FormLabel>
+                    <FormLabel className="text-slate-300 text-xs">
+                      Full Name
+                    </FormLabel>
                     <FormControl>
                       <div className="relative">
                         <User className="absolute left-2.5 top-2 h-3.5 w-3.5 text-slate-400" />
@@ -194,7 +198,9 @@ export default function RegisterPage() {
                 name="username"
                 render={({ field }) => (
                   <FormItem className="space-y-1">
-                    <FormLabel className="text-slate-300 text-xs">Username</FormLabel>
+                    <FormLabel className="text-slate-300 text-xs">
+                      Username
+                    </FormLabel>
                     <FormControl>
                       <div className="relative">
                         <AtSign className="absolute left-2.5 top-2 h-3.5 w-3.5 text-slate-400" />
@@ -217,7 +223,9 @@ export default function RegisterPage() {
               name="email"
               render={({ field }) => (
                 <FormItem className="space-y-1">
-                  <FormLabel className="text-slate-300 text-xs">Email</FormLabel>
+                  <FormLabel className="text-slate-300 text-xs">
+                    Email
+                  </FormLabel>
                   <FormControl>
                     <div className="relative">
                       <Mail className="absolute left-2.5 top-2 h-3.5 w-3.5 text-slate-400" />
@@ -240,16 +248,23 @@ export default function RegisterPage() {
               name="country"
               render={({ field }) => (
                 <FormItem className="space-y-1">
-                  <FormLabel className="text-slate-300 text-xs">Country</FormLabel>
+                  <FormLabel className="text-slate-300 text-xs">
+                    Country
+                  </FormLabel>
                   <Select
                     value={field.value}
                     onValueChange={field.onChange}
-                    onOpenChange={(open) => { if (!open) setCountrySearch(""); }}
+                    onOpenChange={(open) => {
+                      if (!open) setCountrySearch("");
+                    }}
                   >
                     <FormControl>
                       <SelectTrigger className="h-8 w-full text-xs bg-slate-700/50 border-slate-600 text-white pl-8 relative">
                         <Globe className="absolute left-2.5 top-2 h-3.5 w-3.5 text-slate-400 pointer-events-none" />
-                        <SelectValue placeholder="Select country" className="text-slate-500" />
+                        <SelectValue
+                          placeholder="Select country"
+                          className="text-slate-500"
+                        />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent className="bg-slate-800 border-slate-600 text-white">
@@ -292,7 +307,9 @@ export default function RegisterPage() {
               name="phone"
               render={({ field }) => (
                 <FormItem className="space-y-1">
-                  <FormLabel className="text-slate-300 text-xs">Phone Number</FormLabel>
+                  <FormLabel className="text-slate-300 text-xs">
+                    Phone Number
+                  </FormLabel>
                   <FormControl>
                     <div className="relative">
                       <Phone className="absolute left-2.5 top-2 h-3.5 w-3.5 text-slate-400" />
@@ -315,7 +332,9 @@ export default function RegisterPage() {
                 name="password"
                 render={({ field }) => (
                   <FormItem className="space-y-1">
-                    <FormLabel className="text-slate-300 text-xs">Password</FormLabel>
+                    <FormLabel className="text-slate-300 text-xs">
+                      Password
+                    </FormLabel>
                     <FormControl>
                       <div className="relative">
                         <Lock className="absolute left-2.5 top-2 h-3.5 w-3.5 text-slate-400" />
@@ -329,9 +348,15 @@ export default function RegisterPage() {
                           type="button"
                           onClick={() => setShowPassword((v) => !v)}
                           className="absolute right-2.5 top-2 text-slate-400 hover:text-white"
-                          aria-label={showPassword ? "Hide password" : "Show password"}
+                          aria-label={
+                            showPassword ? "Hide password" : "Show password"
+                          }
                         >
-                          {showPassword ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                          {showPassword ? (
+                            <EyeOff className="h-3.5 w-3.5" />
+                          ) : (
+                            <Eye className="h-3.5 w-3.5" />
+                          )}
                         </button>
                       </div>
                     </FormControl>
@@ -345,7 +370,9 @@ export default function RegisterPage() {
                 name="confirmPassword"
                 render={({ field }) => (
                   <FormItem className="space-y-1">
-                    <FormLabel className="text-slate-300 text-xs">Confirm</FormLabel>
+                    <FormLabel className="text-slate-300 text-xs">
+                      Confirm
+                    </FormLabel>
                     <FormControl>
                       <div className="relative">
                         <Lock className="absolute left-2.5 top-2 h-3.5 w-3.5 text-slate-400" />
@@ -361,7 +388,11 @@ export default function RegisterPage() {
                           className="absolute right-2.5 top-2 text-slate-400 hover:text-white"
                           aria-label={showConfirmPassword ? "Hide" : "Show"}
                         >
-                          {showConfirmPassword ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                          {showConfirmPassword ? (
+                            <EyeOff className="h-3.5 w-3.5" />
+                          ) : (
+                            <Eye className="h-3.5 w-3.5" />
+                          )}
                         </button>
                       </div>
                     </FormControl>
@@ -379,7 +410,9 @@ export default function RegisterPage() {
                 <FormItem className="space-y-1">
                   <FormLabel className="text-slate-300 text-xs">
                     Referral Code{" "}
-                    <span className="text-slate-500 font-normal">(optional)</span>
+                    <span className="text-slate-500 font-normal">
+                      (optional)
+                    </span>
                   </FormLabel>
                   <FormControl>
                     <div className="relative">
@@ -388,7 +421,9 @@ export default function RegisterPage() {
                         {...field}
                         placeholder="Friend's referral code"
                         className="h-8 pl-8 text-xs bg-slate-700/50 border-slate-600 text-white placeholder:text-slate-500"
-                        onChange={(e) => field.onChange(e.target.value.toLowerCase())}
+                        onChange={(e) =>
+                          field.onChange(e.target.value.toLowerCase())
+                        }
                       />
                     </div>
                   </FormControl>
