@@ -7,7 +7,7 @@ export interface Market {
   sessionType?: "OPEN" | "CLOSE";
   openTime?: string;
   closeTime?: string;
-  status: "ACTIVE" | "INACTIVE";
+  status: "ACTIVE" | "INACTIVE" | "CANCELLED";
   createdAt: string;
   updatedAt: string;
 }
@@ -45,6 +45,8 @@ export interface KalyanGroupedResult {
   openTime?: string;
   closeTime?: string;
   resultDate: string;
+  createdAt?: string;
+  updatedAt?: string;
   openPatti?: string | null;
   openTotal?: string | number | null;
   closePatti?: string | null;
@@ -75,7 +77,8 @@ export type BetResultStatus =
   | "WON"
   | "LOST"
   | "CANCELLED"
-  | "REMOVED";
+  | "REMOVED"
+  | "REVERSED";
 
 export interface EntryItem {
   id: string;
@@ -185,11 +188,12 @@ export const RESULT_STATUS_STYLE: Record<string, string> = {
 
 export const ENTRY_STATUS_STYLE: Record<string, string> = {
   ACTIVE: "bg-green-500/15 text-green-400 border-green-500/30",
-  CLOSE: "bg-red-500/15 text-red-400 border-red-500/30",
-  CANCEL: "bg-rose-500/15 text-rose-400 border-rose-500/30",
+  CLOSE: "bg-slate-700/50 text-slate-400 border-slate-600/40",
+  CANCEL: "bg-rose-500/20 text-rose-400 border-rose-500/40",
   PENDING: "bg-yellow-500/15 text-yellow-400 border-yellow-500/30",
   WON: "bg-green-500/15 text-green-400 border-green-500/30",
   LOST: "bg-red-500/15 text-red-400 border-red-500/30",
-  CANCELLED: "bg-slate-500/15 text-slate-300 border-slate-500/30",
-  REMOVED: "bg-rose-500/15 text-rose-400 border-rose-500/30",
+  CANCELLED: "bg-rose-500/20 text-rose-400 border-rose-500/40",
+  REMOVED: "bg-rose-500/20 text-rose-400 border-rose-500/40",
+  REVERSED: "bg-amber-500/15 text-amber-400 border-amber-500/30",
 };

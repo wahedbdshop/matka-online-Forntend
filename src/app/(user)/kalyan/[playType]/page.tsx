@@ -23,7 +23,7 @@ interface SessionItem {
   title: string;
   sessionType: "OPEN" | "CLOSE";
   timing?: MarketTiming;
-  marketStatus?: "ACTIVE" | "INACTIVE";
+  marketStatus?: "ACTIVE" | "INACTIVE" | "CANCELLED";
 }
 
 function sortMarketsByOldest<T extends { createdAt?: string; id?: string }>(items: T[]) {

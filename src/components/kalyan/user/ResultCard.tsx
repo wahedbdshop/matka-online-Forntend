@@ -6,14 +6,24 @@ interface ResultCardProps {
 
 const CARD_THEME = {
   shell:
-    "bg-[#231706] hover:border-amber-400/45 hover:shadow-[0_18px_38px_rgba(251,191,36,0.16)]",
-  glow: "bg-amber-400/8",
-  rim: "bg-amber-300/55",
-  side: "bg-amber-400/10 group-hover:border-amber-300/45",
-  title: "text-amber-100 group-hover:text-white",
-  chip: "border-amber-300/22 bg-amber-400/10 text-amber-50",
-  done: "text-amber-300 drop-shadow-[0_0_20px_rgba(252,211,77,0.28)]",
-  partial: "text-orange-300 drop-shadow-[0_0_20px_rgba(253,186,116,0.22)]",
+    "bg-[radial-gradient(circle_at_top_left,rgba(236,72,153,0.24),transparent_34%),radial-gradient(circle_at_top_right,rgba(59,130,246,0.22),transparent_32%),linear-gradient(135deg,#1b1038_0%,#0c1738_52%,#101f4e_100%)] hover:-translate-y-0.5 hover:shadow-[0_18px_44px_rgba(56,189,248,0.24)]",
+  border:
+    "bg-[linear-gradient(90deg,rgba(255,95,109,0.96)_0%,rgba(217,70,239,0.92)_32%,rgba(96,165,250,0.96)_68%,rgba(34,211,238,0.96)_100%)]",
+  glowLeft: "bg-pink-500/45",
+  glowRight: "bg-cyan-400/45",
+  title: "text-white drop-shadow-[0_0_14px_rgba(255,255,255,0.18)]",
+  chip:
+    "border border-white/15 bg-[linear-gradient(90deg,rgba(251,146,60,0.98)_0%,rgba(244,63,94,0.95)_45%,rgba(217,70,239,0.95)_100%)] text-white shadow-[0_0_18px_rgba(244,114,182,0.35)]",
+  date: "text-cyan-300 drop-shadow-[0_0_12px_rgba(34,211,238,0.24)]",
+  resultShell:
+    "border border-cyan-400/35 bg-[linear-gradient(90deg,rgba(124,58,237,0.20)_0%,rgba(30,41,59,0.18)_100%)] shadow-[inset_0_1px_0_rgba(255,255,255,0.06),0_0_26px_rgba(59,130,246,0.12)]",
+  done: "text-white drop-shadow-[0_0_18px_rgba(255,255,255,0.26)]",
+  partial: "text-amber-200 drop-shadow-[0_0_16px_rgba(251,191,36,0.26)]",
+  sideLeft:
+    "border border-pink-400/45 bg-[linear-gradient(90deg,rgba(236,72,153,0.9)_0%,rgba(192,38,211,0.68)_100%)] text-white shadow-[0_0_20px_rgba(236,72,153,0.28)]",
+  sideRight:
+    "border border-cyan-400/40 bg-[linear-gradient(90deg,rgba(67,56,202,0.9)_0%,rgba(14,165,233,0.58)_100%)] text-white shadow-[0_0_20px_rgba(34,211,238,0.22)]",
+  divider: "bg-white/14",
 };
 
 function formatCardDate(value?: string) {
@@ -99,36 +109,38 @@ export function ResultCard({ result }: ResultCardProps) {
 
   return (
     <div
-      className={`group relative w-full max-w-md overflow-hidden rounded-[1.1rem] border border-white/8 text-center shadow-[0_10px_22px_rgba(15,23,42,0.2)] transition-all duration-300 hover:-translate-y-0.5 sm:max-w-lg sm:rounded-[1.25rem] ${theme.shell}`}
+      className={`group relative w-full max-w-md overflow-hidden rounded-[1.1rem] p-[1.5px] text-center transition-all duration-300 sm:max-w-lg sm:rounded-[1.25rem] ${theme.border}`}
     >
-      <div className={`pointer-events-none absolute inset-x-0 top-0 h-[2px] ${theme.rim}`} />
-      <div className={`pointer-events-none absolute inset-x-0 top-0 h-10 opacity-60 blur-xl ${theme.glow}`} />
-      <div className="relative px-2.5 py-2.5 sm:px-3 sm:py-3">
+      <div className="pointer-events-none absolute -left-6 top-4 h-20 w-20 rounded-full blur-3xl sm:h-24 sm:w-24">
+        <div className={`h-full w-full rounded-full ${theme.glowLeft}`} />
+      </div>
+      <div className="pointer-events-none absolute -right-6 bottom-4 h-20 w-20 rounded-full blur-3xl sm:h-24 sm:w-24">
+        <div className={`h-full w-full rounded-full ${theme.glowRight}`} />
+      </div>
+
+      <div
+        className={`relative overflow-hidden rounded-[calc(1.1rem-1.5px)] px-2.5 py-2.5 sm:rounded-[calc(1.25rem-1.5px)] sm:px-3 sm:py-3 ${theme.shell}`}
+      >
         <div className="mb-2 flex items-center justify-between gap-2">
-          <div className={`inline-flex rounded-full border px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-[0.14em] ${theme.chip}`}>
+          <div className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-[0.14em] sm:text-[10px] ${theme.chip}`}>
+            <span className="inline-block h-1.5 w-1.5 rounded-full bg-white shadow-[0_0_10px_rgba(255,255,255,0.9)]" />
             {statusText}
           </div>
           {dateText ? (
-            <p className="text-[9px] font-semibold uppercase tracking-[0.12em] text-slate-300/90 sm:text-[10px]">
+            <p className={`text-[9px] font-semibold uppercase tracking-[0.12em] sm:text-[10px] ${theme.date}`}>
               {dateText}
             </p>
           ) : null}
         </div>
 
         <p
-          className={`text-center text-[0.74rem] font-black uppercase italic tracking-[0.04em] transition-colors duration-300 sm:text-[0.82rem] ${theme.title}`}
+          className={`px-2 text-center text-[0.78rem] font-black uppercase tracking-[0.04em] transition-colors duration-300 sm:text-[0.94rem] ${theme.title}`}
         >
           {result.title}
         </p>
 
-        <div className="mt-2.5 grid grid-cols-[46px_1fr_46px] items-center gap-1.5 sm:mt-3 sm:grid-cols-[56px_1fr_56px] sm:gap-2">
-          <div
-            className={`flex h-8 items-center justify-center rounded-lg border border-white/10 px-1 text-[8px] font-bold uppercase tracking-[0.08em] text-slate-100/90 transition-all duration-300 sm:h-9 sm:rounded-xl sm:text-[9px] ${theme.side}`}
-          >
-            Jori
-          </div>
-
-          <div className="min-w-0 rounded-[0.95rem] border border-white/8 bg-black/12 px-2 py-1.5 sm:rounded-[1.05rem] sm:px-2.5 sm:py-2">
+        <div className="mt-2.5 sm:mt-3">
+          <div className={`min-w-0 rounded-[0.95rem] px-2 py-2.5 sm:rounded-[1.05rem] sm:px-2.5 sm:py-3 ${theme.resultShell}`}>
             <p
               className={`font-black tracking-[0.03em] ${
                 isPending
@@ -141,9 +153,19 @@ export function ResultCard({ result }: ResultCardProps) {
               {resultText}
             </p>
           </div>
+        </div>
+
+        <div className="mt-2.5 grid grid-cols-[1fr_1px_1fr] items-center gap-2 sm:mt-3 sm:gap-3">
+          <div
+            className={`flex h-8 items-center justify-center rounded-full px-1 text-[8px] font-bold uppercase tracking-[0.08em] sm:h-9 sm:text-[9px] ${theme.sideLeft}`}
+          >
+            Jori
+          </div>
+
+          <div className={`h-10 w-px justify-self-center sm:h-11 ${theme.divider}`} />
 
           <div
-            className={`flex h-8 items-center justify-center rounded-lg border border-white/10 px-1 text-[8px] font-bold uppercase tracking-[0.08em] text-slate-100/90 transition-all duration-300 sm:h-9 sm:rounded-xl sm:text-[9px] ${theme.side}`}
+            className={`flex h-8 items-center justify-center rounded-full px-1 text-[8px] font-bold uppercase tracking-[0.08em] sm:h-9 sm:text-[9px] ${theme.sideRight}`}
           >
             Patti
           </div>

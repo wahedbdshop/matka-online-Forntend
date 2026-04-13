@@ -9,11 +9,11 @@ import { ThaiLotteryUserService } from "@/services/thai-lottery.service";
 import { cn } from "@/lib/utils";
 
 import { BannerSlider } from "./_components/banner-slider";
-import { MarqueeText } from "./_components/marquee-text";
 import { PopupBanner } from "./_components/popup-banner";
 import { PaymentMethodsRow } from "./_components/payment-methods-row";
 import { HomeGameHub } from "./_components/home-game-hub";
 import { WinnerCard } from "./_components/winner-card";
+import { GlobalNoticeBar } from "@/components/shared/global-notice-bar";
 
 function matchesGameType(
   winner: Record<string, unknown>,
@@ -43,7 +43,6 @@ export default function DashboardPage() {
   });
   const home = homeData?.data;
   const banners = home?.banners ?? [];
-  const marqueeText = home?.marquees?.[0]?.text ?? "";
   const popularGames = home?.popularGames ?? [];
   const popup = home?.popup ?? null;
   const paymentMethods = home?.paymentMethods ?? [];
@@ -63,7 +62,7 @@ export default function DashboardPage() {
 
       <div className="space-y-4 pb-6">
         <BannerSlider banners={banners} />
-        <MarqueeText text={marqueeText} />
+        <GlobalNoticeBar />
         <HomeGameHub popularGames={popularGames} />
         <WinnerCard title="Last Kalyan Winners" bets={kalyanWinners} theme="kalyan" />
         <WinnerCard title="Last Thai Winners" bets={thaiWinners} />

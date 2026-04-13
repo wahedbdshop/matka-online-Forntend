@@ -22,7 +22,6 @@ import { ThaiLotteryUserService } from "@/services/thai-lottery.service";
 import { KalyanUserService } from "@/services/kalyanUser.service";
 import { cn } from "@/lib/utils";
 import { BannerSlider } from "./(user)/dashboard/_components/banner-slider";
-import { MarqueeText } from "./(user)/dashboard/_components/marquee-text";
 import { HomeGameHub } from "./(user)/dashboard/_components/home-game-hub";
 import { FavSlider } from "./(user)/dashboard/_components/fav-slider";
 import { PopularGames } from "./(user)/dashboard/_components/popular-games";
@@ -31,6 +30,7 @@ import { RateTable } from "./(user)/dashboard/_components/rate-table";
 import { PaymentMethodsRow } from "./(user)/dashboard/_components/payment-methods-row";
 import { AuthPopupProvider } from "@/components/shared/auth-popup";
 import { FloatingChatButton } from "@/components/user/floating-chat-button";
+import { GlobalNoticeBar } from "@/components/shared/global-notice-bar";
 import { SITE_LOGO_SRC } from "@/lib/branding";
 
 function matchesGameType(
@@ -91,9 +91,6 @@ export default function LandingPage() {
 
   const home = homeData?.data;
   const banners = home?.banners ?? [];
-  const marqueeText =
-    home?.marquees?.[0]?.text ??
-    "Welcome to Matka Online 24 - Thailand Lottery, PCSO & more! Fast withdrawal - 24/7 Support - Safe & Trusted";
   const favSlides = home?.favouriteSlides ?? [];
   const popularGames = home?.popularGames ?? [];
   const paymentMethods = home?.paymentMethods ?? [];
@@ -154,10 +151,9 @@ export default function LandingPage() {
 
         <main className="mx-auto flex w-full max-w-lg flex-1 flex-col pb-24">
           {isHotTab ? <BannerSlider banners={banners} /> : null}
+          {isHotTab ? <GlobalNoticeBar /> : null}
 
           <div className="space-y-5 px-4 pt-4">
-            {isHotTab ? <MarqueeText text={marqueeText} /> : null}
-
             {isHotTab ? (
               <section id="games-hub">
                 <HomeGameHub popularGames={popularGames} />

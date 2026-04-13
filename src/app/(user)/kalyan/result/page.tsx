@@ -55,7 +55,23 @@ export function KalyanResultPageContent({
     fetchResults();
   }, [fetchResults]);
 
-  const sections = feed.results.reduce<Array<{ date: string; items: KalyanGroupedResult[] }>>(
+  const sortedResults = [...feed.results].sort((left, right) => {
+    const dateDiff =
+      new Date(right.resultDate ?? right.createdAt ?? 0).getTime() -
+      new Date(left.resultDate ?? left.createdAt ?? 0).getTime();
+
+    if (dateDiff !== 0) return dateDiff;
+
+    const createdAtDiff =
+      new Date(right.createdAt ?? 0).getTime() -
+      new Date(left.createdAt ?? 0).getTime();
+
+    if (createdAtDiff !== 0) return createdAtDiff;
+
+    return String(right.updatedAt ?? "").localeCompare(String(left.updatedAt ?? ""));
+  });
+
+  const sections = sortedResults.reduce<Array<{ date: string; items: KalyanGroupedResult[] }>>(
     (acc, result) => {
       const dateKey = result.resultDate || "unknown";
       const last = acc[acc.length - 1];
@@ -101,8 +117,8 @@ export function KalyanResultPageContent({
           {sections.map((section) => (
             <div key={section.date} className="flex flex-col items-center gap-3">
               <div className="w-full max-w-xl px-1">
-                <div className="rounded-xl border border-amber-400/25 bg-[#2a1b07] px-4 py-2.5 shadow-[0_10px_24px_rgba(15,23,42,0.2)]">
-                  <p className="text-left text-xs font-bold uppercase tracking-[0.16em] text-amber-200">
+                <div className="rounded-xl border border-cyan-400/30 bg-[linear-gradient(135deg,#141b43_0%,#0f1635_55%,#122753_100%)] px-4 py-2.5 shadow-[0_10px_24px_rgba(14,165,233,0.14)]">
+                  <p className="text-left text-xs font-bold uppercase tracking-[0.16em] text-cyan-200 drop-shadow-[0_0_12px_rgba(34,211,238,0.18)]">
                     Date {formatDateLabel(section.date)}
                   </p>
                 </div>

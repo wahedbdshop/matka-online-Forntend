@@ -54,21 +54,43 @@ function resolveCategoryLabel(entry: EntrySlip, item?: EntryItem) {
 function getDisplayStatus(entry: EntrySlip, item?: EntryItem) {
   const itemMeta = item as (EntryItem & { status?: string; gameStatus?: string }) | undefined;
 
-  const resolved = String(
-    itemMeta?.gameStatus ??
-      itemMeta?.status ??
-      entry.gameStatus ??
+  const gameStatus = String(
+    itemMeta?.gameStatus ?? entry.gameStatus ?? "",
+  ).toUpperCase();
+
+  const betStatus = String(
+    itemMeta?.status ??
       (entry as EntrySlip & { status?: string }).status ??
       "ACTIVE",
   ).toUpperCase();
 
-  // Game session closed but result not yet published → keep ACTIVE
-  // When result IS published, gameStatus becomes undefined and status = WON/LOST
-  if (resolved === "CLOSE") {
-    return "ACTIVE";
+  // REVERSED — result was updated and previous winnings were deducted
+  if (betStatus === "REVERSED") {
+    return "REVERSED";
   }
 
-  return resolved;
+  // CANCEL takes priority — admin cancelled the game
+  if (
+    gameStatus === "CANCEL" ||
+    betStatus === "CANCEL" ||
+    betStatus === "CANCELLED" ||
+    betStatus === "REMOVED"
+  ) {
+    return "CANCEL";
+  }
+
+  // Result published → game session is CLOSE
+  // gameStatus CLOSE means result submitted; WON/LOST also means result is published
+  if (
+    gameStatus === "CLOSE" ||
+    betStatus === "CLOSE" ||
+    betStatus === "WON" ||
+    betStatus === "LOST"
+  ) {
+    return "CLOSE";
+  }
+
+  return "ACTIVE";
 }
 
 export default function BetHistoryPage() {

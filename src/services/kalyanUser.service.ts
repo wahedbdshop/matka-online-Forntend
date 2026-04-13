@@ -248,7 +248,13 @@ const normalizePublishedResults = (items: any[] = []) => {
 
     if (dateDiff !== 0) return dateDiff;
 
-    return String(a.title ?? "").localeCompare(String(b.title ?? ""));
+    const createdAtDiff =
+      new Date(b.createdAt ?? 0).getTime() -
+      new Date(a.createdAt ?? 0).getTime();
+
+    if (createdAtDiff !== 0) return createdAtDiff;
+
+    return String(b.updatedAt ?? "").localeCompare(String(a.updatedAt ?? ""));
   });
 };
 

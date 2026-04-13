@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
-import { Loader2, SendHorizonal, TimerOff } from "lucide-react";
+import { Ban, Loader2, SendHorizonal, ShieldOff, TimerOff } from "lucide-react";
 import { KalyanUserService } from "@/services/kalyanUser.service";
 import {
   GAME_TOTAL_NUMBERS,
@@ -51,6 +51,8 @@ const STRICT_PLAY_TYPE_BY_SLUG: Record<string, (typeof ALLOWED_PLAY_TYPES)[numbe
   jori: "JORI",
 };
 
+type MarketAdminStatus = "ACTIVE" | "INACTIVE" | "CANCELLED" | null;
+
 function normalizeSessionType(value: string | null): "OPEN" | "CLOSE" {
   const normalized = value?.trim().toUpperCase();
   return SESSION_TYPES.includes(normalized as "OPEN" | "CLOSE")
@@ -84,6 +86,68 @@ function toTitleCase(value: string) {
   return value.replace(/\b\w/g, (char) => char.toUpperCase());
 }
 
+// ─── Blocking overlay shown when admin has suspended or cancelled the market ──
+function MarketBlockedScreen({
+  status,
+  backHref,
+}: {
+  status: "INACTIVE" | "CANCELLED";
+  backHref: string;
+}) {
+  const router = useRouter();
+  const isCancelled = status === "CANCELLED";
+
+  return (
+    <div className="flex min-h-[60vh] flex-col items-center justify-center gap-6 px-4 text-center">
+      <div
+        className={`flex h-20 w-20 items-center justify-center rounded-full ${
+          isCancelled
+            ? "bg-rose-500/15 ring-2 ring-rose-500/30"
+            : "bg-amber-500/15 ring-2 ring-amber-500/30"
+        }`}
+      >
+        {isCancelled ? (
+          <Ban className="h-9 w-9 text-rose-400" />
+        ) : (
+          <ShieldOff className="h-9 w-9 text-amber-400" />
+        )}
+      </div>
+
+      <div className="space-y-2">
+        <h2 className="text-xl font-extrabold text-white">
+          {isCancelled ? "Market Cancelled" : "Market Suspended"}
+        </h2>
+        <p className="max-w-xs text-sm leading-relaxed text-slate-400">
+          {isCancelled
+            ? "This market has been cancelled by the admin. Betting is permanently closed for this session."
+            : "This market has been temporarily suspended by the admin. Please check back later."}
+        </p>
+      </div>
+
+      <span
+        className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-bold uppercase tracking-widest ${
+          isCancelled
+            ? "border-rose-500/40 bg-rose-500/10 text-rose-300"
+            : "border-amber-500/40 bg-amber-500/10 text-amber-300"
+        }`}
+      >
+        {isCancelled ? (
+          <><Ban className="h-3 w-3" /> Cancelled</>
+        ) : (
+          <><ShieldOff className="h-3 w-3" /> Market Suspended</>
+        )}
+      </span>
+
+      <button
+        onClick={() => router.push(backHref)}
+        className="rounded-xl border border-slate-600 bg-slate-800 px-6 py-2.5 text-sm font-semibold text-slate-300 transition-colors hover:bg-slate-700"
+      >
+        ← Go Back
+      </button>
+    </div>
+  );
+}
+
 export default function GamePlayPage() {
   const params = useParams();
   const router = useRouter();
@@ -96,6 +160,7 @@ export default function GamePlayPage() {
   const playTypeEnum = normalizePlayType(playTypeSlug);
   const playTypeLabel = PLAY_TYPE_LABELS[playTypeEnum] ?? playTypeSlug;
   const [marketTitle, setMarketTitle] = useState("");
+  const [marketAdminStatus, setMarketAdminStatus] = useState<MarketAdminStatus>(null);
   const [discountPct, setDiscountPct] = useState(0);
 
   const { register, watch, handleSubmit, reset } = useForm<Record<string, string>>();
@@ -105,19 +170,36 @@ export default function GamePlayPage() {
   const [isTimeOver, setIsTimeOver] = useState(false);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  // ── Fetch market info + admin status ────────────────────────────────────────
   useEffect(() => {
     let mounted = true;
 
-    KalyanUserService.getActiveMarkets()
+    KalyanUserService.getActiveMarkets({ includeInactive: true })
       .then((res) => {
         const markets = Array.isArray(res.data)
           ? res.data
           : Array.isArray(res.data?.markets)
             ? res.data.markets
             : [];
-        const currentMarket = markets.find((market: any) => market.id === marketId);
+        const currentMarket = markets.find((market: { id: string }) => market.id === marketId);
 
-        if (!mounted || !currentMarket) return;
+        if (!mounted) return;
+
+        if (!currentMarket) {
+          // Market not found at all — treat as suspended
+          setMarketAdminStatus("INACTIVE");
+          return;
+        }
+
+        // Persist admin-level status before any time-based logic runs
+        const rawStatus = String(currentMarket.status ?? "ACTIVE").toUpperCase();
+        if (rawStatus === "CANCELLED") {
+          setMarketAdminStatus("CANCELLED");
+        } else if (rawStatus === "INACTIVE") {
+          setMarketAdminStatus("INACTIVE");
+        } else {
+          setMarketAdminStatus("ACTIVE");
+        }
 
         const title =
           sessionType === "CLOSE"
@@ -128,6 +210,7 @@ export default function GamePlayPage() {
       })
       .catch(() => {
         if (!mounted) return;
+        setMarketAdminStatus("ACTIVE"); // Fail-open: let time check decide
         setMarketTitle(sessionType === "CLOSE" ? "Game Close" : "Game Open");
       });
 
@@ -161,7 +244,7 @@ export default function GamePlayPage() {
     };
   }, [playTypeEnum]);
 
-  // ── Fetch timing for this session and track time expiry ─────────────────
+  // ── Fetch timing for this session and track time expiry ─────────────────────
   useEffect(() => {
     let mounted = true;
 
@@ -222,6 +305,16 @@ export default function GamePlayPage() {
   const payableAmount = Number((total - discountAmount).toFixed(2));
 
   const onSubmit = async (data: Record<string, string>) => {
+    // Admin-override guard — checked before any time logic
+    if (marketAdminStatus === "CANCELLED") {
+      toast.error("This market has been cancelled. Betting is not allowed.");
+      return;
+    }
+    if (marketAdminStatus === "INACTIVE") {
+      toast.error("This market is currently suspended. Please check back later.");
+      return;
+    }
+
     // Re-validate time before every submission
     if (isTimeOver || (() => {
       if (!closeTime) return false;
@@ -297,6 +390,23 @@ export default function GamePlayPage() {
     }
   };
 
+  // ── Admin override blocks the entire page ───────────────────────────────────
+  if (marketAdminStatus === "INACTIVE" || marketAdminStatus === "CANCELLED") {
+    return (
+      <div className="space-y-5 pb-6">
+        <KalyanPageHeader
+          title={playTypeLabel}
+          subtitle={headerSubtitle}
+          backHref={`/kalyan/${playTypeSlug}`}
+        />
+        <MarketBlockedScreen
+          status={marketAdminStatus}
+          backHref={`/kalyan/${playTypeSlug}`}
+        />
+      </div>
+    );
+  }
+
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-5 pb-36">
       <KalyanPageHeader
@@ -308,7 +418,7 @@ export default function GamePlayPage() {
       <div className="rounded-xl border border-slate-700/40 bg-slate-800/30 px-4 py-3">
         <p
           className={`text-xs leading-relaxed text-slate-400 ${
-            playTypeEnum === "SINGLE_PATTI" ? "max-w-[17rem]" : ""
+            playTypeEnum === "SINGLE_PATTI" ? "max-w-68" : ""
           }`}
         >
           Enter the amount beside each number you want to bet on.
@@ -441,7 +551,3 @@ export default function GamePlayPage() {
     </form>
   );
 }
-
-
-
-
