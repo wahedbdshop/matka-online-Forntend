@@ -162,7 +162,21 @@ function groupMethodsForDisplay(methods: DepositMethod[]) {
     groupedMethods.set(key, group);
   });
 
-  return Array.from(groupedMethods.values()).map((group) => group[0]);
+  const groupedDisplayMethods = Array.from(groupedMethods.values()).map(
+    (group) => group[0],
+  );
+
+  const regularMethods = groupedDisplayMethods.filter(
+    (method) =>
+      !method.isGlobal &&
+      getMethodRotationKey(method.name) !== "global agent",
+  );
+  const globalAgentMethods = groupedDisplayMethods.filter(
+    (method) =>
+      method.isGlobal || getMethodRotationKey(method.name) === "global agent",
+  );
+
+  return [...regularMethods, ...globalAgentMethods];
 }
 
 function getNextMethodVariant(

@@ -126,6 +126,112 @@ function SkeletonRow() {
   return <div className="h-14 rounded-2xl bg-slate-700/40 animate-pulse" />;
 }
 
+function RecipientCard({
+  user,
+  selected,
+  onClick,
+  compact = false,
+}: {
+  user: any;
+  selected: boolean;
+  onClick: () => void;
+  compact?: boolean;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={cn(
+        "group relative w-full overflow-hidden rounded-2xl border text-left transition-all duration-200",
+        compact ? "p-3" : "p-4",
+        selected
+          ? "border-blue-400/80 bg-blue-500/10 shadow-[0_0_0_1px_rgba(59,130,246,0.45),0_0_28px_rgba(59,130,246,0.18)]"
+          : "border-slate-700 bg-slate-700/30 hover:border-blue-500/50 hover:bg-blue-500/5",
+      )}
+    >
+      <div
+        className={cn(
+          "pointer-events-none absolute inset-0 transition-opacity",
+          selected
+            ? "opacity-100 bg-[radial-gradient(circle_at_top_right,rgba(96,165,250,0.16),transparent_42%)]"
+            : "opacity-0 group-hover:opacity-100 bg-[radial-gradient(circle_at_top_right,rgba(96,165,250,0.10),transparent_42%)]",
+        )}
+      />
+      <div className="relative flex items-center gap-3">
+        <div
+          className={cn(
+            "flex shrink-0 items-center justify-center rounded-xl border",
+            compact ? "h-10 w-10 text-sm" : "h-12 w-12 text-base",
+            selected
+              ? "border-blue-400/40 bg-blue-500/20 font-extrabold text-white"
+              : "border-blue-500/20 bg-blue-500/10 font-bold text-blue-300",
+          )}
+        >
+          {user.name?.charAt(0)?.toUpperCase() ?? "?"}
+        </div>
+        <div className="min-w-0 flex-1">
+          <p
+            className={cn(
+              "truncate text-white",
+              compact ? "text-lg font-bold" : "text-2xl font-extrabold",
+            )}
+          >
+            {user.name}
+          </p>
+          <p
+            className={cn(
+              "truncate text-slate-400",
+              compact ? "text-xs" : "text-sm",
+            )}
+          >
+            @{user.username}
+            {user.email ? ` · ${user.email}` : ""}
+          </p>
+        </div>
+        {selected && (
+          <div className="flex h-7 w-7 items-center justify-center rounded-full border border-blue-300/50 bg-blue-500 text-white shadow-[0_0_18px_rgba(59,130,246,0.35)]">
+            <CheckCircle className="h-4 w-4" />
+          </div>
+        )}
+      </div>
+    </button>
+  );
+}
+
+function SimpleRecipientCard({
+  user,
+  onClick,
+  compact = false,
+}: {
+  user: any;
+  onClick: () => void;
+  compact?: boolean;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className="w-full flex items-center gap-3 p-3 rounded-xl border border-slate-700 bg-slate-700/30 hover:border-blue-500/50 hover:bg-blue-500/5 transition-all text-left"
+    >
+      <div
+        className={cn(
+          "rounded-xl flex items-center justify-center shrink-0 font-bold",
+          compact
+            ? "w-8 h-8 bg-slate-600/50 text-xs text-slate-300"
+            : "w-9 h-9 bg-blue-500/10 border border-blue-500/20 text-sm text-blue-400",
+        )}
+      >
+        {user.name?.charAt(0)?.toUpperCase() ?? "?"}
+      </div>
+      <div className="min-w-0">
+        <p className="truncate text-sm font-bold text-white">@{user.username}</p>
+        <p className="truncate text-[10px] text-slate-500">
+          {user.name}
+          {user.email ? ` · ${user.email}` : ""}
+        </p>
+      </div>
+    </button>
+  );
+}
+
 // ─── Main Page ────────────────────────────────────────────────
 export default function TransferPage() {
   const queryClient = useQueryClient();
@@ -425,23 +531,11 @@ export default function TransferPage() {
                     {searchResults.length > 0 && (
                       <div className="space-y-1.5">
                         {searchResults.map((u: any) => (
-                          <button
+                          <SimpleRecipientCard
                             key={u.id}
                             onClick={() => handleSelectUser(u)}
-                            className="w-full flex items-center gap-3 p-3 rounded-xl border border-slate-700 bg-slate-700/30 hover:border-blue-500/50 hover:bg-blue-500/5 transition-all text-left"
-                          >
-                            <div className="w-9 h-9 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-sm font-bold text-blue-400 shrink-0">
-                              {u.name?.charAt(0)?.toUpperCase() ?? "?"}
-                            </div>
-                            <div className="min-w-0">
-                              <p className="text-white text-sm font-semibold truncate">
-                                {u.name}
-                              </p>
-                              <p className="text-slate-500 text-[10px]">
-                                @{u.username} · {u.email}
-                              </p>
-                            </div>
-                          </button>
+                            user={u}
+                          />
                         ))}
                       </div>
                     )}
@@ -465,23 +559,12 @@ export default function TransferPage() {
                       </div>
                       <div className="space-y-1.5">
                         {recentRecipients.map((u: any) => (
-                          <button
+                          <SimpleRecipientCard
                             key={u.id}
                             onClick={() => handleSelectUser(u)}
-                            className="w-full flex items-center gap-3 p-3 rounded-xl border border-slate-700 bg-slate-700/30 hover:border-blue-500/50 hover:bg-blue-500/5 transition-all text-left"
-                          >
-                            <div className="w-8 h-8 rounded-xl bg-slate-600/50 flex items-center justify-center text-xs font-bold text-slate-300 shrink-0">
-                              {u.name?.charAt(0)?.toUpperCase() ?? "?"}
-                            </div>
-                            <div className="min-w-0">
-                              <p className="text-white text-sm font-medium truncate">
-                                {u.name}
-                              </p>
-                              <p className="text-slate-500 text-[10px]">
-                                @{u.username}
-                              </p>
-                            </div>
-                          </button>
+                            user={u}
+                            compact
+                          />
                         ))}
                       </div>
                     </div>
@@ -492,19 +575,11 @@ export default function TransferPage() {
               {/* ── STEP 2: Amount ── */}
               {step === "amount" && selectedUser && (
                 <div className="space-y-3">
-                  <div className="rounded-2xl border border-blue-500/20 bg-blue-500/5 p-3 flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-sm font-bold text-blue-400 shrink-0">
-                      {selectedUser.name?.charAt(0)?.toUpperCase() ?? "?"}
-                    </div>
-                    <div>
-                      <p className="text-white text-sm font-semibold">
-                        {selectedUser.name}
-                      </p>
-                      <p className="text-slate-500 text-[10px]">
-                        @{selectedUser.username} · {selectedUser.email}
-                      </p>
-                    </div>
-                  </div>
+                  <SimpleRecipientCard
+                    user={selectedUser}
+                    onClick={() => setStep("recipient")}
+                    compact
+                  />
 
                   <div className="rounded-2xl border border-slate-700/50 bg-slate-800/40 p-4 space-y-4">
                     <p className="text-xs font-medium text-slate-400 uppercase tracking-wider">
