@@ -17,6 +17,7 @@ import {
 import { toast } from "sonner";
 import { ThaiLotteryUserService } from "@/services/thai-lottery.service";
 import { useCurrency } from "@/hooks/use-currency";
+import { formatAbsoluteUtcDateTimeForBangladeshDisplay } from "@/lib/timezone";
 
 const DEFAULT_ROWS = 8;
 
@@ -195,7 +196,10 @@ export default function ThaiLotteryPage() {
   const maxLength = selectedPlay?.maxLength ?? 3;
   const ratesList = ratesData?.data ?? [];
   const activeRound = activeRoundData?.data;
-  const hasOpenRound = Boolean(activeRound?.id);
+  const roundStatus = String(activeRound?.status ?? "").toUpperCase();
+  const hasOpenRound =
+    Boolean(activeRound?.id) &&
+    !["CLOSED", "RESULTED", "CANCELLED"].includes(roundStatus);
   const usdBalance = Number(profileData?.data?.balance ?? 0) / usdToBdt;
 
   const getRate = (playType: ActualPlayType): RateInfo =>
@@ -518,6 +522,15 @@ export default function ThaiLotteryPage() {
                   <p className="mt-1 text-[10px] text-slate-500">
                     Thailand Lottery Official Games
                   </p>
+                  {hasOpenRound && activeRound?.closeTime ? (
+                    <p className="mt-1 text-[10px] text-emerald-300/80">
+                      Closes:{" "}
+                      {formatAbsoluteUtcDateTimeForBangladeshDisplay(
+                        activeRound.closeTime,
+                        { includeTimezone: true },
+                      )}
+                    </p>
+                  ) : null}
                 </div>
 
                 <Link
@@ -538,10 +551,12 @@ export default function ThaiLotteryPage() {
               {!hasOpenRound && (
                 <div className="rounded-[22px] border border-amber-400/20 bg-[linear-gradient(135deg,_rgba(70,36,11,0.95),_rgba(45,23,10,0.95))] px-4 py-3">
                   <p className="text-[10px] font-black uppercase tracking-[0.24em] text-amber-300">
-                    Play Time Over 2:15 PM
+                    Bangladesh Time Control
                   </p>
                   <p className="mt-1 text-sm leading-6 text-amber-100/75">
-                    This play is not available right now. Please wait for the next round.
+                    This play is closed right now. Access follows admin-configured
+                    Bangladesh time on the server, so changing mobile, browser,
+                    or system time will not reopen betting.
                   </p>
                 </div>
               )}

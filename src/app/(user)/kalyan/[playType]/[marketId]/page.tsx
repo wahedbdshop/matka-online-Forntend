@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
@@ -22,6 +22,7 @@ import { TotalAmountBar } from "@/components/kalyan/user/TotalAmountBar";
 import { getBangladeshDateISO } from "@/lib/timezone";
 import { isDhakaTimePastOrEqual } from "@/lib/kalyan-time";
 import { Rate } from "@/types/kalyan";
+import { useServerTime } from "@/hooks/use-server-time";
 
 const SECTION_COLORS = [
   "bg-blue-600/20 text-blue-300",
@@ -163,6 +164,7 @@ export default function GamePlayPage() {
 
   const playTypeEnum = normalizePlayType(playTypeSlug);
   const playTypeLabel = PLAY_TYPE_LABELS[playTypeEnum] ?? playTypeSlug;
+  const { serverNow, serverTimeReady } = useServerTime();
   const [marketTitle, setMarketTitle] = useState("");
   const [marketAdminStatus, setMarketAdminStatus] = useState<MarketAdminStatus>(null);
   const [discountPct, setDiscountPct] = useState(0);
@@ -171,8 +173,6 @@ export default function GamePlayPage() {
   const values = watch();
   const [submitting, setSubmitting] = useState(false);
   const [closeTime, setCloseTime] = useState<string | null>(null);
-  const [isTimeOver, setIsTimeOver] = useState(false);
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
     let mounted = true;
@@ -264,25 +264,10 @@ export default function GamePlayPage() {
     };
   }, [marketId, sessionType]);
 
-  const checkTimeOver = useCallback(() => {
-    if (!closeTime) return;
-
-    if (isDhakaTimePastOrEqual(closeTime)) {
-      setIsTimeOver(true);
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-        intervalRef.current = null;
-      }
-    }
-  }, [closeTime]);
-
-  useEffect(() => {
-    checkTimeOver();
-    intervalRef.current = setInterval(checkTimeOver, 1000);
-    return () => {
-      if (intervalRef.current) clearInterval(intervalRef.current);
-    };
-  }, [checkTimeOver]);
+  const isTimeOver = useMemo(() => {
+    if (!serverTimeReady || !serverNow || !closeTime) return false;
+    return isDhakaTimePastOrEqual(closeTime, serverNow);
+  }, [closeTime, serverNow, serverTimeReady]);
 
   const headerSubtitle = useMemo(() => {
     const normalizedTitle = toTitleCase(marketTitle || "Game");
@@ -312,14 +297,12 @@ export default function GamePlayPage() {
       toast.error("This market is currently suspended. Please check back later.");
       return;
     }
+    if (!serverTimeReady || !serverNow) {
+      toast.error("Server time is syncing. Please try again.");
+      return;
+    }
 
-    if (
-      isTimeOver ||
-      (() => {
-        if (!closeTime) return false;
-        return isDhakaTimePastOrEqual(closeTime);
-      })()
-    ) {
+    if (isTimeOver) {
       toast.error("Time is over! You cannot place this bet.");
       router.push("/kalyan");
       return;
@@ -357,7 +340,7 @@ export default function GamePlayPage() {
       return;
     }
 
-    const today = getBangladeshDateISO();
+    const today = getBangladeshDateISO(serverNow);
 
     try {
       setSubmitting(true);
@@ -427,6 +410,10 @@ export default function GamePlayPage() {
             amount.
           </p>
         )}
+        <p className="mt-2 text-xs leading-relaxed text-slate-500">
+          Betting time is validated by server-side Bangladesh time. Device or
+          browser clock changes will not bypass the open/close rules.
+        </p>
       </div>
 
       {playTypeEnum === "GAME_TOTAL" && (
@@ -521,7 +508,7 @@ export default function GamePlayPage() {
         ) : (
           <button
             type="submit"
-            disabled={submitting || total === 0}
+            disabled={submitting || total === 0 || !serverTimeReady}
             className="mt-2 flex w-full items-center justify-center gap-2 rounded-2xl bg-purple-600 py-2.5 text-sm font-bold text-white transition-colors hover:bg-purple-700 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {submitting ? (
@@ -529,6 +516,8 @@ export default function GamePlayPage() {
                 <Loader2 className="h-4 w-4 animate-spin" />
                 Placing Bet...
               </>
+            ) : !serverTimeReady ? (
+              "Syncing Server Time..."
             ) : (
               <>
                 <SendHorizonal className="h-4 w-4" />

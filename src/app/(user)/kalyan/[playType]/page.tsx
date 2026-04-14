@@ -13,6 +13,7 @@ import { KalyanPageHeader } from "@/components/kalyan/user/KalyanPageHeader";
 import { SessionCard } from "@/components/kalyan/user/SessionCard";
 import { ErrorState } from "@/components/kalyan/user/ErrorState";
 import { EmptyState } from "@/components/kalyan/user/EmptyState";
+import { useServerTime } from "@/hooks/use-server-time";
 
 const MARKET_LIST_LIMIT = 1000;
 
@@ -65,6 +66,7 @@ export default function MarketSelectionPage() {
   const params = useParams();
   const playTypeSlug = params.playType as string;
   const playTypeEnum = PLAY_TYPE_SLUG_MAP[playTypeSlug];
+  const { serverNow, serverTimeReady } = useServerTime();
 
   const [sessions, setSessions] = useState<SessionItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -179,7 +181,7 @@ export default function MarketSelectionPage() {
       </p>
 
       {/* Loading skeleton grid */}
-      {loading && (
+      {(loading || !serverTimeReady) && (
         <div className="grid grid-cols-2 gap-3">
           {Array.from({ length: 6 }).map((_, i) => (
             <SkeletonCard key={i} />
@@ -187,11 +189,11 @@ export default function MarketSelectionPage() {
         </div>
       )}
 
-      {error && !loading && (
+      {error && !loading && serverTimeReady && (
         <ErrorState message={error} onRetry={fetchAll} />
       )}
 
-      {!loading && !error && sessions.length === 0 && (
+      {!loading && serverTimeReady && !error && sessions.length === 0 && (
         <EmptyState
           title="No markets available"
           description="No active markets found. Please check back later."
@@ -199,7 +201,7 @@ export default function MarketSelectionPage() {
       )}
 
       {/* Flat 2-column grid */}
-      {!loading && !error && sessions.length > 0 && (() => {
+      {!loading && serverTimeReady && !error && sessions.length > 0 && (() => {
         const openSessions = sessions.filter((item) => item.sessionType === "OPEN");
         const closeSessions = sessions.filter((item) => item.sessionType === "CLOSE");
         const showCloseColumn = playTypeEnum !== "JORI" && closeSessions.length > 0;
@@ -217,6 +219,7 @@ export default function MarketSelectionPage() {
                   playTypeSlug={playTypeSlug}
                   timing={item.timing}
                   marketStatus={item.marketStatus}
+                  currentDate={serverNow}
                 />
               ))}
             </div>
@@ -235,6 +238,7 @@ export default function MarketSelectionPage() {
                   playTypeSlug={playTypeSlug}
                   timing={item.timing}
                   marketStatus={item.marketStatus}
+                  currentDate={serverNow}
                 />
               ))}
             </div>
@@ -250,6 +254,7 @@ export default function MarketSelectionPage() {
                     playTypeSlug={playTypeSlug}
                     timing={item.timing}
                     marketStatus={item.marketStatus}
+                    currentDate={serverNow}
                   />
                 ))}
               </div>

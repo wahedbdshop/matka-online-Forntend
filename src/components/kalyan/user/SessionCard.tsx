@@ -12,10 +12,11 @@ interface SessionCardProps {
   playTypeSlug: string;
   timing?: MarketTiming;
   marketStatus?: "ACTIVE" | "INACTIVE" | "CANCELLED";
+  currentDate?: Date | null;
 }
 
-function isWithinWindow(openTime: string, closeTime: string): boolean {
-  return isDhakaTimeWithinWindow(openTime, closeTime);
+function isWithinWindow(openTime: string, closeTime: string, date: Date): boolean {
+  return isDhakaTimeWithinWindow(openTime, closeTime, date);
 }
 
 function fmt12(t: string): string {
@@ -31,6 +32,7 @@ type CardState = "OPEN" | "CANCELLED" | "DAY_OFF" | "TIME_OVER";
 function resolveCardState(
   marketStatus: "ACTIVE" | "INACTIVE" | "CANCELLED",
   timing: MarketTiming | undefined,
+  currentDate: Date | null | undefined,
 ): CardState {
   // 1. Admin hard-cancelled the whole market
   if (marketStatus === "CANCELLED") return "CANCELLED";
@@ -39,10 +41,10 @@ function resolveCardState(
   // 3. Timing-level INACTIVE = scheduled day off
   if (timing?.status === "INACTIVE") return "DAY_OFF";
   // 4. No timing data at all → can't determine window → treat as time over
-  if (!timing?.openTime || !timing?.closeTime) return "TIME_OVER";
+  if (!timing?.openTime || !timing?.closeTime || !currentDate) return "TIME_OVER";
 
   // 5. Time window check
-  if (isWithinWindow(timing.openTime, timing.closeTime)) {
+  if (isWithinWindow(timing.openTime, timing.closeTime, currentDate)) {
     return "OPEN";
   }
 
@@ -120,9 +122,10 @@ export function SessionCard({
   playTypeSlug,
   timing,
   marketStatus = "ACTIVE",
+  currentDate,
 }: SessionCardProps) {
   const router = useRouter();
-  const state = resolveCardState(marketStatus, timing);
+  const state = resolveCardState(marketStatus, timing, currentDate);
   const isOpen = state === "OPEN";
   const config = STATE_CONFIG[state];
 
