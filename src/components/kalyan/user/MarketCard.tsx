@@ -5,23 +5,15 @@ import { useRouter } from "next/navigation";
 import { CircleSlash, Clock, PlayCircle, TimerOff } from "lucide-react";
 import { KalyanUserService } from "@/services/kalyanUser.service";
 import { Market, MarketTiming } from "@/types/kalyan";
+import { isDhakaTimeWithinWindow } from "@/lib/kalyan-time";
 
 interface MarketCardProps {
   market: Market;
   playTypeSlug: string;
 }
 
-function parseTimeToMinutes(t: string): number {
-  const [h, m] = t.split(":").map(Number);
-  return h * 60 + m;
-}
-
 function isWithinWindow(openTime: string, closeTime: string): boolean {
-  const now = new Date();
-  const nowMin = now.getHours() * 60 + now.getMinutes();
-  const open = parseTimeToMinutes(openTime);
-  const close = parseTimeToMinutes(closeTime);
-  return nowMin >= open && nowMin < close;
+  return isDhakaTimeWithinWindow(openTime, closeTime);
 }
 
 function fmt12(t: string): string {

@@ -20,6 +20,7 @@ import { NumberAmountCell } from "@/components/kalyan/user/NumberAmountCell";
 import { NumberSectionCard } from "@/components/kalyan/user/NumberSectionCard";
 import { TotalAmountBar } from "@/components/kalyan/user/TotalAmountBar";
 import { Rate } from "@/types/kalyan";
+import { isDhakaTimePastOrEqual } from "@/lib/kalyan-time";
 
 // ─── Section accent colours (cycle through totals 0–9) ────────────────────────
 const SECTION_COLORS = [
@@ -264,11 +265,7 @@ export default function GamePlayPage() {
 
   const checkTimeOver = useCallback(() => {
     if (!closeTime) return;
-    const now = new Date();
-    const nowMin = now.getHours() * 60 + now.getMinutes();
-    const [h, m] = closeTime.split(":").map(Number);
-    const closeMin = h * 60 + m;
-    if (nowMin >= closeMin) {
+    if (isDhakaTimePastOrEqual(closeTime)) {
       setIsTimeOver(true);
       if (intervalRef.current) {
         clearInterval(intervalRef.current);
@@ -318,10 +315,7 @@ export default function GamePlayPage() {
     // Re-validate time before every submission
     if (isTimeOver || (() => {
       if (!closeTime) return false;
-      const now = new Date();
-      const nowMin = now.getHours() * 60 + now.getMinutes();
-      const [h, m] = closeTime.split(":").map(Number);
-      return nowMin >= h * 60 + m;
+      return isDhakaTimePastOrEqual(closeTime);
     })()) {
       toast.error("Time is over! You cannot place this bet.");
       router.push("/kalyan");

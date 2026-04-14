@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { Ban, CircleSlash, Clock, PlayCircle, TimerOff } from "lucide-react";
 import { MarketTiming } from "@/types/kalyan";
+import { isDhakaTimeWithinWindow } from "@/lib/kalyan-time";
 
 interface SessionCardProps {
   title: string;
@@ -13,15 +14,8 @@ interface SessionCardProps {
   marketStatus?: "ACTIVE" | "INACTIVE" | "CANCELLED";
 }
 
-function parseTimeToMinutes(t: string): number {
-  const [h, m] = t.split(":").map(Number);
-  return h * 60 + m;
-}
-
 function isWithinWindow(openTime: string, closeTime: string): boolean {
-  const now = new Date();
-  const nowMin = now.getHours() * 60 + now.getMinutes();
-  return nowMin >= parseTimeToMinutes(openTime) && nowMin < parseTimeToMinutes(closeTime);
+  return isDhakaTimeWithinWindow(openTime, closeTime);
 }
 
 function fmt12(t: string): string {
