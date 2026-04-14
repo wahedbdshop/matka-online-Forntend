@@ -20,7 +20,6 @@ import { NumberAmountCell } from "@/components/kalyan/user/NumberAmountCell";
 import { NumberSectionCard } from "@/components/kalyan/user/NumberSectionCard";
 import { TotalAmountBar } from "@/components/kalyan/user/TotalAmountBar";
 import {
-  formatUtcScheduleTimeForLocalDisplay,
   getBangladeshDateISO,
 } from "@/lib/timezone";
 import { Rate } from "@/types/kalyan";
@@ -185,10 +184,6 @@ export default function GamePlayPage() {
   const [isTimeOver, setIsTimeOver] = useState(false);
   const [isResultPublished, setIsResultPublished] = useState(false);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const closeTimeLabel = useMemo(
-    () => (closeTime ? formatUtcScheduleTimeForLocalDisplay(closeTime) : null),
-    [closeTime],
-  );
 
   // ── Fetch market info + admin status ────────────────────────────────────────
   useEffect(() => {
@@ -464,34 +459,6 @@ export default function GamePlayPage() {
         subtitle={headerSubtitle}
         backHref={`/kalyan/${playTypeSlug}`}
       />
-
-      <div className="rounded-xl border border-slate-700/40 bg-slate-800/30 px-4 py-3">
-        <p
-          className={`text-xs leading-relaxed text-slate-400 ${
-            playTypeEnum === "SINGLE_PATTI" ? "max-w-68" : ""
-          }`}
-        >
-          Enter the amount beside each number you want to bet on.
-          Only numbers with an amount will be included in your submission.
-        </p>
-        {discountPct > 0 && (
-          <p className="mt-2 text-xs leading-relaxed text-emerald-300/90">
-            Discount: {discountPct}% applied. Wallet will deduct only the payable
-            amount, but winnings will still be calculated from your entered
-            amount.
-          </p>
-        )}
-        {closeTimeLabel ? (
-          <p className="mt-2 text-xs leading-relaxed text-slate-300">
-            Closes at {closeTimeLabel}.
-          </p>
-        ) : null}
-        {isResultPublished ? (
-          <p className="mt-2 text-xs leading-relaxed text-red-300">
-            Result is already published for this session. Betting is closed.
-          </p>
-        ) : null}
-      </div>
 
       {/* ── Game Total ─────────────────────────────────────────── */}
       {playTypeEnum === "GAME_TOTAL" && (

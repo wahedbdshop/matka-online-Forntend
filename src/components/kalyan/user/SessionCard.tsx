@@ -12,6 +12,7 @@ interface SessionCardProps {
   playTypeSlug: string;
   timing?: MarketTiming;
   marketStatus?: "ACTIVE" | "INACTIVE" | "CANCELLED";
+  isResultPublished?: boolean;
 }
 
 function isWithinWindow(openTime: string, closeTime: string): boolean {
@@ -24,15 +25,17 @@ function fmt12(t: string): string {
   return `${h % 12 || 12}:${String(m).padStart(2, "0")} ${suffix}`;
 }
 
-type CardState = "OPEN" | "CANCELLED" | "DAY_OFF" | "TIME_OVER";
+type CardState = "OPEN" | "CANCELLED" | "DAY_OFF" | "RESULT_PUBLISHED" | "TIME_OVER";
 
 function resolveCardState(
   marketStatus: "ACTIVE" | "INACTIVE" | "CANCELLED",
   timing: MarketTiming | undefined,
+  isResultPublished: boolean,
 ): CardState {
   if (marketStatus === "CANCELLED") return "CANCELLED";
   if (marketStatus === "INACTIVE") return "DAY_OFF";
   if (timing?.status === "INACTIVE") return "DAY_OFF";
+  if (isResultPublished) return "RESULT_PUBLISHED";
   if (!timing?.openTime || !timing?.closeTime) return "TIME_OVER";
 
   if (isWithinWindow(timing.openTime, timing.closeTime)) {
@@ -94,6 +97,16 @@ const stateConfig: Record<
       </div>
     ),
   },
+  RESULT_PUBLISHED: {
+    card: "cursor-not-allowed border-red-500/40 bg-gradient-to-br from-red-900/55 via-red-950/45 to-slate-900/80 shadow-[0_4px_18px_rgba(239,68,68,0.18)]",
+    clockColor: "text-red-300",
+    actionNode: () => (
+      <div className="mt-auto flex w-full cursor-not-allowed items-center justify-center gap-1.5 rounded-xl border border-red-500/40 bg-red-500/20 py-2 text-[11px] font-semibold text-red-200">
+        <Ban className="h-3.5 w-3.5" />
+        RESULT PUBLISHED
+      </div>
+    ),
+  },
   TIME_OVER: {
     card: "cursor-not-allowed border-red-500/40 bg-gradient-to-br from-red-900/55 via-red-950/45 to-slate-900/80 shadow-[0_4px_18px_rgba(239,68,68,0.18)]",
     clockColor: "text-red-300",
@@ -113,9 +126,10 @@ export function SessionCard({
   playTypeSlug,
   timing,
   marketStatus = "ACTIVE",
+  isResultPublished = false,
 }: SessionCardProps) {
   const router = useRouter();
-  const state = resolveCardState(marketStatus, timing);
+  const state = resolveCardState(marketStatus, timing, isResultPublished);
   const isOpen = state === "OPEN";
   const config = stateConfig[state];
 
