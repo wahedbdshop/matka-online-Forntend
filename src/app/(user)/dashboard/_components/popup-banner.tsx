@@ -1,23 +1,31 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable @next/next/no-img-element */
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { consumePendingLoginPopup } from "@/lib/login-popup";
 
 export function PopupBanner({ popup }: { popup: any }) {
-  const [show, setShow] = useState<boolean>(() => {
-    if (!popup) return false;
-    if (typeof window === "undefined") return false;
+  const [show, setShow] = useState(false);
+
+  useEffect(() => {
+    if (!popup || typeof window === "undefined") {
+      setShow(false);
+      return;
+    }
 
     const shouldForceShow = consumePendingLoginPopup();
     const key = `popup_seen_${popup.id}`;
+    const hasSeenPopup = sessionStorage.getItem(key) === "1";
 
-    if (sessionStorage.getItem(key) && !shouldForceShow) return false;
+    if (hasSeenPopup && !shouldForceShow) {
+      setShow(false);
+      return;
+    }
+
     sessionStorage.setItem(key, "1");
-
-    return true;
-  });
+    setShow(true);
+  }, [popup?.id]);
 
   if (!show || !popup) return null;
 
