@@ -7,14 +7,14 @@ import { useParams, useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { ChevronLeft, Clock } from "lucide-react";
 import {
-  formatAbsoluteUtcDateTimeForLocalDisplay,
-  toUtcIsoFromLocalDateTimeInput,
+  formatAbsoluteUtcDateTimeForBangladeshDisplay,
+  toUtcIsoFromBangladeshDateTimeInput,
 } from "@/lib/timezone";
 import { AdminService } from "@/services/admin.service";
 
 const formatDate = (d?: string) => {
   if (!d) return "-";
-  return formatAbsoluteUtcDateTimeForLocalDisplay(d, { includeTimezone: true });
+  return formatAbsoluteUtcDateTimeForBangladeshDisplay(d, { includeTimezone: true });
 };
 
 export default function ThaiRoundClosePage() {
@@ -39,7 +39,7 @@ export default function ThaiRoundClosePage() {
   const { mutate: setClose, isPending } = useMutation({
     mutationFn: () =>
       AdminService.setThaiCloseTime(id, {
-        closeTime: toUtcIsoFromLocalDateTimeInput(closeTime),
+        closeTime: toUtcIsoFromBangladeshDateTimeInput(closeTime),
       }),
     onSuccess: () => {
       toast.success("Close time set successfully");
@@ -100,7 +100,7 @@ export default function ThaiRoundClosePage() {
           </p>
           <div className="space-y-2">
             <label className="text-xs font-medium text-slate-400">
-              New Close Time
+              New Close Time (Bangladesh)
             </label>
             <input
               type="datetime-local"
@@ -109,10 +109,10 @@ export default function ThaiRoundClosePage() {
               className="w-full rounded-lg border border-slate-600 bg-slate-700 px-3 py-2.5 text-sm text-white outline-none focus:border-yellow-500"
             />
             <p className="text-[10px] text-slate-500">
-              Enter your local time. It will be converted to UTC before saving.
+              Enter Bangladesh time. It will be converted to UTC before saving.
               {closeTime
-                ? ` Saves as ${formatAbsoluteUtcDateTimeForLocalDisplay(
-                    toUtcIsoFromLocalDateTimeInput(closeTime),
+                ? ` Saves as ${formatAbsoluteUtcDateTimeForBangladeshDisplay(
+                    toUtcIsoFromBangladeshDateTimeInput(closeTime),
                     { includeTimezone: true },
                   )}.`
                 : ""}

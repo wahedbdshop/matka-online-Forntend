@@ -1,11 +1,9 @@
 "use client";
 
+import moment from "moment-timezone";
 import { useRouter } from "next/navigation";
 import { Ban, CircleSlash, Clock, PlayCircle, TimerOff } from "lucide-react";
-import {
-  formatUtcScheduleTimeForLocalDisplay,
-  isCurrentWithinUtcScheduleWindow,
-} from "@/lib/timezone";
+import { isCurrentWithinUtcScheduleWindow } from "@/lib/timezone";
 import { MarketTiming } from "@/types/kalyan";
 
 interface SessionCardProps {
@@ -18,6 +16,18 @@ interface SessionCardProps {
 }
 
 type CardState = "OPEN" | "CANCELLED" | "DAY_OFF" | "TIME_OVER";
+
+function formatLocalCloseTime(value?: string | null) {
+  if (!value) return "-";
+
+  const guessedTimeZone = moment.tz.guess();
+  const parsed = moment.utc(value, "HH:mm", true);
+  if (!parsed.isValid()) {
+    return value;
+  }
+
+  return parsed.tz(guessedTimeZone).format("hh:mm A");
+}
 
 function resolveCardState(
   marketStatus: "ACTIVE" | "INACTIVE" | "CANCELLED",
@@ -49,6 +59,7 @@ const stateConfig: Record<
     clockColor: "text-green-300",
     actionNode: ({ onClick }) => (
       <button
+        type="button"
         onClick={(event) => {
           event.stopPropagation();
           onClick?.();
@@ -152,7 +163,7 @@ export function SessionCard({
           <Clock className={`h-3.5 w-3.5 shrink-0 ${config.clockColor}`} />
           {timing?.closeTime ? (
             <span className="text-base font-black text-white">
-              {formatUtcScheduleTimeForLocalDisplay(timing.closeTime)}
+              {formatLocalCloseTime(timing.closeTime)}
             </span>
           ) : (
             <span className="text-slate-400">-</span>

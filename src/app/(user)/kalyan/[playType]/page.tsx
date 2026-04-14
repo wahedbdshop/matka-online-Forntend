@@ -174,9 +174,11 @@ export default function MarketSelectionPage() {
       />
 
       {/* Section heading */}
-      <p className="text-center text-base font-extrabold tracking-[0.06em] text-white sm:text-lg">
-        Select Game
-      </p>
+      <div className="space-y-2 text-center">
+        <p className="text-base font-extrabold tracking-[0.06em] text-white sm:text-lg">
+          Select Game
+        </p>
+      </div>
 
       {/* Loading skeleton grid */}
       {loading && (

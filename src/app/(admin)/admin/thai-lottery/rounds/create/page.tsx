@@ -7,8 +7,8 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { ChevronLeft } from "lucide-react";
 import {
-  formatAbsoluteUtcDateTimeForLocalDisplay,
-  toUtcIsoFromLocalDateTimeInput,
+  formatAbsoluteUtcDateTimeForBangladeshDisplay,
+  toUtcIsoFromBangladeshDateTimeInput,
 } from "@/lib/timezone";
 import { AdminService } from "@/services/admin.service";
 
@@ -33,7 +33,7 @@ export default function CreateThaiRoundPage() {
     }
     mutate({
       issueNumber: form.issueNumber,
-      drawDate: toUtcIsoFromLocalDateTimeInput(form.drawDate),
+      drawDate: toUtcIsoFromBangladeshDateTimeInput(form.drawDate),
     });
   };
 
@@ -72,7 +72,7 @@ export default function CreateThaiRoundPage() {
 
         <div className="space-y-1.5">
           <label className="text-xs font-medium text-slate-400">
-            Draw Date
+            Draw Date (Bangladesh)
           </label>
           <input
             type="datetime-local"
@@ -83,10 +83,10 @@ export default function CreateThaiRoundPage() {
             className="w-full rounded-lg border border-slate-600 bg-slate-700 px-3 py-2.5 text-sm text-white outline-none focus:border-blue-500"
           />
           <p className="text-[10px] text-slate-500">
-            Enter your local time. It will be converted to UTC before saving.
+            Enter Bangladesh time. It will be converted to UTC before saving.
             {form.drawDate
-              ? ` Saves as ${formatAbsoluteUtcDateTimeForLocalDisplay(
-                  toUtcIsoFromLocalDateTimeInput(form.drawDate),
+              ? ` Saves as ${formatAbsoluteUtcDateTimeForBangladeshDisplay(
+                  toUtcIsoFromBangladeshDateTimeInput(form.drawDate),
                   { includeTimezone: true },
                 )}.`
               : ""}

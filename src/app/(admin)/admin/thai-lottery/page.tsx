@@ -6,7 +6,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Plus, ChevronRight, Clock, Lock } from "lucide-react";
-import { formatAbsoluteUtcDateTimeForLocalDisplay } from "@/lib/timezone";
+import { formatAbsoluteUtcDateTimeForBangladeshDisplay } from "@/lib/timezone";
 import { AdminService } from "@/services/admin.service";
 
 const STATUS_STYLE: Record<string, string> = {
@@ -51,7 +51,7 @@ export default function AdminThaiLotteryPage() {
 
   const formatDate = (d?: string) => {
     if (!d) return "-";
-    return formatAbsoluteUtcDateTimeForLocalDisplay(d, {
+    return formatAbsoluteUtcDateTimeForBangladeshDisplay(d, {
       includeTimezone: true,
     });
   };
@@ -62,7 +62,7 @@ export default function AdminThaiLotteryPage() {
         <div>
           <h1 className="text-xl font-bold text-white">Thai Lottery</h1>
           <p className="text-xs text-slate-400 mt-0.5">
-            Manage all lottery rounds
+            Manage all lottery rounds in Bangladesh time
           </p>
         </div>
         <button

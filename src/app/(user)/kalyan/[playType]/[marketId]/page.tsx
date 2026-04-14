@@ -21,6 +21,7 @@ import { NumberSectionCard } from "@/components/kalyan/user/NumberSectionCard";
 import { TotalAmountBar } from "@/components/kalyan/user/TotalAmountBar";
 import {
   formatUtcScheduleTimeForLocalDisplay,
+  getBangladeshDateISO,
   hasUtcScheduleTimePassed,
 } from "@/lib/timezone";
 import { Rate } from "@/types/kalyan";
@@ -88,6 +89,16 @@ function normalizePlayType(value: string): string {
 
 function toTitleCase(value: string) {
   return value.replace(/\b\w/g, (char) => char.toUpperCase());
+}
+
+function hasPublishedResultForSession(result: any, sessionType: "OPEN" | "CLOSE") {
+  if (!result) return false;
+
+  if (sessionType === "OPEN") {
+    return !!result?.openPatti && result.openPatti !== "000";
+  }
+
+  return !!result?.closePatti && result.closePatti !== "000";
 }
 
 // ─── Blocking overlay shown when admin has suspended or cancelled the market ──
@@ -172,6 +183,7 @@ export default function GamePlayPage() {
   const [submitting, setSubmitting] = useState(false);
   const [closeTime, setCloseTime] = useState<string | null>(null);
   const [isTimeOver, setIsTimeOver] = useState(false);
+  const [isResultPublished, setIsResultPublished] = useState(false);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const closeTimeLabel = useMemo(
     () => (closeTime ? formatUtcScheduleTimeForLocalDisplay(closeTime) : null),
@@ -270,6 +282,38 @@ export default function GamePlayPage() {
     return () => { mounted = false; };
   }, [marketId, sessionType]);
 
+  useEffect(() => {
+    let mounted = true;
+
+    KalyanUserService.getPublishedResults({
+      marketId,
+      date: getBangladeshDateISO(),
+      page: 1,
+      limit: 50,
+    })
+      .then((res) => {
+        if (!mounted) return;
+
+        const results = Array.isArray(res.data)
+          ? res.data
+          : Array.isArray(res.data?.results)
+            ? res.data.results
+            : [];
+
+        setIsResultPublished(
+          results.some((result: any) => hasPublishedResultForSession(result, sessionType)),
+        );
+      })
+      .catch(() => {
+        if (!mounted) return;
+        setIsResultPublished(false);
+      });
+
+    return () => {
+      mounted = false;
+    };
+  }, [marketId, sessionType]);
+
   const checkTimeOver = useCallback(() => {
     if (!closeTime) return;
     if (hasUtcScheduleTimePassed(closeTime)) {
@@ -318,6 +362,11 @@ export default function GamePlayPage() {
       toast.error("This market is currently suspended. Please check back later.");
       return;
     }
+    if (isResultPublished) {
+      toast.error("Result is already published. Betting is closed for this session.");
+      router.push("/kalyan");
+      return;
+    }
 
     // Re-validate time before every submission
     if (isTimeOver || (() => {
@@ -361,7 +410,7 @@ export default function GamePlayPage() {
       return;
     }
 
-    const today = new Date().toISOString().split("T")[0];
+    const today = getBangladeshDateISO();
 
     try {
       setSubmitting(true);
@@ -435,6 +484,11 @@ export default function GamePlayPage() {
         {closeTimeLabel ? (
           <p className="mt-2 text-xs leading-relaxed text-slate-300">
             Closes at {closeTimeLabel}.
+          </p>
+        ) : null}
+        {isResultPublished ? (
+          <p className="mt-2 text-xs leading-relaxed text-red-300">
+            Result is already published for this session. Betting is closed.
           </p>
         ) : null}
       </div>
@@ -529,7 +583,12 @@ export default function GamePlayPage() {
           discountAmount={discountAmount}
           payableAmount={payableAmount}
         />
-        {isTimeOver ? (
+        {isResultPublished ? (
+          <div className="mt-2 flex w-full cursor-not-allowed items-center justify-center gap-2 rounded-2xl border border-red-500/40 bg-red-500/20 py-2.5 text-sm font-bold text-red-200">
+            <TimerOff className="h-4 w-4" />
+            Result Published - Betting Closed
+          </div>
+        ) : isTimeOver ? (
           <div className="mt-2 flex w-full cursor-not-allowed items-center justify-center gap-2 rounded-2xl border border-red-500/40 bg-red-500/20 py-2.5 text-sm font-bold text-red-200">
             <TimerOff className="h-4 w-4" />
             Time Over — Betting Closed

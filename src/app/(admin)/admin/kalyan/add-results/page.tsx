@@ -9,7 +9,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
 import { ChevronDown, Plus, Search, X } from "lucide-react";
-import { getCurrentUtcMinutes } from "@/lib/timezone";
+import { getBangladeshDateISO, getCurrentUtcMinutes } from "@/lib/timezone";
 import { KalyanAdminService } from "@/services/kalyanAdmin.service";
 
 const schema = z.object({
@@ -24,11 +24,7 @@ const schema = z.object({
 type FormData = z.infer<typeof schema>;
 
 function getTodayDate() {
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = String(now.getMonth() + 1).padStart(2, "0");
-  const day = String(now.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
+  return getBangladeshDateISO();
 }
 
 function getMinutesFromTime(value?: string | null) {
