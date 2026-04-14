@@ -3,16 +3,24 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { CircleSlash, Clock, PlayCircle, TimerOff } from "lucide-react";
-import {
-  formatUtcScheduleRangeForLocalDisplay,
-  isCurrentWithinUtcScheduleWindow,
-} from "@/lib/timezone";
 import { KalyanUserService } from "@/services/kalyanUser.service";
 import { Market, MarketTiming } from "@/types/kalyan";
+import { isDhakaTimeWithinWindow } from "@/lib/kalyan-time";
 
 interface MarketCardProps {
   market: Market;
   playTypeSlug: string;
+}
+
+function isWithinWindow(openTime: string, closeTime: string): boolean {
+  return isDhakaTimeWithinWindow(openTime, closeTime);
+}
+
+function fmt12(t: string): string {
+  const [h, m] = t.split(":").map(Number);
+  const suffix = h >= 12 ? "PM" : "AM";
+  const h12 = h % 12 || 12;
+  return `${h12}:${String(m).padStart(2, "0")} ${suffix}`;
 }
 
 export function MarketCard({ market, playTypeSlug }: MarketCardProps) {
@@ -58,7 +66,7 @@ export function MarketCard({ market, playTypeSlug }: MarketCardProps) {
       timing?.status === "ACTIVE" &&
       !!timing?.openTime &&
       !!timing?.closeTime &&
-      isCurrentWithinUtcScheduleWindow(timing.openTime, timing.closeTime);
+      isWithinWindow(timing.openTime, timing.closeTime);
 
     return (
       <div className="flex items-center justify-between gap-2">
@@ -68,11 +76,9 @@ export function MarketCard({ market, playTypeSlug }: MarketCardProps) {
             {sessionLabels[sessionType]}
           </span>
           {timing?.openTime ? (
-            <div className="min-w-0">
-              <span className="block text-[10px] text-slate-500">
-                {formatUtcScheduleRangeForLocalDisplay(timing.openTime, timing.closeTime)}
-              </span>
-            </div>
+            <span className="text-[10px] text-slate-500">
+              {fmt12(timing.openTime)} - {fmt12(timing.closeTime)}
+            </span>
           ) : null}
         </div>
         {loading ? (

@@ -22,9 +22,9 @@ import { TotalAmountBar } from "@/components/kalyan/user/TotalAmountBar";
 import {
   formatUtcScheduleTimeForLocalDisplay,
   getBangladeshDateISO,
-  hasUtcScheduleTimePassed,
 } from "@/lib/timezone";
 import { Rate } from "@/types/kalyan";
+import { isDhakaTimePastOrEqual } from "@/lib/kalyan-time";
 
 // ─── Section accent colours (cycle through totals 0–9) ────────────────────────
 const SECTION_COLORS = [
@@ -316,7 +316,7 @@ export default function GamePlayPage() {
 
   const checkTimeOver = useCallback(() => {
     if (!closeTime) return;
-    if (hasUtcScheduleTimePassed(closeTime)) {
+    if (isDhakaTimePastOrEqual(closeTime)) {
       setIsTimeOver(true);
       if (intervalRef.current) {
         clearInterval(intervalRef.current);
@@ -371,7 +371,7 @@ export default function GamePlayPage() {
     // Re-validate time before every submission
     if (isTimeOver || (() => {
       if (!closeTime) return false;
-      return hasUtcScheduleTimePassed(closeTime);
+      return isDhakaTimePastOrEqual(closeTime);
     })()) {
       toast.error("Time is over! You cannot place this bet.");
       router.push("/kalyan");

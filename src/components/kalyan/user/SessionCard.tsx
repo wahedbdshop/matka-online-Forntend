@@ -1,10 +1,9 @@
 "use client";
 
-import moment from "moment-timezone";
 import { useRouter } from "next/navigation";
 import { Ban, CircleSlash, Clock, PlayCircle, TimerOff } from "lucide-react";
-import { isCurrentWithinUtcScheduleWindow } from "@/lib/timezone";
 import { MarketTiming } from "@/types/kalyan";
+import { isDhakaTimeWithinWindow } from "@/lib/kalyan-time";
 
 interface SessionCardProps {
   title: string;
@@ -15,19 +14,17 @@ interface SessionCardProps {
   marketStatus?: "ACTIVE" | "INACTIVE" | "CANCELLED";
 }
 
-type CardState = "OPEN" | "CANCELLED" | "DAY_OFF" | "TIME_OVER";
-
-function formatLocalCloseTime(value?: string | null) {
-  if (!value) return "-";
-
-  const guessedTimeZone = moment.tz.guess();
-  const parsed = moment.utc(value, "HH:mm", true);
-  if (!parsed.isValid()) {
-    return value;
-  }
-
-  return parsed.tz(guessedTimeZone).format("hh:mm A");
+function isWithinWindow(openTime: string, closeTime: string): boolean {
+  return isDhakaTimeWithinWindow(openTime, closeTime);
 }
+
+function fmt12(t: string): string {
+  const [h, m] = t.split(":").map(Number);
+  const suffix = h >= 12 ? "PM" : "AM";
+  return `${h % 12 || 12}:${String(m).padStart(2, "0")} ${suffix}`;
+}
+
+type CardState = "OPEN" | "CANCELLED" | "DAY_OFF" | "TIME_OVER";
 
 function resolveCardState(
   marketStatus: "ACTIVE" | "INACTIVE" | "CANCELLED",
@@ -38,7 +35,7 @@ function resolveCardState(
   if (timing?.status === "INACTIVE") return "DAY_OFF";
   if (!timing?.openTime || !timing?.closeTime) return "TIME_OVER";
 
-  if (isCurrentWithinUtcScheduleWindow(timing.openTime, timing.closeTime)) {
+  if (isWithinWindow(timing.openTime, timing.closeTime)) {
     return "OPEN";
   }
 
@@ -163,7 +160,7 @@ export function SessionCard({
           <Clock className={`h-3.5 w-3.5 shrink-0 ${config.clockColor}`} />
           {timing?.closeTime ? (
             <span className="text-base font-black text-white">
-              {formatLocalCloseTime(timing.closeTime)}
+              {fmt12(timing.closeTime)}
             </span>
           ) : (
             <span className="text-slate-400">-</span>
