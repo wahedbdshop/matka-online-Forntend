@@ -6,6 +6,7 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Eye, EyeOff, X, Check } from "lucide-react";
 import { toast } from "sonner";
+import { formatAbsoluteUtcDateForLocalDisplay } from "@/lib/timezone";
 import { AdminService } from "@/services/admin.service";
 
 const LIMIT = 20;
@@ -47,11 +48,7 @@ export default function ThaiPublicResultPage() {
 
   const formatDate = (d?: string) => {
     if (!d) return "-";
-    return new Date(d).toLocaleDateString("en-BD", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-    });
+    return formatAbsoluteUtcDateForLocalDisplay(d);
   };
 
   return (

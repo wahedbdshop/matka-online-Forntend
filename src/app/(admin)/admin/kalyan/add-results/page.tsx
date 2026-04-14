@@ -9,6 +9,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
 import { ChevronDown, Plus, Search, X } from "lucide-react";
+import { getCurrentUtcMinutes } from "@/lib/timezone";
 import { KalyanAdminService } from "@/services/kalyanAdmin.service";
 
 const schema = z.object({
@@ -211,10 +212,7 @@ export default function KalyanAddResultsPage() {
     }
 
     const currentMinutes = isToday
-      ? (() => {
-          const now = new Date();
-          return now.getHours() * 60 + now.getMinutes();
-        })()
+      ? getCurrentUtcMinutes()
       : Number.POSITIVE_INFINITY;
     const rawOptions = markets.flatMap((market: any) => {
       if (!isActiveEntity(market?.status)) {

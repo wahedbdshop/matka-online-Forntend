@@ -19,6 +19,11 @@ import { KalyanPageHeader } from "@/components/kalyan/user/KalyanPageHeader";
 import { NumberAmountCell } from "@/components/kalyan/user/NumberAmountCell";
 import { NumberSectionCard } from "@/components/kalyan/user/NumberSectionCard";
 import { TotalAmountBar } from "@/components/kalyan/user/TotalAmountBar";
+import {
+  formatLocalTimezoneNotice,
+  formatUtcScheduleTimeForLocalDisplay,
+  hasUtcScheduleTimePassed,
+} from "@/lib/timezone";
 import { Rate } from "@/types/kalyan";
 
 // ─── Section accent colours (cycle through totals 0–9) ────────────────────────
@@ -169,6 +174,15 @@ export default function GamePlayPage() {
   const [closeTime, setCloseTime] = useState<string | null>(null);
   const [isTimeOver, setIsTimeOver] = useState(false);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const closeTimeLabel = useMemo(
+    () =>
+      closeTime
+        ? formatUtcScheduleTimeForLocalDisplay(closeTime, {
+            includeTimezone: true,
+          })
+        : null,
+    [closeTime],
+  );
 
   // ── Fetch market info + admin status ────────────────────────────────────────
   useEffect(() => {
@@ -264,11 +278,7 @@ export default function GamePlayPage() {
 
   const checkTimeOver = useCallback(() => {
     if (!closeTime) return;
-    const now = new Date();
-    const nowMin = now.getHours() * 60 + now.getMinutes();
-    const [h, m] = closeTime.split(":").map(Number);
-    const closeMin = h * 60 + m;
-    if (nowMin >= closeMin) {
+    if (hasUtcScheduleTimePassed(closeTime)) {
       setIsTimeOver(true);
       if (intervalRef.current) {
         clearInterval(intervalRef.current);
@@ -318,10 +328,7 @@ export default function GamePlayPage() {
     // Re-validate time before every submission
     if (isTimeOver || (() => {
       if (!closeTime) return false;
-      const now = new Date();
-      const nowMin = now.getHours() * 60 + now.getMinutes();
-      const [h, m] = closeTime.split(":").map(Number);
-      return nowMin >= h * 60 + m;
+      return hasUtcScheduleTimePassed(closeTime);
     })()) {
       toast.error("Time is over! You cannot place this bet.");
       router.push("/kalyan");
@@ -431,6 +438,11 @@ export default function GamePlayPage() {
             amount.
           </p>
         )}
+        {closeTimeLabel ? (
+          <p className="mt-2 text-xs leading-relaxed text-slate-300">
+            Closes at {closeTimeLabel}. {formatLocalTimezoneNotice()}
+          </p>
+        ) : null}
       </div>
 
       {/* ── Game Total ─────────────────────────────────────────── */}

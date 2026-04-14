@@ -8,6 +8,10 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
 import { Clock3, Pencil, Plus, X } from "lucide-react";
+import {
+  formatLocalTimezoneNotice,
+  formatUtcScheduleTimeForLocalDisplay,
+} from "@/lib/timezone";
 import { KalyanAdminService } from "@/services/kalyanAdmin.service";
 
 const MARKET_LIST_LIMIT = 1000;
@@ -40,7 +44,7 @@ const SESSION_STYLES: Record<string, string> = {
   CLOSE: "border-red-500/30 bg-red-500/15 text-red-400",
 };
 const FIXED_OPEN_TIME = "00:00";
-const FIXED_OPEN_TIME_LABEL = "12:00 AM";
+const FIXED_OPEN_TIME_LABEL = "00:00 UTC";
 
 function sortMarketsByOldest<T extends { createdAt?: string; id?: string }>(items: T[]) {
   return [...items].sort((left, right) => {
@@ -63,18 +67,7 @@ function getTimingList(data: any): any[] {
 
 function formatTimeLabel(time?: string | null) {
   if (!time) return "-";
-
-  const [hourText = "0", minuteText = "0"] = time.split(":");
-  const hours = Number(hourText);
-  const minutes = Number(minuteText);
-
-  if (Number.isNaN(hours) || Number.isNaN(minutes)) {
-    return time;
-  }
-
-  const suffix = hours >= 12 ? "PM" : "AM";
-  const hour12 = hours % 12 || 12;
-  return `${hour12}:${String(minutes).padStart(2, "0")} ${suffix}`;
+  return `${time} UTC`;
 }
 
 function resolveCreatedMarketId(created: any, markets: any[], marketName: string) {
@@ -132,6 +125,7 @@ export default function KalyanGameTimePage() {
     register,
     handleSubmit,
     reset,
+    watch,
     formState: { errors },
   } = useForm<TimingForm>({
     resolver: zodResolver(timingSchema),
@@ -162,6 +156,8 @@ export default function KalyanGameTimePage() {
   });
 
   const watchedGameName = watchCreate("gameName");
+  const watchedCreateCloseTime = watchCreate("closeTime");
+  const watchedEditCloseTime = watch("closeTime");
   const detectedSession: "OPEN" | "CLOSE" | null = /close/i.test(watchedGameName)
     ? "CLOSE"
     : /open/i.test(watchedGameName)
@@ -377,7 +373,9 @@ export default function KalyanGameTimePage() {
             <div className="mb-5 flex items-start justify-between gap-4">
               <div>
                 <h2 className="text-base font-bold text-white">Add New Game</h2>
-                <p className="mt-1 text-xs text-slate-400">Create a new market and set its initial timing.</p>
+                <p className="mt-1 text-xs text-slate-400">
+                  Create a new market and set its UTC schedule.
+                </p>
               </div>
               <button type="button" onClick={closeCreate} className="rounded-lg border border-slate-700 p-2 text-slate-400 transition-colors hover:bg-slate-800 hover:text-white">
                 <X className="h-4 w-4" />
@@ -420,15 +418,21 @@ export default function KalyanGameTimePage() {
 
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-slate-400">Open Time</label>
+                  <label className="text-xs font-medium text-slate-400">Open Time (UTC)</label>
                   <div className="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2.5 text-sm font-medium text-slate-300">
                     {FIXED_OPEN_TIME_LABEL}
                   </div>
+                  <p className="text-[10px] text-slate-500">
+                    Shows as {formatUtcScheduleTimeForLocalDisplay(FIXED_OPEN_TIME, { includeTimezone: true })} on this device.
+                  </p>
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-slate-400">Close Time</label>
+                  <label className="text-xs font-medium text-slate-400">Close Time (UTC)</label>
                   <input type="time" {...registerCreate("closeTime")} className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2.5 text-sm text-white outline-none focus:border-orange-500" />
                   {createErrors.closeTime ? <p className="text-[10px] text-red-400">{createErrors.closeTime.message}</p> : null}
+                  <p className="text-[10px] text-slate-500">
+                    Enter UTC. {watchedCreateCloseTime ? `This shows as ${formatUtcScheduleTimeForLocalDisplay(watchedCreateCloseTime, { includeTimezone: true })} on this device.` : formatLocalTimezoneNotice()}
+                  </p>
                 </div>
               </div>
 
@@ -451,7 +455,9 @@ export default function KalyanGameTimePage() {
             <div className="mb-5 flex items-start justify-between gap-4">
               <div>
                 <h2 className="text-base font-bold text-white">Edit Game Time</h2>
-                <p className="mt-1 text-xs text-slate-400">Update the selected game timing and status.</p>
+                <p className="mt-1 text-xs text-slate-400">
+                  Update the selected game timing and status in UTC.
+                </p>
               </div>
               <button type="button" onClick={closeEdit} className="rounded-lg border border-slate-700 p-2 text-slate-400 transition-colors hover:bg-slate-800 hover:text-white">
                 <X className="h-4 w-4" />
@@ -499,15 +505,21 @@ export default function KalyanGameTimePage() {
 
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-slate-400">Open Time</label>
+                  <label className="text-xs font-medium text-slate-400">Open Time (UTC)</label>
                   <div className="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2.5 text-sm font-medium text-slate-300">
                     {FIXED_OPEN_TIME_LABEL}
                   </div>
+                  <p className="text-[10px] text-slate-500">
+                    Shows as {formatUtcScheduleTimeForLocalDisplay(FIXED_OPEN_TIME, { includeTimezone: true })} on this device.
+                  </p>
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-slate-400">Close Time</label>
+                  <label className="text-xs font-medium text-slate-400">Close Time (UTC)</label>
                   <input type="time" {...register("closeTime")} className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2.5 text-sm text-white outline-none focus:border-orange-500" />
                   {errors.closeTime ? <p className="text-[10px] text-red-400">{errors.closeTime.message}</p> : null}
+                  <p className="text-[10px] text-slate-500">
+                    Enter UTC. {watchedEditCloseTime ? `This shows as ${formatUtcScheduleTimeForLocalDisplay(watchedEditCloseTime, { includeTimezone: true })} on this device.` : formatLocalTimezoneNotice()}
+                  </p>
                 </div>
               </div>
 

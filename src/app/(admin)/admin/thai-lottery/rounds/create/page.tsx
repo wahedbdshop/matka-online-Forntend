@@ -6,6 +6,10 @@ import { useMutation } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { ChevronLeft } from "lucide-react";
+import {
+  formatAbsoluteUtcDateTimeForLocalDisplay,
+  toUtcIsoFromLocalDateTimeInput,
+} from "@/lib/timezone";
 import { AdminService } from "@/services/admin.service";
 
 export default function CreateThaiRoundPage() {
@@ -29,7 +33,7 @@ export default function CreateThaiRoundPage() {
     }
     mutate({
       issueNumber: form.issueNumber,
-      drawDate: new Date(form.drawDate).toISOString(),
+      drawDate: toUtcIsoFromLocalDateTimeInput(form.drawDate),
     });
   };
 
@@ -78,6 +82,15 @@ export default function CreateThaiRoundPage() {
             }
             className="w-full rounded-lg border border-slate-600 bg-slate-700 px-3 py-2.5 text-sm text-white outline-none focus:border-blue-500"
           />
+          <p className="text-[10px] text-slate-500">
+            Enter your local time. It will be converted to UTC before saving.
+            {form.drawDate
+              ? ` Saves as ${formatAbsoluteUtcDateTimeForLocalDisplay(
+                  toUtcIsoFromLocalDateTimeInput(form.drawDate),
+                  { includeTimezone: true },
+                )}.`
+              : ""}
+          </p>
         </div>
 
         <div className="rounded-lg border border-blue-500/20 bg-blue-500/5 p-3">

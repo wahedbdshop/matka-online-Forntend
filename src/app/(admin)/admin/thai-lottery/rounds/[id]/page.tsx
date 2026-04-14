@@ -12,6 +12,7 @@ import {
   RotateCcw,
 } from "lucide-react";
 import { AdminService } from "@/services/admin.service";
+import { formatAbsoluteUtcDateTimeForLocalDisplay } from "@/lib/timezone";
 import { cn } from "@/lib/utils";
 
 const STATUS_STYLE: Record<string, string> = {
@@ -23,13 +24,7 @@ const STATUS_STYLE: Record<string, string> = {
 
 const formatDate = (d?: string) => {
   if (!d) return "-";
-  return new Date(d).toLocaleString("en-BD", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  return formatAbsoluteUtcDateTimeForLocalDisplay(d, { includeTimezone: true });
 };
 
 export default function ThaiRoundOverviewPage() {

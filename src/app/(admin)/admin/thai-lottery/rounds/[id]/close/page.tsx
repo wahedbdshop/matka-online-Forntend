@@ -6,17 +6,15 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useParams, useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { ChevronLeft, Clock } from "lucide-react";
+import {
+  formatAbsoluteUtcDateTimeForLocalDisplay,
+  toUtcIsoFromLocalDateTimeInput,
+} from "@/lib/timezone";
 import { AdminService } from "@/services/admin.service";
 
 const formatDate = (d?: string) => {
   if (!d) return "-";
-  return new Date(d).toLocaleString("en-BD", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  return formatAbsoluteUtcDateTimeForLocalDisplay(d, { includeTimezone: true });
 };
 
 export default function ThaiRoundClosePage() {
@@ -41,7 +39,7 @@ export default function ThaiRoundClosePage() {
   const { mutate: setClose, isPending } = useMutation({
     mutationFn: () =>
       AdminService.setThaiCloseTime(id, {
-        closeTime: new Date(closeTime).toISOString(),
+        closeTime: toUtcIsoFromLocalDateTimeInput(closeTime),
       }),
     onSuccess: () => {
       toast.success("Close time set successfully");
@@ -110,6 +108,15 @@ export default function ThaiRoundClosePage() {
               onChange={(e) => setCloseTime(e.target.value)}
               className="w-full rounded-lg border border-slate-600 bg-slate-700 px-3 py-2.5 text-sm text-white outline-none focus:border-yellow-500"
             />
+            <p className="text-[10px] text-slate-500">
+              Enter your local time. It will be converted to UTC before saving.
+              {closeTime
+                ? ` Saves as ${formatAbsoluteUtcDateTimeForLocalDisplay(
+                    toUtcIsoFromLocalDateTimeInput(closeTime),
+                    { includeTimezone: true },
+                  )}.`
+                : ""}
+            </p>
           </div>
           <button
             onClick={() => setClose()}

@@ -4,7 +4,6 @@
 import Image from "next/image";
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export function BannerSlider({ banners }: { banners: any[] }) {
@@ -37,8 +36,8 @@ export function BannerSlider({ banners }: { banners: any[] }) {
   };
 
   return (
-    <section className="relative mt-4 overflow-hidden rounded-[28px] border border-[#223258] bg-[#0d1426] p-2 shadow-[0_18px_40px_rgba(3,8,20,0.45)]">
-      <div className="relative h-[188px] overflow-hidden rounded-[22px] bg-[#0f172a] sm:h-[220px]">
+    <section className="relative overflow-hidden rounded-xl border border-[#223258] bg-[#0d1426] p-2 shadow-[0_18px_40px_rgba(3,8,20,0.45)]">
+      <div className="relative h-[188px] overflow-hidden rounded-lg bg-[#0f172a] sm:h-55">
         <div
           className="flex h-full transition-transform duration-700 ease-out"
           style={{
@@ -90,23 +89,6 @@ export function BannerSlider({ banners }: { banners: any[] }) {
 
         {total > 1 && (
           <>
-            <button
-              type="button"
-              onClick={() => goTo(current - 1)}
-              className="absolute left-3 top-1/2 z-10 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-white/10 bg-black/25 text-white backdrop-blur transition hover:bg-black/40"
-              aria-label="Previous banner"
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </button>
-            <button
-              type="button"
-              onClick={() => goTo(current + 1)}
-              className="absolute right-3 top-1/2 z-10 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-white/10 bg-black/25 text-white backdrop-blur transition hover:bg-black/40"
-              aria-label="Next banner"
-            >
-              <ChevronRight className="h-4 w-4" />
-            </button>
-
             <div className="absolute bottom-4 left-1/2 z-10 flex -translate-x-1/2 items-center gap-2 rounded-full border border-[#9c6f24]/30 bg-[#6a4317]/45 px-3 py-1.5 backdrop-blur">
               {visibleBanners.map((_: any, index: number) => (
                 <button
@@ -115,14 +97,31 @@ export function BannerSlider({ banners }: { banners: any[] }) {
                   onClick={() => goTo(index)}
                   aria-label={`Go to banner ${index + 1}`}
                   className={cn(
-                    "rounded-full transition-all duration-300",
+                    "rounded-full transition-all duration-300 overflow-hidden",
                     index === current
-                      ? "h-2.5 w-6 bg-[#f3c74d]"
+                      ? "h-2.5 w-6 bg-white/25"
                       : "h-2.5 w-2.5 bg-white/45 hover:bg-white/70",
                   )}
-                />
+                >
+                  {index === current && (
+                    <span
+                      key={current}
+                      className="block h-full rounded-full bg-[#f3c74d]"
+                      style={{
+                        animation: "banner-progress 4.2s linear forwards",
+                      }}
+                    />
+                  )}
+                </button>
               ))}
             </div>
+
+            <style>{`
+              @keyframes banner-progress {
+                from { width: 0% }
+                to   { width: 100% }
+              }
+            `}</style>
           </>
         )}
       </div>

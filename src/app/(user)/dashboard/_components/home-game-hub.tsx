@@ -245,7 +245,7 @@ const sectionGames: Record<HubTabId, HubGame[]> = {
 
 function GameTile({ game }: { game: HubGame }) {
   const tile = (
-    <div className="group relative overflow-hidden rounded-[18px] border border-slate-700 bg-[#222a4a] p-2 transition-all hover:-translate-y-0.5 hover:border-[#f0bf38]/40 hover:bg-[#2a3358]">
+    <div className="group relative overflow-hidden rounded-xl border border-slate-700 bg-[#222a4a] p-2 transition-all hover:-translate-y-0.5 hover:border-[#f0bf38]/40 hover:bg-[#2a3358]">
       <div className="absolute right-0 top-0 h-5 w-5 bg-gradient-to-bl from-[#f0bf38] to-transparent opacity-90" />
       <div className="relative flex flex-col gap-2">
         <div className="flex items-start justify-between gap-1.5">
@@ -314,7 +314,7 @@ export function HomeGameHub({ popularGames }: { popularGames: any[] }) {
   const meta = sectionMeta[activeTab];
 
   return (
-    <section className="overflow-hidden rounded-[30px] border border-[#414a73] bg-[#2e355c] shadow-[0_18px_45px_rgba(6,12,27,0.45)]">
+    <section className="overflow-hidden rounded-xl border border-[#414a73] bg-[#2e355c] shadow-[0_18px_45px_rgba(6,12,27,0.45)]">
       <div className="border-b border-[#8e6d20] bg-[linear-gradient(90deg,#f7d154_0%,#f0bf38_45%,#dd9e1b_100%)] px-4 py-3 text-[11px] font-semibold text-[#11162b] shadow-[inset_0_1px_0_rgba(255,255,255,0.2)]">
         Latest links, banners, and featured games update area
       </div>
@@ -383,7 +383,7 @@ export function HomeGameHub({ popularGames }: { popularGames: any[] }) {
           </div>
         </div>
 
-        <div className="rounded-[26px] border border-[#495482] bg-[#2a3153] p-4">
+        <div className="rounded-xl border border-[#495482] bg-[#2a3153] p-4">
           <div className="mb-4 flex items-center justify-between gap-3">
             <div>
               <p className="text-lg font-black text-white">{meta.title}</p>
@@ -407,7 +407,7 @@ export function HomeGameHub({ popularGames }: { popularGames: any[] }) {
             activeTab === "kalyan" ||
             activeTab === "ludo" ||
             activeTab === "pcso") && (
-            <div className="mt-4 rounded-[18px] border border-[#3e4772] bg-[#2d355a] p-3">
+            <div className="mt-4 rounded-xl border border-[#3e4772] bg-[#2d355a] p-3">
               <div className="flex items-center gap-3">
                 <div className="flex h-14 w-14 items-center justify-center overflow-hidden rounded-2xl border border-slate-600 bg-slate-900/60">
                   <Image

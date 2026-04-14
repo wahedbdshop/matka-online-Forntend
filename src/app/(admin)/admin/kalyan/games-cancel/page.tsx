@@ -5,6 +5,7 @@ import { useMemo, useState } from "react";
 import { useMutation, useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { XCircle } from "lucide-react";
+import { getCurrentUtcMinutes } from "@/lib/timezone";
 import { KalyanAdminService } from "@/services/kalyanAdmin.service";
 
 const LIMIT = 20;
@@ -249,9 +250,8 @@ export default function KalyanGamesCancelPage() {
 
     const selectedDate = dateFilter;
     const isToday = selectedDate === todayISO();
-    const now = new Date();
     const currentMinutes = isToday
-      ? now.getHours() * 60 + now.getMinutes()
+      ? getCurrentUtcMinutes()
       : Number.POSITIVE_INFINITY;
     const entryCountBySession = new Map<string, number>();
 
