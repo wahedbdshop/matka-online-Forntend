@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { KalyanUserService } from "@/services/kalyanUser.service";
-import { KalyanResult, Market, MarketTiming } from "@/types/kalyan";
+import { Market, MarketTiming } from "@/types/kalyan";
 import {
   PLAY_TYPE_SLUG_MAP,
   PLAY_TYPE_LABELS,
@@ -13,7 +13,6 @@ import { KalyanPageHeader } from "@/components/kalyan/user/KalyanPageHeader";
 import { SessionCard } from "@/components/kalyan/user/SessionCard";
 import { ErrorState } from "@/components/kalyan/user/ErrorState";
 import { EmptyState } from "@/components/kalyan/user/EmptyState";
-import { getBangladeshDateISO } from "@/lib/timezone";
 
 const MARKET_LIST_LIMIT = 1000;
 
@@ -25,7 +24,6 @@ interface SessionItem {
   sessionType: "OPEN" | "CLOSE";
   timing?: MarketTiming;
   marketStatus?: "ACTIVE" | "INACTIVE" | "CANCELLED";
-  isResultPublished?: boolean;
 }
 
 function sortMarketsByOldest<T extends { createdAt?: string; id?: string }>(items: T[]) {
@@ -50,34 +48,6 @@ function formatGameTitle(value?: string | null) {
     .trim();
 
   return normalized.replace(/\b\w/g, (char) => char.toUpperCase());
-}
-
-type PublishedSessionResult = Partial<KalyanResult> & {
-  sessionType?: string;
-  isPublished?: boolean;
-};
-
-function isSessionPublished(
-  result: PublishedSessionResult | null | undefined,
-  sessionType: "OPEN" | "CLOSE",
-) {
-  if (!result) return false;
-
-  const normalizedResultSession = String(result?.sessionType ?? "").toUpperCase();
-  if (normalizedResultSession === sessionType) {
-    if (typeof result?.isPublished === "boolean") return result.isPublished;
-
-    const status = String(result?.status ?? "").toUpperCase();
-    if (status === "PUBLISHED" || status === "ACTIVE" || status === "COMPLETED") {
-      return true;
-    }
-  }
-
-  if (sessionType === "OPEN") {
-    return !!result?.openPatti && result.openPatti !== "000";
-  }
-
-  return !!result?.closePatti && result.closePatti !== "000";
 }
 
 // ─── Skeleton card ────────────────────────────────────────────────────────────
@@ -115,32 +85,6 @@ export default function MarketSelectionPage() {
           ? marketsRes.data.markets
           : [],
       );
-      let publishedResults: PublishedSessionResult[] = [];
-      try {
-        const resultsRes = await KalyanUserService.getPublishedResults({
-          date: getBangladeshDateISO(),
-          page: 1,
-          limit: MARKET_LIST_LIMIT,
-        });
-        publishedResults = Array.isArray(resultsRes.data)
-          ? resultsRes.data
-          : Array.isArray(resultsRes.data?.results)
-            ? resultsRes.data.results
-            : [];
-      } catch {
-        publishedResults = [];
-      }
-      const publishedSessionKeys = new Set(
-        publishedResults.flatMap((result) => {
-          const marketId = String(result?.marketId ?? "").trim();
-          if (!marketId) return [];
-
-          const sessions: string[] = [];
-          if (isSessionPublished(result, "OPEN")) sessions.push(`${marketId}::OPEN`);
-          if (isSessionPublished(result, "CLOSE")) sessions.push(`${marketId}::CLOSE`);
-          return sessions;
-        }),
-      );
 
       // Fetch all timings in parallel
       const timingResults = await Promise.allSettled(
@@ -177,9 +121,6 @@ export default function MarketSelectionPage() {
             sessionType: timing.sessionType,
             timing,
             marketStatus: market.status,
-            isResultPublished: publishedSessionKeys.has(
-              `${market.id}::${timing.sessionType}`,
-            ),
           });
           });
 
@@ -198,7 +139,6 @@ export default function MarketSelectionPage() {
               sessionType: st,
               timing: undefined,
               marketStatus: market.status,
-              isResultPublished: publishedSessionKeys.has(`${market.id}::${st}`),
             });
           });
         }
@@ -234,11 +174,9 @@ export default function MarketSelectionPage() {
       />
 
       {/* Section heading */}
-      <div className="space-y-2 text-center">
-        <p className="text-base font-extrabold tracking-[0.06em] text-white sm:text-lg">
-          Select Game
-        </p>
-      </div>
+      <p className="text-center text-base font-extrabold tracking-[0.06em] text-white sm:text-lg">
+        Select Game
+      </p>
 
       {/* Loading skeleton grid */}
       {loading && (
@@ -279,7 +217,6 @@ export default function MarketSelectionPage() {
                   playTypeSlug={playTypeSlug}
                   timing={item.timing}
                   marketStatus={item.marketStatus}
-                  isResultPublished={item.isResultPublished}
                 />
               ))}
             </div>
@@ -298,7 +235,6 @@ export default function MarketSelectionPage() {
                   playTypeSlug={playTypeSlug}
                   timing={item.timing}
                   marketStatus={item.marketStatus}
-                  isResultPublished={item.isResultPublished}
                 />
               ))}
             </div>
@@ -314,7 +250,6 @@ export default function MarketSelectionPage() {
                     playTypeSlug={playTypeSlug}
                     timing={item.timing}
                     marketStatus={item.marketStatus}
-                    isResultPublished={item.isResultPublished}
                   />
                 ))}
               </div>

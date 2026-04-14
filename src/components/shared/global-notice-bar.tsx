@@ -17,7 +17,7 @@ export function GlobalNoticeBar() {
   const marqueeText = homeData?.data?.marquees?.[0]?.text ?? FALLBACK_MARQUEE_TEXT;
 
   return (
-    <div className="w-full">
+    <div className="mx-auto w-full max-w-lg px-4 pt-4">
       <MarqueeText text={marqueeText} />
     </div>
   );

@@ -298,7 +298,7 @@ export default function KalyanGameTimePage() {
           </div>
           <div>
             <h1 className="text-xl font-bold text-white">Game Time</h1>
-            <p className="text-xs text-slate-400">Manage open and close times for each Kalyan game in Bangladesh time</p>
+            <p className="text-xs text-slate-400">Manage open and close times for each Kalyan game</p>
           </div>
         </div>
         <button
@@ -419,13 +419,13 @@ export default function KalyanGameTimePage() {
 
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-slate-400">Open Time (Bangladesh)</label>
+                  <label className="text-xs font-medium text-slate-400">Open Time</label>
                   <div className="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2.5 text-sm font-medium text-slate-300">
                     {FIXED_OPEN_TIME_LABEL}
                   </div>
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-slate-400">Close Time (Bangladesh)</label>
+                  <label className="text-xs font-medium text-slate-400">Close Time</label>
                   <input type="time" {...registerCreate("closeTime")} className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2.5 text-sm text-white outline-none focus:border-orange-500" />
                   {createErrors.closeTime ? <p className="text-[10px] text-red-400">{createErrors.closeTime.message}</p> : null}
                 </div>
@@ -498,13 +498,13 @@ export default function KalyanGameTimePage() {
 
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-slate-400">Open Time (Bangladesh)</label>
+                  <label className="text-xs font-medium text-slate-400">Open Time</label>
                   <div className="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2.5 text-sm font-medium text-slate-300">
                     {FIXED_OPEN_TIME_LABEL}
                   </div>
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-slate-400">Close Time (Bangladesh)</label>
+                  <label className="text-xs font-medium text-slate-400">Close Time</label>
                   <input type="time" {...register("closeTime")} className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2.5 text-sm text-white outline-none focus:border-orange-500" />
                   {errors.closeTime ? <p className="text-[10px] text-red-400">{errors.closeTime.message}</p> : null}
                 </div>

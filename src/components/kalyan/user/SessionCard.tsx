@@ -12,7 +12,6 @@ interface SessionCardProps {
   playTypeSlug: string;
   timing?: MarketTiming;
   marketStatus?: "ACTIVE" | "INACTIVE" | "CANCELLED";
-  isResultPublished?: boolean;
 }
 
 function isWithinWindow(openTime: string, closeTime: string): boolean {
@@ -25,19 +24,24 @@ function fmt12(t: string): string {
   return `${h % 12 || 12}:${String(m).padStart(2, "0")} ${suffix}`;
 }
 
-type CardState = "OPEN" | "CANCELLED" | "DAY_OFF" | "RESULT_PUBLISHED" | "TIME_OVER";
+// ─── Priority-ordered state resolution ───────────────────────────────────────
+// Admin overrides (CANCELLED > INACTIVE/DAY_OFF) always win over time-based checks.
+type CardState = "OPEN" | "CANCELLED" | "DAY_OFF" | "TIME_OVER";
 
 function resolveCardState(
   marketStatus: "ACTIVE" | "INACTIVE" | "CANCELLED",
   timing: MarketTiming | undefined,
-  isResultPublished: boolean,
 ): CardState {
+  // 1. Admin hard-cancelled the whole market
   if (marketStatus === "CANCELLED") return "CANCELLED";
+  // 2. Admin marked the market inactive, show it with the same UI as day off
   if (marketStatus === "INACTIVE") return "DAY_OFF";
+  // 3. Timing-level INACTIVE = scheduled day off
   if (timing?.status === "INACTIVE") return "DAY_OFF";
-  if (isResultPublished) return "RESULT_PUBLISHED";
+  // 4. No timing data at all → can't determine window → treat as time over
   if (!timing?.openTime || !timing?.closeTime) return "TIME_OVER";
 
+  // 5. Time window check
   if (isWithinWindow(timing.openTime, timing.closeTime)) {
     return "OPEN";
   }
@@ -45,7 +49,8 @@ function resolveCardState(
   return "TIME_OVER";
 }
 
-const stateConfig: Record<
+// ─── Per-state visual config ──────────────────────────────────────────────────
+const STATE_CONFIG: Record<
   CardState,
   {
     card: string;
@@ -59,9 +64,8 @@ const stateConfig: Record<
     clockColor: "text-green-300",
     actionNode: ({ onClick }) => (
       <button
-        type="button"
-        onClick={(event) => {
-          event.stopPropagation();
+        onClick={(e) => {
+          e.stopPropagation();
           onClick?.();
         }}
         className="mt-auto flex w-full items-center justify-center gap-1.5 rounded-xl bg-green-500 py-2 text-[11px] font-bold text-white shadow-[0_4px_14px_rgba(34,197,94,0.40)] transition-all hover:bg-green-400 active:scale-95"
@@ -97,16 +101,6 @@ const stateConfig: Record<
       </div>
     ),
   },
-  RESULT_PUBLISHED: {
-    card: "cursor-not-allowed border-red-500/40 bg-gradient-to-br from-red-900/55 via-red-950/45 to-slate-900/80 shadow-[0_4px_18px_rgba(239,68,68,0.18)]",
-    clockColor: "text-red-300",
-    actionNode: () => (
-      <div className="mt-auto flex w-full cursor-not-allowed items-center justify-center gap-1.5 rounded-xl border border-red-500/40 bg-red-500/20 py-2 text-[11px] font-semibold text-red-200">
-        <Ban className="h-3.5 w-3.5" />
-        RESULT PUBLISHED
-      </div>
-    ),
-  },
   TIME_OVER: {
     card: "cursor-not-allowed border-red-500/40 bg-gradient-to-br from-red-900/55 via-red-950/45 to-slate-900/80 shadow-[0_4px_18px_rgba(239,68,68,0.18)]",
     clockColor: "text-red-300",
@@ -126,12 +120,11 @@ export function SessionCard({
   playTypeSlug,
   timing,
   marketStatus = "ACTIVE",
-  isResultPublished = false,
 }: SessionCardProps) {
   const router = useRouter();
-  const state = resolveCardState(marketStatus, timing, isResultPublished);
+  const state = resolveCardState(marketStatus, timing);
   const isOpen = state === "OPEN";
-  const config = stateConfig[state];
+  const config = STATE_CONFIG[state];
 
   const handlePlay = () => {
     if (!isOpen) return;
@@ -161,25 +154,25 @@ export function SessionCard({
         <p className="text-center text-[16px] font-extrabold leading-snug tracking-[0.01em] text-white">
           {title}
         </p>
-        <span
-          className={`rounded-full border px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-widest ${sessionBadgeClass}`}
-        >
+
+        {/* Session type badge */}
+        <span className={`rounded-full border px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-widest ${sessionBadgeClass}`}>
           {sessionType === "OPEN" ? "Open" : "Close"}
         </span>
+
+        {/* Admin-override badge — only shown for Cancelled / Suspended */}
         {config.badge}
       </div>
 
-      <div className="flex flex-col items-center justify-center gap-1">
-        <div className="flex items-center justify-center gap-2">
-          <Clock className={`h-3.5 w-3.5 shrink-0 ${config.clockColor}`} />
-          {timing?.closeTime ? (
-            <span className="text-base font-black text-white">
-              {fmt12(timing.closeTime)}
-            </span>
-          ) : (
-            <span className="text-slate-400">-</span>
-          )}
-        </div>
+      <div className="flex items-center justify-center gap-2">
+        <Clock className={`h-3.5 w-3.5 shrink-0 ${config.clockColor}`} />
+        {timing?.closeTime ? (
+          <span className="text-base font-black text-white">
+            {fmt12(timing.closeTime)}
+          </span>
+        ) : (
+          <span className="text-slate-400">-</span>
+        )}
       </div>
 
       {config.actionNode({ onClick: handlePlay })}

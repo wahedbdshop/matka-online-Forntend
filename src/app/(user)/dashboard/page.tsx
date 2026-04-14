@@ -97,7 +97,7 @@ export default function DashboardPage() {
             <div
               key={s.label}
               className={cn(
-                "relative overflow-hidden rounded-xl border p-3 text-center bg-gradient-to-br shadow-lg transition-all hover:scale-[1.04]",
+                "relative overflow-hidden rounded-2xl border p-3 text-center bg-gradient-to-br shadow-lg transition-all hover:scale-[1.04]",
                 s.bg,
                 s.border,
               )}
@@ -126,9 +126,9 @@ export default function DashboardPage() {
         </div>
 
         {/* Referral Banner */}
-        <div className="rounded-xl border border-green-500/20 bg-gradient-to-br from-green-900/20 to-slate-800/60 p-4">
+        <div className="rounded-2xl border border-green-500/20 bg-gradient-to-br from-green-900/20 to-slate-800/60 p-4">
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-xl bg-green-500/10 border border-green-500/20 flex items-center justify-center text-2xl shrink-0">
+            <div className="w-12 h-12 rounded-2xl bg-green-500/10 border border-green-500/20 flex items-center justify-center text-2xl shrink-0">
               🎁
             </div>
             <div>
@@ -149,7 +149,7 @@ export default function DashboardPage() {
 
         <PaymentMethodsRow methods={paymentMethods} />
 
-        <div className="rounded-xl border border-[#3e4873] bg-[#242c4c] p-4">
+        <div className="rounded-[24px] border border-[#3e4873] bg-[#242c4c] p-4">
           <div className="flex items-center justify-between gap-3">
             <div>
               <p className="text-sm font-bold text-white">Quick Access</p>
@@ -167,7 +167,7 @@ export default function DashboardPage() {
         </div>
 
         {/* SEO */}
-        <div className="rounded-xl border border-slate-700/50 bg-slate-800/40 p-4 space-y-3">
+        <div className="rounded-2xl border border-slate-700/50 bg-slate-800/40 p-4 space-y-3">
           <p className="text-sm font-bold text-white">Top Betting Exchange</p>
           <p className="text-[11px] text-slate-500 leading-relaxed">
             India, Pakistan, Sri Lanka, Nepal, Bangladesh & South East Asia.

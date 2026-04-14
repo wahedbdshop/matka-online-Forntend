@@ -1,5 +1,7 @@
 "use client";
 
+import moment from "moment-timezone";
+
 type DateLike = Date | string | number | null | undefined;
 
 type DateTimeFormatOptions = {
@@ -73,6 +75,30 @@ function buildUtcScheduleDate(
   );
 }
 
+function buildAbsoluteFormat(options: DateTimeFormatOptions) {
+  const includeDate = options.includeDate ?? true;
+  const includeTime = options.includeTime ?? true;
+  const hour12 = options.hour12 ?? true;
+
+  if (includeDate && includeTime) {
+    return hour12 ? "DD MMM YYYY, h:mm A" : "DD MMM YYYY, HH:mm";
+  }
+
+  if (includeDate) {
+    return "DD MMM YYYY";
+  }
+
+  if (includeTime) {
+    return hour12 ? "h:mm A" : "HH:mm";
+  }
+
+  return "";
+}
+
+function buildScheduleFormat(hour12 = true) {
+  return hour12 ? "h:mm A" : "HH:mm";
+}
+
 function formatOffset(minutesOffset: number) {
   const sign = minutesOffset >= 0 ? "+" : "-";
   const absoluteMinutes = Math.abs(minutesOffset);
@@ -87,7 +113,8 @@ function formatOffset(minutesOffset: number) {
 }
 
 export function getCurrentUtcMinutes(date: Date = new Date()) {
-  return date.getUTCHours() * 60 + date.getUTCMinutes();
+  const current = moment.utc(date);
+  return current.hours() * 60 + current.minutes();
 }
 
 export function getUtcScheduleMinutes(value?: string | null) {
@@ -129,7 +156,7 @@ export function isCurrentWithinUtcScheduleWindow(
 }
 
 export function getLocalTimezoneLabel(date: Date = new Date()) {
-  return formatOffset(-date.getTimezoneOffset());
+  return formatOffset(moment(date).utcOffset());
 }
 
 export function getBangladeshTimezoneLabel() {
@@ -137,7 +164,7 @@ export function getBangladeshTimezoneLabel() {
 }
 
 export function getUserTimeZone() {
-  return Intl.DateTimeFormat().resolvedOptions().timeZone || "Local time";
+  return moment.tz.guess() || "Local time";
 }
 
 export function formatLocalTimezoneNotice(date: Date = new Date()) {
@@ -161,25 +188,9 @@ export function formatAbsoluteUtcDateTimeForLocalDisplay(
     includeTimezone = false,
     hour12 = true,
   } = options;
-
-  const formatter = new Intl.DateTimeFormat(undefined, {
-    ...(includeDate
-      ? {
-          day: "2-digit",
-          month: "short",
-          year: "numeric",
-        }
-      : {}),
-    ...(includeTime
-      ? {
-          hour: "numeric",
-          minute: "2-digit",
-          hour12,
-        }
-      : {}),
-  });
-
-  const formatted = formatter.format(parsed);
+  const formatted = moment(parsed).format(
+    buildAbsoluteFormat({ includeDate, includeTime, hour12 }),
+  );
   return includeTimezone
     ? `${formatted}, ${getLocalTimezoneLabel(parsed)}`
     : formatted;
@@ -205,26 +216,9 @@ export function formatAbsoluteUtcDateTimeForBangladeshDisplay(
     includeTimezone = false,
     hour12 = true,
   } = options;
-
-  const formatter = new Intl.DateTimeFormat(undefined, {
-    ...(includeDate
-      ? {
-          day: "2-digit",
-          month: "short",
-          year: "numeric",
-        }
-      : {}),
-    ...(includeTime
-      ? {
-          hour: "numeric",
-          minute: "2-digit",
-          hour12,
-        }
-      : {}),
-    timeZone: BANGLADESH_TIME_ZONE,
-  });
-
-  const formatted = formatter.format(parsed);
+  const formatted = moment(parsed)
+    .tz(BANGLADESH_TIME_ZONE)
+    .format(buildAbsoluteFormat({ includeDate, includeTime, hour12 }));
   return includeTimezone
     ? `${formatted}, ${getBangladeshTimezoneLabel()}`
     : formatted;
@@ -238,16 +232,10 @@ export function formatUtcScheduleTimeForLocalDisplay(
 ) {
   const parsed = buildUtcScheduleDate(value, options.baseDate);
   if (!parsed) return value || "-";
-
-  const formatter = new Intl.DateTimeFormat(undefined, {
-    hour: "numeric",
-    minute: "2-digit",
-    hour12: options.hour12 ?? true,
-  });
-
-  const formatted = formatter.format(parsed);
+  const localMoment = moment.utc(parsed).local();
+  const formatted = localMoment.format(buildScheduleFormat(options.hour12 ?? true));
   return options.includeTimezone
-    ? `${formatted} (${getLocalTimezoneLabel(parsed)})`
+    ? `${formatted} (${getLocalTimezoneLabel(localMoment.toDate())})`
     : formatted;
 }
 
@@ -277,15 +265,8 @@ export function formatUtcScheduleTimeForBangladeshDisplay(
 ) {
   const parsed = buildUtcScheduleDate(value, options.baseDate);
   if (!parsed) return value || "-";
-
-  const formatter = new Intl.DateTimeFormat(undefined, {
-    hour: "numeric",
-    minute: "2-digit",
-    hour12: options.hour12 ?? true,
-    timeZone: BANGLADESH_TIME_ZONE,
-  });
-
-  const formatted = formatter.format(parsed);
+  const bangladeshMoment = moment.utc(parsed).tz(BANGLADESH_TIME_ZONE);
+  const formatted = bangladeshMoment.format(buildScheduleFormat(options.hour12 ?? true));
   return options.includeTimezone
     ? `${formatted} (${getBangladeshTimezoneLabel()})`
     : formatted;
@@ -319,62 +300,22 @@ export function formatUtcScheduleRangeForLocalDisplay(
 export function toUtcIsoFromLocalDateTimeInput(value: string) {
   if (!value) return "";
 
-  const parsed = new Date(value);
-  return isValidDate(parsed) ? parsed.toISOString() : "";
+  const parsed = moment(value);
+  return parsed.isValid() ? parsed.toDate().toISOString() : "";
 }
 
 export function toUtcIsoFromBangladeshDateTimeInput(value: string) {
   if (!value) return "";
-
-  const [datePart = "", timePart = ""] = value.split("T");
-  const [yearText = "0", monthText = "0", dayText = "0"] = datePart.split("-");
-  const [hoursText = "0", minutesText = "0"] = timePart.split(":");
-
-  const year = Number(yearText);
-  const month = Number(monthText);
-  const day = Number(dayText);
-  const hours = Number(hoursText);
-  const minutes = Number(minutesText);
-
-  if (
-    [year, month, day, hours, minutes].some((part) => Number.isNaN(part)) ||
-    month < 1 ||
-    month > 12 ||
-    day < 1 ||
-    day > 31 ||
-    hours < 0 ||
-    hours > 23 ||
-    minutes < 0 ||
-    minutes > 59
-  ) {
-    return "";
-  }
-
-  return new Date(
-    Date.UTC(year, month - 1, day, hours, minutes - BANGLADESH_UTC_OFFSET_MINUTES, 0, 0),
-  ).toISOString();
+  const parsed = moment.tz(value, "YYYY-MM-DDTHH:mm", true, BANGLADESH_TIME_ZONE);
+  return parsed.isValid() ? parsed.toDate().toISOString() : "";
 }
 
 export function toLocalDateTimeInputValue(value: DateLike) {
   const parsed = parseAbsoluteDate(value);
   if (!parsed) return "";
-
-  const year = parsed.getFullYear();
-  const month = String(parsed.getMonth() + 1).padStart(2, "0");
-  const day = String(parsed.getDate()).padStart(2, "0");
-  const hours = String(parsed.getHours()).padStart(2, "0");
-  const minutes = String(parsed.getMinutes()).padStart(2, "0");
-
-  return `${year}-${month}-${day}T${hours}:${minutes}`;
+  return moment(parsed).format("YYYY-MM-DDTHH:mm");
 }
 
 export function getBangladeshDateISO(date: Date = new Date()) {
-  const formatter = new Intl.DateTimeFormat("en-CA", {
-    timeZone: BANGLADESH_TIME_ZONE,
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  });
-
-  return formatter.format(date);
+  return moment(date).tz(BANGLADESH_TIME_ZONE).format("YYYY-MM-DD");
 }

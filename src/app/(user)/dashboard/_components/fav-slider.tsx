@@ -24,7 +24,7 @@ export function FavSlider({ slides }: { slides: any[] }) {
 
   return (
     <div>
-      <p className="text-white font-semibold text-sm mb-3">Favourites </p>
+      <p className="text-white font-semibold text-sm mb-3">Favourites</p>
       <div className="relative aspect-[3/1] overflow-hidden rounded-2xl">
         {slides.map((s, i) => (
           <div

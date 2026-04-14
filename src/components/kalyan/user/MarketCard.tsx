@@ -49,7 +49,7 @@ export function MarketCard({ market, playTypeSlug }: MarketCardProps) {
   const openTiming = timings.find((t) => t.sessionType === "OPEN");
   const closeTiming = timings.find((t) => t.sessionType === "CLOSE");
 
-  const sessionLabels = { OPEN: "Open", CLOSE: "Close" } as const;
+  const SESSION_LABELS = { OPEN: "Open", CLOSE: "Close" };
 
   const SessionRow = ({
     timing,
@@ -70,34 +70,34 @@ export function MarketCard({ market, playTypeSlug }: MarketCardProps) {
 
     return (
       <div className="flex items-center justify-between gap-2">
-        <div className="flex min-w-0 items-center gap-2">
+        <div className="flex items-center gap-2 min-w-0">
           <Clock className="h-3 w-3 shrink-0 text-slate-500" />
-          <span className="text-[11px] font-medium text-slate-400">
-            {sessionLabels[sessionType]}
+          <span className="text-[11px] text-slate-400 font-medium">
+            {SESSION_LABELS[sessionType]}
           </span>
-          {timing?.openTime ? (
+          {timing?.openTime && (
             <span className="text-[10px] text-slate-500">
-              {fmt12(timing.openTime)} - {fmt12(timing.closeTime)}
+              {fmt12(timing.openTime)} – {fmt12(timing.closeTime)}
             </span>
-          ) : null}
+          )}
         </div>
         {loading ? (
           <div className="h-7 w-20 animate-pulse rounded-lg bg-slate-700/50" />
         ) : active ? (
           <button
             onClick={() => navigate(sessionType)}
-            className="flex items-center gap-1 rounded-lg bg-green-600 px-3 py-1.5 text-[11px] font-bold text-white transition-colors hover:bg-green-700"
+            className="flex items-center gap-1 rounded-lg bg-green-600 px-3 py-1.5 text-[11px] font-bold text-white hover:bg-green-700 transition-colors"
           >
             <PlayCircle className="h-3 w-3" />
             Play Now
           </button>
         ) : isDayOff ? (
-          <span className="flex cursor-not-allowed items-center gap-1 rounded-lg border border-red-500/40 bg-red-500/20 px-3 py-1.5 text-[11px] font-semibold text-red-200">
+          <span className="flex items-center gap-1 rounded-lg border border-red-500/40 bg-red-500/20 px-3 py-1.5 text-[11px] font-semibold text-red-200 cursor-not-allowed">
             <CircleSlash className="h-3 w-3" />
             Day Off
           </span>
         ) : (
-          <span className="flex cursor-not-allowed items-center gap-1 rounded-lg border border-slate-600/40 bg-slate-700/60 px-3 py-1.5 text-[11px] font-semibold text-slate-500">
+          <span className="flex items-center gap-1 rounded-lg bg-slate-700/60 border border-slate-600/40 px-3 py-1.5 text-[11px] font-semibold text-slate-500 cursor-not-allowed">
             <TimerOff className="h-3 w-3" />
             Time Over
           </span>
@@ -107,7 +107,7 @@ export function MarketCard({ market, playTypeSlug }: MarketCardProps) {
   };
 
   return (
-    <div className="space-y-3 rounded-2xl border border-slate-700/60 bg-slate-800/50 p-4">
+    <div className="rounded-2xl border border-slate-700/60 bg-slate-800/50 p-4 space-y-3">
       <p className="text-sm font-bold text-white">{market.name}</p>
       <div className="space-y-2.5">
         <SessionRow timing={openTiming} sessionType="OPEN" />

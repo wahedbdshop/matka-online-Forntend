@@ -15,7 +15,6 @@ import {
   ListChecks,
 } from "lucide-react";
 import { toast } from "sonner";
-import { formatAbsoluteUtcDateTimeForLocalDisplay } from "@/lib/timezone";
 import { ThaiLotteryUserService } from "@/services/thai-lottery.service";
 import { useCurrency } from "@/hooks/use-currency";
 
@@ -198,16 +197,6 @@ export default function ThaiLotteryPage() {
   const activeRound = activeRoundData?.data;
   const hasOpenRound = Boolean(activeRound?.id);
   const usdBalance = Number(profileData?.data?.balance ?? 0) / usdToBdt;
-  const activeRoundCloseLabel = activeRound?.closeTime
-    ? formatAbsoluteUtcDateTimeForLocalDisplay(activeRound.closeTime, {
-        includeTimezone: true,
-      })
-    : null;
-  const activeRoundDrawLabel = activeRound?.drawDate
-    ? formatAbsoluteUtcDateTimeForLocalDisplay(activeRound.drawDate, {
-        includeTimezone: true,
-      })
-    : null;
 
   const getRate = (playType: ActualPlayType): RateInfo =>
     ratesList.find((r: any) => r.playType === playType) ?? FALLBACK_RATES[playType];
@@ -549,36 +538,13 @@ export default function ThaiLotteryPage() {
               {!hasOpenRound && (
                 <div className="rounded-[22px] border border-amber-400/20 bg-[linear-gradient(135deg,_rgba(70,36,11,0.95),_rgba(45,23,10,0.95))] px-4 py-3">
                   <p className="text-[10px] font-black uppercase tracking-[0.24em] text-amber-300">
-                    Play Time Over
+                    Play Time Over 2:15 PM
                   </p>
                   <p className="mt-1 text-sm leading-6 text-amber-100/75">
                     This play is not available right now. Please wait for the next round.
                   </p>
-                  {activeRoundDrawLabel ? (
-                    <p className="mt-1 text-[11px] text-amber-200/80">
-                      Next draw: {activeRoundDrawLabel}
-                    </p>
-                  ) : null}
                 </div>
               )}
-
-              {hasOpenRound && (activeRoundCloseLabel || activeRoundDrawLabel) ? (
-                <div className="rounded-[22px] border border-emerald-400/15 bg-[linear-gradient(135deg,_rgba(8,43,36,0.95),_rgba(6,26,22,0.95))] px-4 py-3">
-                  <p className="text-[10px] font-black uppercase tracking-[0.24em] text-emerald-300">
-                    Active Round #{activeRound.issueNumber}
-                  </p>
-                  {activeRoundCloseLabel ? (
-                    <p className="mt-1 text-sm leading-6 text-emerald-100/80">
-                      Closes at {activeRoundCloseLabel}
-                    </p>
-                  ) : null}
-                  {activeRoundDrawLabel ? (
-                    <p className="text-[11px] text-emerald-200/70">
-                      Draw time: {activeRoundDrawLabel}
-                    </p>
-                  ) : null}
-                </div>
-              ) : null}
 
               <div className="space-y-3">
                 <div className="relative">

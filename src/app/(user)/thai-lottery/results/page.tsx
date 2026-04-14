@@ -5,7 +5,6 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { ChevronLeft, ReceiptText } from "lucide-react";
-import { formatAbsoluteUtcDateForLocalDisplay } from "@/lib/timezone";
 import { ThaiPublicResultService } from "@/services/thai-public-result.service";
 
 const LIMIT = 20;
@@ -14,11 +13,13 @@ const formatDate = (
   date?: string,
 ): { compact: string; year: string } => {
   if (!date) return { compact: "-", year: "-" };
-  const label = formatAbsoluteUtcDateForLocalDisplay(date);
-  const parts = label.split(" ");
+  const d = new Date(date);
   return {
-    compact: parts.slice(0, 2).join(" ") || label,
-    year: parts[2]?.slice(-2) || "-",
+    compact: d.toLocaleDateString("en-GB", {
+      day: "2-digit",
+      month: "short",
+    }),
+    year: d.toLocaleDateString("en-GB", { year: "2-digit" }),
   };
 };
 

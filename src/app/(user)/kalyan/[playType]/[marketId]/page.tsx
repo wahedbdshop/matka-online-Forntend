@@ -19,13 +19,10 @@ import { KalyanPageHeader } from "@/components/kalyan/user/KalyanPageHeader";
 import { NumberAmountCell } from "@/components/kalyan/user/NumberAmountCell";
 import { NumberSectionCard } from "@/components/kalyan/user/NumberSectionCard";
 import { TotalAmountBar } from "@/components/kalyan/user/TotalAmountBar";
-import {
-  getBangladeshDateISO,
-} from "@/lib/timezone";
-import { Rate } from "@/types/kalyan";
+import { getBangladeshDateISO } from "@/lib/timezone";
 import { isDhakaTimePastOrEqual } from "@/lib/kalyan-time";
+import { Rate } from "@/types/kalyan";
 
-// ─── Section accent colours (cycle through totals 0–9) ────────────────────────
 const SECTION_COLORS = [
   "bg-blue-600/20 text-blue-300",
   "bg-indigo-600/20 text-indigo-300",
@@ -90,17 +87,6 @@ function toTitleCase(value: string) {
   return value.replace(/\b\w/g, (char) => char.toUpperCase());
 }
 
-function hasPublishedResultForSession(result: any, sessionType: "OPEN" | "CLOSE") {
-  if (!result) return false;
-
-  if (sessionType === "OPEN") {
-    return !!result?.openPatti && result.openPatti !== "000";
-  }
-
-  return !!result?.closePatti && result.closePatti !== "000";
-}
-
-// ─── Blocking overlay shown when admin has suspended or cancelled the market ──
 function MarketBlockedScreen({
   status,
   backHref,
@@ -146,9 +132,13 @@ function MarketBlockedScreen({
         }`}
       >
         {isCancelled ? (
-          <><Ban className="h-3 w-3" /> Cancelled</>
+          <>
+            <Ban className="h-3 w-3" /> Cancelled
+          </>
         ) : (
-          <><ShieldOff className="h-3 w-3" /> Market Suspended</>
+          <>
+            <ShieldOff className="h-3 w-3" /> Market Suspended
+          </>
         )}
       </span>
 
@@ -182,10 +172,8 @@ export default function GamePlayPage() {
   const [submitting, setSubmitting] = useState(false);
   const [closeTime, setCloseTime] = useState<string | null>(null);
   const [isTimeOver, setIsTimeOver] = useState(false);
-  const [isResultPublished, setIsResultPublished] = useState(false);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // ── Fetch market info + admin status ────────────────────────────────────────
   useEffect(() => {
     let mounted = true;
 
@@ -201,12 +189,10 @@ export default function GamePlayPage() {
         if (!mounted) return;
 
         if (!currentMarket) {
-          // Market not found at all — treat as suspended
           setMarketAdminStatus("INACTIVE");
           return;
         }
 
-        // Persist admin-level status before any time-based logic runs
         const rawStatus = String(currentMarket.status ?? "ACTIVE").toUpperCase();
         if (rawStatus === "CANCELLED") {
           setMarketAdminStatus("CANCELLED");
@@ -225,7 +211,7 @@ export default function GamePlayPage() {
       })
       .catch(() => {
         if (!mounted) return;
-        setMarketAdminStatus("ACTIVE"); // Fail-open: let time check decide
+        setMarketAdminStatus("ACTIVE");
         setMarketTitle(sessionType === "CLOSE" ? "Game Close" : "Game Open");
       });
 
@@ -259,7 +245,6 @@ export default function GamePlayPage() {
     };
   }, [playTypeEnum]);
 
-  // ── Fetch timing for this session and track time expiry ─────────────────────
   useEffect(() => {
     let mounted = true;
 
@@ -272,37 +257,7 @@ export default function GamePlayPage() {
           setCloseTime(timing.closeTime);
         }
       })
-      .catch(() => {/* silently ignore — no timing available */});
-
-    return () => { mounted = false; };
-  }, [marketId, sessionType]);
-
-  useEffect(() => {
-    let mounted = true;
-
-    KalyanUserService.getPublishedResults({
-      marketId,
-      date: getBangladeshDateISO(),
-      page: 1,
-      limit: 50,
-    })
-      .then((res) => {
-        if (!mounted) return;
-
-        const results = Array.isArray(res.data)
-          ? res.data
-          : Array.isArray(res.data?.results)
-            ? res.data.results
-            : [];
-
-        setIsResultPublished(
-          results.some((result: any) => hasPublishedResultForSession(result, sessionType)),
-        );
-      })
-      .catch(() => {
-        if (!mounted) return;
-        setIsResultPublished(false);
-      });
+      .catch(() => {});
 
     return () => {
       mounted = false;
@@ -311,6 +266,7 @@ export default function GamePlayPage() {
 
   const checkTimeOver = useCallback(() => {
     if (!closeTime) return;
+
     if (isDhakaTimePastOrEqual(closeTime)) {
       setIsTimeOver(true);
       if (intervalRef.current) {
@@ -341,14 +297,13 @@ export default function GamePlayPage() {
   }, [marketTitle, sessionType]);
 
   const total = Object.values(values).reduce(
-    (sum, v) => sum + Math.max(0, Number(v) || 0),
+    (sum, value) => sum + Math.max(0, Number(value) || 0),
     0,
   );
   const discountAmount = Number(((total * discountPct) / 100).toFixed(2));
   const payableAmount = Number((total - discountAmount).toFixed(2));
 
   const onSubmit = async (data: Record<string, string>) => {
-    // Admin-override guard — checked before any time logic
     if (marketAdminStatus === "CANCELLED") {
       toast.error("This market has been cancelled. Betting is not allowed.");
       return;
@@ -357,17 +312,14 @@ export default function GamePlayPage() {
       toast.error("This market is currently suspended. Please check back later.");
       return;
     }
-    if (isResultPublished) {
-      toast.error("Result is already published. Betting is closed for this session.");
-      router.push("/kalyan");
-      return;
-    }
 
-    // Re-validate time before every submission
-    if (isTimeOver || (() => {
-      if (!closeTime) return false;
-      return isDhakaTimePastOrEqual(closeTime);
-    })()) {
+    if (
+      isTimeOver ||
+      (() => {
+        if (!closeTime) return false;
+        return isDhakaTimePastOrEqual(closeTime);
+      })()
+    ) {
       toast.error("Time is over! You cannot place this bet.");
       router.push("/kalyan");
       return;
@@ -395,10 +347,10 @@ export default function GamePlayPage() {
     }
 
     const items = Object.entries(data)
-      .filter(([, amt]) => Number(amt) > 0)
-      .map(([num, amt]) => ({
-        selectedNumber: num,
-        amount: Number(amt),
+      .filter(([, amount]) => Number(amount) > 0)
+      .map(([selectedNumber, amount]) => ({
+        selectedNumber,
+        amount: Number(amount),
       }));
 
     if (!items.length) {
@@ -435,7 +387,6 @@ export default function GamePlayPage() {
     }
   };
 
-  // ── Admin override blocks the entire page ───────────────────────────────────
   if (marketAdminStatus === "INACTIVE" || marketAdminStatus === "CANCELLED") {
     return (
       <div className="space-y-5 pb-6">
@@ -460,7 +411,24 @@ export default function GamePlayPage() {
         backHref={`/kalyan/${playTypeSlug}`}
       />
 
-      {/* ── Game Total ─────────────────────────────────────────── */}
+      <div className="rounded-xl border border-slate-700/40 bg-slate-800/30 px-4 py-3">
+        <p
+          className={`text-xs leading-relaxed text-slate-400 ${
+            playTypeEnum === "SINGLE_PATTI" ? "max-w-68" : ""
+          }`}
+        >
+          Enter the amount beside each number you want to bet on.
+          Only numbers with an amount will be included in your submission.
+        </p>
+        {discountPct > 0 && (
+          <p className="mt-2 text-xs leading-relaxed text-emerald-300/90">
+            Discount: {discountPct}% applied. Wallet will deduct only the payable
+            amount, but winnings will still be calculated from your entered
+            amount.
+          </p>
+        )}
+      </div>
+
       {playTypeEnum === "GAME_TOTAL" && (
         <div className="rounded-2xl border border-slate-700/60 bg-slate-800/30 overflow-hidden">
           <div className="bg-blue-600/25 px-4 py-2.5">
@@ -476,40 +444,37 @@ export default function GamePlayPage() {
         </div>
       )}
 
-      {/* ── Single Patti ────────────────────────────────────────── */}
       {playTypeEnum === "SINGLE_PATTI" && (
         <div className="space-y-3">
-          {Object.entries(SINGLE_PATTI_MAP).map(([total, nums], idx) => (
+          {Object.entries(SINGLE_PATTI_MAP).map(([total, nums], index) => (
             <NumberSectionCard
               key={total}
               title={`Total ${total}`}
               numbers={nums}
               register={register}
-              accentColor={SECTION_COLORS[idx % SECTION_COLORS.length]}
+              accentColor={SECTION_COLORS[index % SECTION_COLORS.length]}
             />
           ))}
         </div>
       )}
 
-      {/* ── Double Patti ────────────────────────────────────────── */}
       {playTypeEnum === "DOUBLE_PATTI" && (
         <div className="space-y-3">
-          {Object.entries(DOUBLE_PATTI_MAP).map(([total, nums], idx) => (
+          {Object.entries(DOUBLE_PATTI_MAP).map(([total, nums], index) => (
             <NumberSectionCard
               key={total}
               title={`Total ${total}`}
               numbers={nums}
               register={register}
-              accentColor={SECTION_COLORS[idx % SECTION_COLORS.length]}
+              accentColor={SECTION_COLORS[index % SECTION_COLORS.length]}
             />
           ))}
         </div>
       )}
 
-      {/* ── Triple Patti ────────────────────────────────────────── */}
       {playTypeEnum === "TRIPLE_PATTI" && (
         <div className="rounded-2xl border border-slate-700/60 bg-slate-800/30 overflow-hidden">
-          <div className="bg-orange-600/20 text-orange-300 px-4 py-2">
+          <div className="bg-orange-600/20 px-4 py-2 text-orange-300">
             <span className="text-xs font-bold uppercase tracking-wide">
               Triple Patti Numbers
             </span>
@@ -522,40 +487,33 @@ export default function GamePlayPage() {
         </div>
       )}
 
-      {/* ── Jori ────────────────────────────────────────────────── */}
       {playTypeEnum === "JORI" && (
         <div className="space-y-3">
-          {Object.entries(JORI_MAP).map(([digit, nums], idx) => (
+          {Object.entries(JORI_MAP).map(([digit, nums], index) => (
             <NumberSectionCard
               key={digit}
               title={`Digit - ${digit}`}
               numbers={nums}
               register={register}
-              accentColor={SECTION_COLORS[idx % SECTION_COLORS.length]}
+              accentColor={SECTION_COLORS[index % SECTION_COLORS.length]}
             />
           ))}
         </div>
       )}
 
       {!playTypeEnum && (
-        <p className="text-center text-sm text-red-400 py-8">
+        <p className="py-8 text-center text-sm text-red-400">
           Unknown play type: {playTypeSlug}
         </p>
       )}
 
-      {/* ── Sticky total + submit ─────────────────────────────── */}
-      <div className="fixed bottom-16 left-0 right-0 px-4 z-20 max-w-lg mx-auto">
+      <div className="fixed bottom-16 left-0 right-0 z-20 mx-auto max-w-lg px-4">
         <TotalAmountBar
           total={total}
           discountAmount={discountAmount}
           payableAmount={payableAmount}
         />
-        {isResultPublished ? (
-          <div className="mt-2 flex w-full cursor-not-allowed items-center justify-center gap-2 rounded-2xl border border-red-500/40 bg-red-500/20 py-2.5 text-sm font-bold text-red-200">
-            <TimerOff className="h-4 w-4" />
-            Result Published - Betting Closed
-          </div>
-        ) : isTimeOver ? (
+        {isTimeOver ? (
           <div className="mt-2 flex w-full cursor-not-allowed items-center justify-center gap-2 rounded-2xl border border-red-500/40 bg-red-500/20 py-2.5 text-sm font-bold text-red-200">
             <TimerOff className="h-4 w-4" />
             Time Over — Betting Closed
