@@ -3,7 +3,10 @@
 import { useRouter } from "next/navigation";
 import { Ban, CircleSlash, Clock, PlayCircle, TimerOff } from "lucide-react";
 import { MarketTiming } from "@/types/kalyan";
-import { isDhakaTimeWithinWindow } from "@/lib/kalyan-time";
+import {
+  formatUtcScheduleTimeForLocalDisplay,
+  hasUtcScheduleTimePassed,
+} from "@/lib/timezone";
 
 interface SessionCardProps {
   title: string;
@@ -15,14 +18,14 @@ interface SessionCardProps {
   currentDate?: Date | null;
 }
 
-function isWithinWindow(openTime: string, closeTime: string, date: Date): boolean {
-  return isDhakaTimeWithinWindow(openTime, closeTime, date);
+function isSessionStillOpen(closeTime: string, date: Date): boolean {
+  return !hasUtcScheduleTimePassed(closeTime, date);
 }
 
-function fmt12(t: string): string {
-  const [h, m] = t.split(":").map(Number);
-  const suffix = h >= 12 ? "PM" : "AM";
-  return `${h % 12 || 12}:${String(m).padStart(2, "0")} ${suffix}`;
+function formatLocalTime(time?: string | null, date?: Date | null) {
+  return formatUtcScheduleTimeForLocalDisplay(time, {
+    baseDate: date ?? new Date(),
+  });
 }
 
 // ─── Priority-ordered state resolution ───────────────────────────────────────
@@ -41,10 +44,10 @@ function resolveCardState(
   // 3. Timing-level INACTIVE = scheduled day off
   if (timing?.status === "INACTIVE") return "DAY_OFF";
   // 4. No timing data at all → can't determine window → treat as time over
-  if (!timing?.openTime || !timing?.closeTime || !currentDate) return "TIME_OVER";
+  if (!timing?.closeTime || !currentDate) return "TIME_OVER";
 
-  // 5. Time window check
-  if (isWithinWindow(timing.openTime, timing.closeTime, currentDate)) {
+  // 5. Session stays playable until its configured close time
+  if (isSessionStillOpen(timing.closeTime, currentDate)) {
     return "OPEN";
   }
 
@@ -171,7 +174,7 @@ export function SessionCard({
         <Clock className={`h-3.5 w-3.5 shrink-0 ${config.clockColor}`} />
         {timing?.closeTime ? (
           <span className="text-base font-black text-white">
-            {fmt12(timing.closeTime)}
+            {formatLocalTime(timing.closeTime, currentDate)}
           </span>
         ) : (
           <span className="text-slate-400">-</span>

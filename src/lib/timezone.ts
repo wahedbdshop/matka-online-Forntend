@@ -75,6 +75,29 @@ function buildUtcScheduleDate(
   );
 }
 
+function buildUtcScheduleInstantFromBangladeshDate(
+  value?: string | null,
+  referenceDate: Date = new Date(),
+) {
+  if (!value) return null;
+
+  const bangladeshDate = moment(referenceDate)
+    .tz(BANGLADESH_TIME_ZONE)
+    .format("YYYY-MM-DD");
+  const bangladeshTime = convertUtcScheduleToBangladesh(value);
+
+  if (!bangladeshTime) return null;
+
+  const parsed = moment.tz(
+    `${bangladeshDate} ${bangladeshTime}`,
+    "YYYY-MM-DD HH:mm",
+    true,
+    BANGLADESH_TIME_ZONE,
+  );
+
+  return parsed.isValid() ? parsed.utc() : null;
+}
+
 function buildAbsoluteFormat(options: DateTimeFormatOptions) {
   const includeDate = options.includeDate ?? true;
   const includeTime = options.includeTime ?? true;
@@ -128,10 +151,10 @@ export function hasUtcScheduleTimePassed(
   value?: string | null,
   date: Date = new Date(),
 ) {
-  const scheduleMinutes = getUtcScheduleMinutes(value);
-  if (scheduleMinutes === null) return false;
+  const scheduleMoment = buildUtcScheduleInstantFromBangladeshDate(value, date);
+  if (!scheduleMoment) return false;
 
-  return getCurrentUtcMinutes(date) >= scheduleMinutes;
+  return moment(date).valueOf() >= scheduleMoment.valueOf();
 }
 
 export function isCurrentWithinUtcScheduleWindow(
@@ -139,20 +162,19 @@ export function isCurrentWithinUtcScheduleWindow(
   closeTime?: string | null,
   date: Date = new Date(),
 ) {
-  const openMinutes = getUtcScheduleMinutes(openTime);
-  const closeMinutes = getUtcScheduleMinutes(closeTime);
+  const openMoment = buildUtcScheduleInstantFromBangladeshDate(openTime, date);
+  const closeMoment = buildUtcScheduleInstantFromBangladeshDate(closeTime, date);
 
-  if (openMinutes === null || closeMinutes === null) {
+  if (!openMoment || !closeMoment) {
     return false;
   }
 
-  const currentMinutes = getCurrentUtcMinutes(date);
-
-  if (openMinutes <= closeMinutes) {
-    return currentMinutes >= openMinutes && currentMinutes < closeMinutes;
+  if (closeMoment.valueOf() <= openMoment.valueOf()) {
+    closeMoment.add(1, "day");
   }
 
-  return currentMinutes >= openMinutes || currentMinutes < closeMinutes;
+  const currentTime = moment(date).valueOf();
+  return currentTime >= openMoment.valueOf() && currentTime < closeMoment.valueOf();
 }
 
 export function getLocalTimezoneLabel(date: Date = new Date()) {

@@ -19,8 +19,10 @@ import { KalyanPageHeader } from "@/components/kalyan/user/KalyanPageHeader";
 import { NumberAmountCell } from "@/components/kalyan/user/NumberAmountCell";
 import { NumberSectionCard } from "@/components/kalyan/user/NumberSectionCard";
 import { TotalAmountBar } from "@/components/kalyan/user/TotalAmountBar";
-import { getBangladeshDateISO } from "@/lib/timezone";
-import { isDhakaTimePastOrEqual } from "@/lib/kalyan-time";
+import {
+  getBangladeshDateISO,
+  hasUtcScheduleTimePassed,
+} from "@/lib/timezone";
 import { Rate } from "@/types/kalyan";
 import { useServerTime } from "@/hooks/use-server-time";
 
@@ -266,7 +268,7 @@ export default function GamePlayPage() {
 
   const isTimeOver = useMemo(() => {
     if (!serverTimeReady || !serverNow || !closeTime) return false;
-    return isDhakaTimePastOrEqual(closeTime, serverNow);
+    return hasUtcScheduleTimePassed(closeTime, serverNow);
   }, [closeTime, serverNow, serverTimeReady]);
 
   const headerSubtitle = useMemo(() => {
@@ -394,27 +396,15 @@ export default function GamePlayPage() {
         backHref={`/kalyan/${playTypeSlug}`}
       />
 
-      <div className="rounded-xl border border-slate-700/40 bg-slate-800/30 px-4 py-3">
-        <p
-          className={`text-xs leading-relaxed text-slate-400 ${
-            playTypeEnum === "SINGLE_PATTI" ? "max-w-68" : ""
-          }`}
-        >
-          Enter the amount beside each number you want to bet on.
-          Only numbers with an amount will be included in your submission.
-        </p>
-        {discountPct > 0 && (
-          <p className="mt-2 text-xs leading-relaxed text-emerald-300/90">
+      {discountPct > 0 && (
+        <div className="rounded-xl border border-slate-700/40 bg-slate-800/30 px-4 py-3">
+          <p className="text-xs leading-relaxed text-emerald-300/90">
             Discount: {discountPct}% applied. Wallet will deduct only the payable
             amount, but winnings will still be calculated from your entered
             amount.
           </p>
-        )}
-        <p className="mt-2 text-xs leading-relaxed text-slate-500">
-          Betting time is validated by server-side Bangladesh time. Device or
-          browser clock changes will not bypass the open/close rules.
-        </p>
-      </div>
+        </div>
+      )}
 
       {playTypeEnum === "GAME_TOTAL" && (
         <div className="rounded-2xl border border-slate-700/60 bg-slate-800/30 overflow-hidden">

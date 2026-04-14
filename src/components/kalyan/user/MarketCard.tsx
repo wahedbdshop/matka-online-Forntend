@@ -5,26 +5,30 @@ import { useRouter } from "next/navigation";
 import { CircleSlash, Clock, PlayCircle, TimerOff } from "lucide-react";
 import { KalyanUserService } from "@/services/kalyanUser.service";
 import { Market, MarketTiming } from "@/types/kalyan";
-import { isDhakaTimeWithinWindow } from "@/lib/kalyan-time";
+import {
+  formatUtcScheduleTimeForLocalDisplay,
+  hasUtcScheduleTimePassed,
+} from "@/lib/timezone";
+import { useServerTime } from "@/hooks/use-server-time";
 
 interface MarketCardProps {
   market: Market;
   playTypeSlug: string;
 }
 
-function isWithinWindow(openTime: string, closeTime: string): boolean {
-  return isDhakaTimeWithinWindow(openTime, closeTime);
+function isSessionStillOpen(closeTime: string, date: Date): boolean {
+  return !hasUtcScheduleTimePassed(closeTime, date);
 }
 
-function fmt12(t: string): string {
-  const [h, m] = t.split(":").map(Number);
-  const suffix = h >= 12 ? "PM" : "AM";
-  const h12 = h % 12 || 12;
-  return `${h12}:${String(m).padStart(2, "0")} ${suffix}`;
+function formatLocalTime(time?: string | null, date?: Date | null) {
+  return formatUtcScheduleTimeForLocalDisplay(time, {
+    baseDate: date ?? new Date(),
+  });
 }
 
 export function MarketCard({ market, playTypeSlug }: MarketCardProps) {
   const router = useRouter();
+  const { serverNow } = useServerTime();
   const [timings, setTimings] = useState<MarketTiming[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -64,20 +68,20 @@ export function MarketCard({ market, playTypeSlug }: MarketCardProps) {
     const active =
       !isDayOff &&
       timing?.status === "ACTIVE" &&
-      !!timing?.openTime &&
+      !!serverNow &&
       !!timing?.closeTime &&
-      isWithinWindow(timing.openTime, timing.closeTime);
+      isSessionStillOpen(timing.closeTime, serverNow);
 
     return (
       <div className="flex items-center justify-between gap-2">
-        <div className="flex items-center gap-2 min-w-0">
+        <div className="flex min-w-0 items-center gap-2">
           <Clock className="h-3 w-3 shrink-0 text-slate-500" />
-          <span className="text-[11px] text-slate-400 font-medium">
+          <span className="text-[11px] font-medium text-slate-400">
             {SESSION_LABELS[sessionType]}
           </span>
           {timing?.openTime && (
             <span className="text-[10px] text-slate-500">
-              {fmt12(timing.openTime)} – {fmt12(timing.closeTime)}
+              {formatLocalTime(timing.openTime, serverNow)} - {formatLocalTime(timing.closeTime, serverNow)}
             </span>
           )}
         </div>
@@ -86,18 +90,18 @@ export function MarketCard({ market, playTypeSlug }: MarketCardProps) {
         ) : active ? (
           <button
             onClick={() => navigate(sessionType)}
-            className="flex items-center gap-1 rounded-lg bg-green-600 px-3 py-1.5 text-[11px] font-bold text-white hover:bg-green-700 transition-colors"
+            className="flex items-center gap-1 rounded-lg bg-green-600 px-3 py-1.5 text-[11px] font-bold text-white transition-colors hover:bg-green-700"
           >
             <PlayCircle className="h-3 w-3" />
             Play Now
           </button>
         ) : isDayOff ? (
-          <span className="flex items-center gap-1 rounded-lg border border-red-500/40 bg-red-500/20 px-3 py-1.5 text-[11px] font-semibold text-red-200 cursor-not-allowed">
+          <span className="cursor-not-allowed flex items-center gap-1 rounded-lg border border-red-500/40 bg-red-500/20 px-3 py-1.5 text-[11px] font-semibold text-red-200">
             <CircleSlash className="h-3 w-3" />
             Day Off
           </span>
         ) : (
-          <span className="flex items-center gap-1 rounded-lg bg-slate-700/60 border border-slate-600/40 px-3 py-1.5 text-[11px] font-semibold text-slate-500 cursor-not-allowed">
+          <span className="cursor-not-allowed flex items-center gap-1 rounded-lg border border-slate-600/40 bg-slate-700/60 px-3 py-1.5 text-[11px] font-semibold text-slate-500">
             <TimerOff className="h-3 w-3" />
             Time Over
           </span>
@@ -107,7 +111,7 @@ export function MarketCard({ market, playTypeSlug }: MarketCardProps) {
   };
 
   return (
-    <div className="rounded-2xl border border-slate-700/60 bg-slate-800/50 p-4 space-y-3">
+    <div className="space-y-3 rounded-2xl border border-slate-700/60 bg-slate-800/50 p-4">
       <p className="text-sm font-bold text-white">{market.name}</p>
       <div className="space-y-2.5">
         <SessionRow timing={openTiming} sessionType="OPEN" />
