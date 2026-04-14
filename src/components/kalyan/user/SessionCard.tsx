@@ -3,7 +3,6 @@
 import { useRouter } from "next/navigation";
 import { Ban, CircleSlash, Clock, PlayCircle, TimerOff } from "lucide-react";
 import {
-  formatLocalTimezoneNotice,
   formatUtcScheduleTimeForLocalDisplay,
   isCurrentWithinUtcScheduleWindow,
 } from "@/lib/timezone";
@@ -153,19 +152,12 @@ export function SessionCard({
           <Clock className={`h-3.5 w-3.5 shrink-0 ${config.clockColor}`} />
           {timing?.closeTime ? (
             <span className="text-base font-black text-white">
-              {formatUtcScheduleTimeForLocalDisplay(timing.closeTime, {
-                includeTimezone: true,
-              })}
+              {formatUtcScheduleTimeForLocalDisplay(timing.closeTime)}
             </span>
           ) : (
             <span className="text-slate-400">-</span>
           )}
         </div>
-        {timing?.closeTime ? (
-          <span className="text-center text-[10px] text-slate-400">
-            Closes in {formatLocalTimezoneNotice()}
-          </span>
-        ) : null}
       </div>
 
       {config.actionNode({ onClick: handlePlay })}

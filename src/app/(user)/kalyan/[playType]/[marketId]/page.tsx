@@ -20,7 +20,6 @@ import { NumberAmountCell } from "@/components/kalyan/user/NumberAmountCell";
 import { NumberSectionCard } from "@/components/kalyan/user/NumberSectionCard";
 import { TotalAmountBar } from "@/components/kalyan/user/TotalAmountBar";
 import {
-  formatLocalTimezoneNotice,
   formatUtcScheduleTimeForLocalDisplay,
   hasUtcScheduleTimePassed,
 } from "@/lib/timezone";
@@ -175,12 +174,7 @@ export default function GamePlayPage() {
   const [isTimeOver, setIsTimeOver] = useState(false);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const closeTimeLabel = useMemo(
-    () =>
-      closeTime
-        ? formatUtcScheduleTimeForLocalDisplay(closeTime, {
-            includeTimezone: true,
-          })
-        : null,
+    () => (closeTime ? formatUtcScheduleTimeForLocalDisplay(closeTime) : null),
     [closeTime],
   );
 
@@ -440,7 +434,7 @@ export default function GamePlayPage() {
         )}
         {closeTimeLabel ? (
           <p className="mt-2 text-xs leading-relaxed text-slate-300">
-            Closes at {closeTimeLabel}. {formatLocalTimezoneNotice()}
+            Closes at {closeTimeLabel}.
           </p>
         ) : null}
       </div>

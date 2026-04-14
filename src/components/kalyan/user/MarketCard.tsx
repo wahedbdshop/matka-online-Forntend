@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { CircleSlash, Clock, PlayCircle, TimerOff } from "lucide-react";
 import {
-  formatLocalTimezoneNotice,
   formatUtcScheduleRangeForLocalDisplay,
   isCurrentWithinUtcScheduleWindow,
 } from "@/lib/timezone";
@@ -71,14 +70,7 @@ export function MarketCard({ market, playTypeSlug }: MarketCardProps) {
           {timing?.openTime ? (
             <div className="min-w-0">
               <span className="block text-[10px] text-slate-500">
-                {formatUtcScheduleRangeForLocalDisplay(
-                  timing.openTime,
-                  timing.closeTime,
-                  { includeTimezone: true },
-                )}
-              </span>
-              <span className="block text-[9px] text-slate-600">
-                {formatLocalTimezoneNotice()}
+                {formatUtcScheduleRangeForLocalDisplay(timing.openTime, timing.closeTime)}
               </span>
             </div>
           ) : null}
