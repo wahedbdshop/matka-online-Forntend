@@ -23,6 +23,7 @@ import { WithdrawalService } from "@/services/withdrawal.service";
 import { AdminService } from "@/services/admin.service";
 import { UserService } from "@/services/user.service"; // profile fetch
 import { cn } from "@/lib/utils";
+import { useAuthStore } from "@/store/auth.store";
 
 // ─── Types ────────────────────────────────────────────────────
 type Step = "method" | "amount" | "details";
@@ -96,6 +97,28 @@ const STATUS_ICON: Record<string, any> = {
 };
 
 const fmt = (n: number | string) => Number(n).toLocaleString("en-BD");
+
+function getWithdrawalStatusLabel(status?: string) {
+  switch (status) {
+    case "REJECTED":
+      return "Rejected";
+    case "APPROVED":
+      return "Approved";
+    case "PENDING":
+    default:
+      return "Pending";
+  }
+}
+
+function getWithdrawalStatusMessage(withdrawal: any) {
+  if (withdrawal?.status === "REJECTED") {
+    return "Rejected: amount credited back to your wallet.";
+  }
+  if (withdrawal?.status === "PENDING") {
+    return "Pending review";
+  }
+  return null;
+}
 
 // ─── Smart Quick Amounts ──────────────────────────────────────
 function generateQuickAmounts(min: number, max: number): number[] {
@@ -200,6 +223,7 @@ function AccountCard({
 // ─── Main Component ───────────────────────────────────────────
 export default function WithdrawPage() {
   const queryClient = useQueryClient();
+  const updateUser = useAuthStore((state) => state.updateUser);
 
   // ── UI state ──────────────────────────────────────────────
   const [tab, setTab] = useState<"new" | "history">("new");
@@ -336,14 +360,58 @@ export default function WithdrawPage() {
   // ── Mutations ─────────────────────────────────────────────
   const { mutate: createWithdrawal, isPending } = useMutation({
     mutationFn: WithdrawalService.create,
-    onSuccess: () => {
+    onSuccess: async (response, variables) => {
+      const cachedProfile =
+        queryClient.getQueryData<any>(["profile"]) ??
+        queryClient.getQueryData<any>(["my-profile"]);
+      const currentBalance = Number(cachedProfile?.data?.balance ?? 0);
+      const responseBalanceCandidates = [
+        response?.data?.balance,
+        response?.data?.user?.balance,
+        response?.data?.updatedBalance,
+        response?.data?.walletBalance,
+      ];
+      const nextBalance = Number(
+        responseBalanceCandidates.find((value) => value != null) ??
+          Math.max(currentBalance - Number(variables.amount ?? 0), 0),
+      );
+
+      queryClient.setQueryData(["profile"], (old: any) =>
+        old?.data
+          ? {
+              ...old,
+              data: {
+                ...old.data,
+                balance: nextBalance,
+              },
+            }
+          : old,
+      );
+      queryClient.setQueryData(["my-profile"], (old: any) =>
+        old?.data
+          ? {
+              ...old,
+              data: {
+                ...old.data,
+                balance: nextBalance,
+              },
+            }
+          : old,
+      );
+      updateUser({ balance: nextBalance });
+
       toast.success(
-        "Withdrawal request submitted! You'll be notified upon approval.",
+        "Withdrawal request submitted! Your balance has been updated.",
       );
       queryClient.invalidateQueries({ queryKey: ["my-withdrawals"] });
       queryClient.invalidateQueries({ queryKey: ["saved-accounts"] });
       queryClient.invalidateQueries({ queryKey: ["profile"] });
       queryClient.invalidateQueries({ queryKey: ["my-profile"] });
+      await queryClient.refetchQueries({ queryKey: ["profile"], type: "active" });
+      await queryClient.refetchQueries({
+        queryKey: ["my-profile"],
+        type: "active",
+      });
       refetchSaved();
       resetFlow();
       setTab("history");
@@ -1271,8 +1339,21 @@ export default function WithdrawPage() {
                           STATUS_STYLE[w.status] ?? "",
                         )}
                       >
-                        <Icon className="h-2.5 w-2.5" /> {w.status}
+                        <Icon className="h-2.5 w-2.5" />{" "}
+                        {getWithdrawalStatusLabel(w.status)}
                       </span>
+                      {getWithdrawalStatusMessage(w) && (
+                        <p
+                          className={cn(
+                            "mt-1 max-w-[170px] text-[10px]",
+                            w.status === "REJECTED"
+                              ? "text-emerald-400"
+                              : "text-slate-400",
+                          )}
+                        >
+                          {getWithdrawalStatusMessage(w)}
+                        </p>
+                      )}
                     </div>
                     <button
                       onClick={() => setDetailItem(w)}
@@ -1328,7 +1409,8 @@ export default function WithdrawPage() {
                   "You Receive",
                   `৳${fmt(detailItem.finalPayableAmount ?? detailItem.amount)}`,
                 ],
-                ["Status", detailItem.status],
+                ["Status", getWithdrawalStatusLabel(detailItem.status)],
+                ["Wallet Update", getWithdrawalStatusMessage(detailItem)],
                 ["Note", detailItem.reviewNote],
                 [
                   "Submitted At",
