@@ -13,6 +13,7 @@ import {
   Trophy,
   Percent,
   ListChecks,
+  Clock3,
 } from "lucide-react";
 import { toast } from "sonner";
 import { ThaiLotteryUserService } from "@/services/thai-lottery.service";
@@ -125,6 +126,12 @@ interface BetRow {
   rumbleAmountUsd: string;
 }
 
+type ActiveRoundLike = {
+  id?: string;
+  status?: string;
+  [key: string]: unknown;
+};
+
 type RateInfo = {
   multiplier: number;
   baseDiscountPct: number;
@@ -161,6 +168,58 @@ const amountInput = (value: string) =>
 const getRateDiscountPct = (rate?: Partial<RateInfo>) =>
   Number(rate?.globalDiscountPct ?? 0) + Number(rate?.baseDiscountPct ?? 0);
 
+const resolveActiveRound = (payload: unknown): ActiveRoundLike | null => {
+  if (!payload || typeof payload !== "object") {
+    return null;
+  }
+
+  const directRound = payload as ActiveRoundLike;
+  if (directRound.id) {
+    return directRound;
+  }
+
+  const nested = payload as {
+    round?: ActiveRoundLike;
+    activeRound?: ActiveRoundLike;
+    rounds?: ActiveRoundLike[];
+  };
+
+  if (nested.round?.id) {
+    return nested.round;
+  }
+
+  if (nested.activeRound?.id) {
+    return nested.activeRound;
+  }
+
+  if (Array.isArray(nested.rounds)) {
+    const firstOpenRound = nested.rounds.find((round) => round?.id);
+    if (firstOpenRound) {
+      return firstOpenRound;
+    }
+  }
+
+  return null;
+};
+
+const formatLocalCloseTime = (value: unknown) => {
+  if (typeof value !== "string" || !value) {
+    return "";
+  }
+
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    return "";
+  }
+
+  return new Intl.DateTimeFormat(undefined, {
+    day: "2-digit",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(parsed);
+};
+
 export default function ThaiLotteryPage() {
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -179,6 +238,9 @@ export default function ThaiLotteryPage() {
   const { data: activeRoundData, isLoading: roundLoading } = useQuery({
     queryKey: ["thai-active-round"],
     queryFn: ThaiLotteryUserService.getActiveRound,
+    refetchInterval: 10000,
+    refetchIntervalInBackground: true,
+    refetchOnWindowFocus: true,
   });
   const { data: ratesData, isLoading: ratesLoading } = useQuery({
     queryKey: ["thai-rates"],
@@ -194,9 +256,10 @@ export default function ThaiLotteryPage() {
   const isComboMode = selectedPlay?.mode === "combo";
   const maxLength = selectedPlay?.maxLength ?? 3;
   const ratesList = ratesData?.data ?? [];
-  const activeRound = activeRoundData?.data;
+  const activeRound = resolveActiveRound(activeRoundData?.data);
   const hasOpenRound = Boolean(activeRound?.id);
   const usdBalance = Number(profileData?.data?.balance ?? 0) / usdToBdt;
+  const closeTimeLabel = formatLocalCloseTime(activeRound?.closeTime);
 
   const getRate = (playType: ActualPlayType): RateInfo =>
     ratesList.find((r: any) => r.playType === playType) ?? FALLBACK_RATES[playType];
@@ -265,6 +328,12 @@ export default function ThaiLotteryPage() {
       return null;
     }
 
+    const activeRoundId = activeRound?.id;
+    if (!activeRoundId) {
+      toast.error("No open round available");
+      return null;
+    }
+
     const payloads: Array<{
       roundId: string;
       playType: ActualPlayType;
@@ -330,7 +399,7 @@ export default function ThaiLotteryPage() {
 
         if (directAmount > 0) {
           payloads.push({
-            roundId: activeRound.id,
+            roundId: activeRoundId,
             playType: "THREE_UP_DIRECT",
             betNumber,
             amount: directAmount,
@@ -339,7 +408,7 @@ export default function ThaiLotteryPage() {
 
         if (rumbleAmount > 0) {
           payloads.push({
-            roundId: activeRound.id,
+            roundId: activeRoundId,
             playType: "THREE_UP_RUMBLE",
             betNumber,
             amount: rumbleAmount,
@@ -356,7 +425,7 @@ export default function ThaiLotteryPage() {
       }
 
       payloads.push({
-        roundId: activeRound.id,
+        roundId: activeRoundId,
         playType: selectedPlayType as ActualPlayType,
         betNumber,
         amount,
@@ -488,12 +557,12 @@ export default function ThaiLotteryPage() {
                   <Link
                     key={item.label}
                     href={item.href}
-                    className="flex flex-col items-center gap-1 rounded-[18px] border border-slate-700/70 bg-slate-800/55 px-1 py-2 text-center transition-colors hover:bg-slate-800"
+                    className="flex min-h-[60px] flex-col items-center justify-center gap-1 rounded-[16px] border border-slate-700/70 bg-slate-800/55 px-1 py-1.5 text-center transition-colors hover:bg-slate-800"
                   >
-                    <div className={`rounded-xl p-1.5 ${item.color}`}>
+                    <div className={`rounded-xl p-1 ${item.color}`}>
                       <item.icon className="h-3.5 w-3.5" />
                     </div>
-                    <span className="whitespace-nowrap text-[9px] font-semibold text-slate-200">
+                    <span className="whitespace-nowrap text-[8.5px] font-semibold leading-none text-slate-200">
                       {item.label}
                     </span>
                   </Link>
@@ -518,6 +587,14 @@ export default function ThaiLotteryPage() {
                   <p className="mt-1 text-[10px] text-slate-500">
                     Thailand Lottery Official Games
                   </p>
+                  {closeTimeLabel ? (
+                    <div className="mt-2 flex justify-center">
+                      <div className="inline-flex items-center gap-1.5 rounded-full border border-cyan-400/25 bg-cyan-400/8 px-2.5 py-1 text-[10px] font-semibold text-cyan-200">
+                        <Clock3 className="h-3 w-3 text-cyan-300" />
+                        <span>Close Time: {closeTimeLabel}</span>
+                      </div>
+                    </div>
+                  ) : null}
                 </div>
 
                 <Link
@@ -538,7 +615,7 @@ export default function ThaiLotteryPage() {
               {!hasOpenRound && (
                 <div className="rounded-[22px] border border-amber-400/20 bg-[linear-gradient(135deg,_rgba(70,36,11,0.95),_rgba(45,23,10,0.95))] px-4 py-3">
                   <p className="text-[10px] font-black uppercase tracking-[0.24em] text-amber-300">
-                    Play Time Over 2:15 PM
+                    Waiting For Next Round
                   </p>
                   <p className="mt-1 text-sm leading-6 text-amber-100/75">
                     This play is not available right now. Please wait for the next round.

@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { ChevronLeft } from "lucide-react";
 import { AdminService } from "@/services/admin.service";
+import { bangladeshDateTimeInputToIso } from "@/lib/bangladesh-time";
 
 export default function CreateThaiRoundPage() {
   const router = useRouter();
@@ -29,7 +30,7 @@ export default function CreateThaiRoundPage() {
     }
     mutate({
       issueNumber: form.issueNumber,
-      drawDate: new Date(form.drawDate).toISOString(),
+      drawDate: bangladeshDateTimeInputToIso(form.drawDate),
     });
   };
 
@@ -68,7 +69,7 @@ export default function CreateThaiRoundPage() {
 
         <div className="space-y-1.5">
           <label className="text-xs font-medium text-slate-400">
-            Draw Date
+            Draw Date (Bangladesh Time)
           </label>
           <input
             type="datetime-local"
@@ -76,8 +77,12 @@ export default function CreateThaiRoundPage() {
             onChange={(e) =>
               setForm((p) => ({ ...p, drawDate: e.target.value }))
             }
+            placeholder="YYYY-MM-DD HH:mm (BD Time)"
             className="w-full rounded-lg border border-slate-600 bg-slate-700 px-3 py-2.5 text-sm text-white outline-none focus:border-blue-500"
           />
+          <p className="text-[11px] text-slate-500">
+            Enter the official draw schedule in Bangladesh Time (Asia/Dhaka).
+          </p>
         </div>
 
         <div className="rounded-lg border border-blue-500/20 bg-blue-500/5 p-3">
@@ -85,7 +90,8 @@ export default function CreateThaiRoundPage() {
             Once created, the round will immediately be marked as{" "}
             <strong>OPEN</strong>
             and users will be able to place bets right away. You can set the
-            close time separately afterward.
+            close time separately afterward. Displayed draw date and issue
+            number should match the Bangladesh schedule.
           </p>
         </div>
 

@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Plus, ChevronRight, Clock, Lock } from "lucide-react";
 import { AdminService } from "@/services/admin.service";
+import { formatBangladeshDateTime } from "@/lib/bangladesh-time";
 
 const STATUS_STYLE: Record<string, string> = {
   OPEN: "bg-green-500/15 text-green-400 border-green-500/30",
@@ -47,17 +48,6 @@ export default function AdminThaiLotteryPage() {
   const rounds = data?.data?.rounds ?? [];
   const total = data?.data?.total ?? 0;
   const totalPages = Math.ceil(total / LIMIT);
-
-  const formatDate = (d?: string) => {
-    if (!d) return "-";
-    return new Date(d).toLocaleString("en-BD", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  };
 
   return (
     <div className="space-y-5">
@@ -104,10 +94,16 @@ export default function AdminThaiLotteryPage() {
                 Issue
               </th>
               <th className="px-4 py-3 text-xs font-medium text-slate-400">
-                Draw Date
+                Draw Date (BD Time)
               </th>
               <th className="px-4 py-3 text-xs font-medium text-slate-400">
-                Close Time
+                Close Time (BD Time)
+              </th>
+              <th className="px-4 py-3 text-xs font-medium text-slate-400">
+                Created At (BD Time)
+              </th>
+              <th className="px-4 py-3 text-xs font-medium text-slate-400">
+                Resulted At (BD Time)
               </th>
               <th className="px-4 py-3 text-xs font-medium text-slate-400">
                 Status
@@ -124,7 +120,7 @@ export default function AdminThaiLotteryPage() {
             {isLoading ? (
               Array.from({ length: 5 }).map((_, i) => (
                 <tr key={i} className="border-b border-slate-700/50">
-                  {Array.from({ length: 6 }).map((_, j) => (
+                  {Array.from({ length: 8 }).map((_, j) => (
                     <td key={j} className="px-4 py-3">
                       <div className="h-4 w-24 animate-pulse rounded bg-slate-700" />
                     </td>
@@ -134,7 +130,7 @@ export default function AdminThaiLotteryPage() {
             ) : rounds.length === 0 ? (
               <tr>
                 <td
-                  colSpan={6}
+                  colSpan={8}
                   className="px-4 py-8 text-center text-slate-500"
                 >
                   No rounds found
@@ -150,16 +146,34 @@ export default function AdminThaiLotteryPage() {
                     {round.issueNumber}
                   </td>
                   <td className="px-4 py-3 text-slate-300">
-                    {formatDate(round.drawDate)}
+                    {formatBangladeshDateTime(
+                      round.drawDate,
+                      { timeZone: round.scheduleTimeZone },
+                    )}
                   </td>
                   <td className="px-4 py-3 text-slate-300">
                     {round.closeTime ? (
                       <span className="flex items-center gap-1">
                         <Clock className="h-3 w-3 text-yellow-400" />
-                        {formatDate(round.closeTime)}
+                        {formatBangladeshDateTime(
+                          round.closeTime,
+                          { timeZone: round.scheduleTimeZone },
+                        )}
                       </span>
                     ) : (
                       <span className="text-slate-500">Not set</span>
+                    )}
+                  </td>
+                  <td className="px-4 py-3 text-slate-300">
+                    {formatBangladeshDateTime(
+                      round.createdAt,
+                      { timeZone: round.scheduleTimeZone },
+                    )}
+                  </td>
+                  <td className="px-4 py-3 text-slate-300">
+                    {formatBangladeshDateTime(
+                      round.resultedAt,
+                      { timeZone: round.scheduleTimeZone },
                     )}
                   </td>
                   <td className="px-4 py-3">

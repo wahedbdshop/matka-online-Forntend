@@ -1,23 +1,17 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useParams, useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { ChevronLeft, PauseCircle, PlayCircle, Clock } from "lucide-react";
 import { AdminService } from "@/services/admin.service";
-
-const formatDate = (d?: string) => {
-  if (!d) return "-";
-  return new Date(d).toLocaleString("en-BD", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-};
+import {
+  bangladeshDateTimeInputToIso,
+  formatBangladeshDateTime,
+  toBangladeshDateTimeInputValue,
+} from "@/lib/bangladesh-time";
 
 export default function ThaiRoundControlPage() {
   const router = useRouter();
@@ -32,6 +26,17 @@ export default function ThaiRoundControlPage() {
   });
 
   const round = data?.data;
+
+  useEffect(() => {
+    if (round?.closeTime) {
+      setExtendTime(
+        toBangladeshDateTimeInputValue(
+          round.closeTime,
+          round.scheduleTimeZone,
+        ),
+      );
+    }
+  }, [round?.closeTime, round?.scheduleTimeZone]);
 
   const invalidate = () => {
     queryClient.invalidateQueries({ queryKey: ["admin-thai-round", id] });
@@ -58,7 +63,10 @@ export default function ThaiRoundControlPage() {
 
   const { mutate: extendClose, isPending: extending } = useMutation({
     mutationFn: () =>
-      AdminService.extendThaiCloseTime(id, new Date(extendTime).toISOString()),
+      AdminService.extendThaiCloseTime(
+        id,
+        bangladeshDateTimeInputToIso(extendTime, round?.scheduleTimeZone),
+      ),
     onSuccess: () => {
       toast.success("Close time updated");
       invalidate();
@@ -180,13 +188,17 @@ export default function ThaiRoundControlPage() {
             Current Close Time
           </p>
           <p className="text-sm font-medium text-yellow-400 mt-0.5">
-            {round.closeTime ? formatDate(round.closeTime) : "Not set"}
+            {round.closeTime
+              ? formatBangladeshDateTime(round.closeTime, {
+                  timeZone: round.scheduleTimeZone,
+                })
+              : "Not set"}
           </p>
         </div>
 
         <div className="space-y-2">
           <label className="text-xs font-medium text-slate-400">
-            New Close Time
+            New Close Time (Bangladesh Time)
           </label>
           <input
             type="datetime-local"
@@ -194,6 +206,9 @@ export default function ThaiRoundControlPage() {
             onChange={(e) => setExtendTime(e.target.value)}
             className="w-full rounded-lg border border-slate-600 bg-slate-700 px-3 py-2.5 text-sm text-white outline-none focus:border-blue-500"
           />
+          <p className="text-[11px] text-slate-500">
+            Round schedule updates always use Bangladesh Time (Asia/Dhaka).
+          </p>
         </div>
 
         {isClosed && (

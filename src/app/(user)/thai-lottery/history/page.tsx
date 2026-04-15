@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { ChevronLeft, History, TrendingUp, Clock, Trophy } from "lucide-react";
 import { ThaiLotteryUserService } from "@/services/thai-lottery.service";
+import { formatBangladeshDate } from "@/lib/bangladesh-time";
 
 const LIMIT = 20;
 
@@ -52,12 +53,7 @@ const STATUS_CONFIG: Record<
 };
 
 const formatDateShort = (date?: string) => {
-  if (!date) return "-";
-  return new Date(date).toLocaleDateString("en-BD", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  });
+  return formatBangladeshDate(date);
 };
 
 function SkeletonRow() {

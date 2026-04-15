@@ -7,11 +7,11 @@ const BASE = "/kalyan";
 const MARKET_LIST_LIMIT = 1000;
 
 const DEFAULT_KALYAN_RATES = [
-  { playType: "GAME_TOTAL", rate: 90, status: "ACTIVE" },
-  { playType: "SINGLE_PATTI", rate: 140, status: "ACTIVE" },
-  { playType: "DOUBLE_PATTI", rate: 280, status: "ACTIVE" },
-  { playType: "TRIPLE_PATTI", rate: 480, status: "ACTIVE" },
-  { playType: "JORI", rate: 100, status: "ACTIVE" },
+  { playType: "GAME_TOTAL", rate: 900, status: "ACTIVE" },
+  { playType: "SINGLE_PATTI", rate: 14000, status: "ACTIVE" },
+  { playType: "DOUBLE_PATTI", rate: 28000, status: "ACTIVE" },
+  { playType: "TRIPLE_PATTI", rate: 60000, status: "ACTIVE" },
+  { playType: "JORI", rate: 9000, status: "ACTIVE" },
 ];
 
 const normalizeRateItem = (item: any) => ({
@@ -447,14 +447,12 @@ export const KalyanUserService = {
     return res.data;
   },
 
-  // ─── Game rates (placeholder — same structure as admin) ───────────────────
+  // ─── Game rates ───────────────────────────────────────────────────────────
   getGameRates: async (): Promise<ApiResponse<any>> => {
     const token = useAuthStore.getState().token;
-    if (!token) {
-      return { success: true, message: "ok", data: DEFAULT_KALYAN_RATES };
-    }
+    const client = token ? api : publicApi;
     try {
-      const res = await api.get<ApiResponse<any>>(`${BASE}/rates`);
+      const res = await client.get<ApiResponse<any>>(`${BASE}/rates`);
       return {
         ...res.data,
         data: normalizeKalyanRates(

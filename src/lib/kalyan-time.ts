@@ -1,6 +1,8 @@
 "use client";
 
-const KALYAN_TIMEZONE = "Asia/Dhaka";
+import { BANGLADESH_TIMEZONE } from "@/lib/bangladesh-time";
+
+const KALYAN_TIMEZONE = BANGLADESH_TIMEZONE;
 
 function parseTimeToMinutes(time: string): number | null {
   const [hours, minutes] = time.split(":").map(Number);
