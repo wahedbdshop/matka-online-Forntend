@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { Trash2, Search, Gamepad2, AlertCircle } from "lucide-react";
 import { KalyanAdminService } from "@/services/kalyanAdmin.service";
 import { MARKET_STATUS_STYLE } from "@/types/kalyan";
+import { getKalyanMarketOptionLabel } from "@/lib/kalyan-market-display";
 
 const MARKET_LIST_LIMIT = 1000;
 
@@ -234,7 +235,7 @@ export default function KalyanLotteryGamesPage() {
                   <td className="border-r border-slate-700/40 px-4 py-3 text-center text-xs text-slate-500 last:border-r-0">{index + 1}</td>
                   <td className="border-r border-slate-700/40 px-4 py-3 text-center last:border-r-0">
                     <div className="flex items-center justify-center gap-2">
-                      <span className="font-medium text-white">{market.name}</span>
+                      <span className="font-medium text-white">{getKalyanMarketOptionLabel(market)}</span>
                       <span className={`rounded-full border px-2 py-0.5 text-[10px] font-medium ${(timing?.sessionType ?? market.sessionType) === "CLOSE" ? "border-red-500/30 bg-red-500/10 text-red-400" : "border-green-500/30 bg-green-500/10 text-green-400"}`}>
                         {timing?.sessionType ?? market.sessionType ?? "OPEN"}
                       </span>

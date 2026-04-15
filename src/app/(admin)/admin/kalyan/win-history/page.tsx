@@ -7,6 +7,10 @@ import { Search, Trophy } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import { KalyanAdminService } from "@/services/kalyanAdmin.service";
 import { PLAY_TYPE_LABEL, ENTRY_STATUS_STYLE, type PlayType } from "@/types/kalyan";
+import {
+  getKalyanMarketOptionLabel,
+  getKalyanMarketSessionLabel,
+} from "@/lib/kalyan-market-display";
 
 const LIMIT = 20;
 const PLAY_TYPES = Object.keys(PLAY_TYPE_LABEL) as PlayType[];
@@ -20,15 +24,11 @@ function getPlayTypeLabel(value: unknown) {
 }
 
 function resolveGameName(entry: any) {
-  return (
-    entry?.gameName?.trim?.() ||
-    entry?.market?.name ||
-    entry?.market?.openName ||
-    entry?.market?.closeName ||
-    entry?.items?.[0]?.gameName ||
-    entry?.marketId ||
-    "-"
-  );
+  if (entry?.market) {
+    return getKalyanMarketSessionLabel(entry.market, resolveSessionType(entry));
+  }
+
+  return entry?.gameName?.trim?.() || entry?.items?.[0]?.gameName || entry?.marketId || "-";
 }
 
 function resolveSessionType(entry: any): "OPEN" | "CLOSE" | undefined {
@@ -76,6 +76,7 @@ function KalyanWinHistoryPageContent() {
   const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState("");
   const [marketFilter, setMarketFilter] = useState("");
+  const [sessionFilter, setSessionFilter] = useState<"" | "OPEN" | "CLOSE">("");
   const [playTypeFilter, setPlayTypeFilter] = useState("");
   const [dateFilter, setDateFilter] = useState(() => searchParams.get("date") ?? "");
   const [page, setPage] = useState(1);
@@ -100,6 +101,7 @@ function KalyanWinHistoryPageContent() {
       "kalyan-win-history",
       search,
       marketFilter,
+      sessionFilter,
       playTypeFilter,
       dateFilter,
       page,
@@ -137,6 +139,11 @@ function KalyanWinHistoryPageContent() {
   const rows = useMemo(
     () =>
       entries
+        .filter((entry: any) => {
+          if (!sessionFilter) return true;
+          const st = resolveSessionType(entry);
+          return st === sessionFilter;
+        })
         .flatMap((entry: any) => {
         const sessionType = resolveSessionType(entry);
         const items = (Array.isArray(entry?.items) ? entry.items : []).filter((item: any) => {
@@ -258,17 +265,25 @@ function KalyanWinHistoryPageContent() {
         <select
           value={marketFilter}
           onChange={(e) => {
-            setMarketFilter(e.target.value);
+            const [mid, session] = e.target.value.split(":");
+            setMarketFilter(mid);
+            setSessionFilter((session as "" | "OPEN" | "CLOSE") || "");
             setPage(1);
           }}
           className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-1.5 text-xs text-white outline-none"
         >
           <option value="">All Markets</option>
-          {markets.map((market: any) => (
-            <option key={market.id} value={market.id}>
-              {market.name}
-            </option>
-          ))}
+          {markets.map((market: any) => {
+            const baseName = getKalyanMarketOptionLabel(market);
+            return [
+              <option key={`${market.id}:OPEN`} value={`${market.id}:OPEN`}>
+                {baseName} — Open
+              </option>,
+              <option key={`${market.id}:CLOSE`} value={`${market.id}:CLOSE`}>
+                {baseName} — Close
+              </option>,
+            ];
+          })}
         </select>
 
         <select

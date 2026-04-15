@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { KalyanAdminService } from "@/services/kalyanAdmin.service";
 import { cn } from "@/lib/utils";
+import { getKalyanMarketOptionLabel } from "@/lib/kalyan-market-display";
 
 function toArray<T>(value: unknown): T[] {
   if (Array.isArray(value)) {
@@ -241,7 +242,7 @@ export default function KalyanDashboardPage() {
                 >
                   <div>
                     <p className="text-xs font-medium text-white">
-                      {r.market?.name ?? r.marketId}
+                      {r.market ? getKalyanMarketOptionLabel(r.market) : r.marketId}
                     </p>
                     <p className="text-[10px] text-slate-500">
                       {formatDate(r.resultDate)}

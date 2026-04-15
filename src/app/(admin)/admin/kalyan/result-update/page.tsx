@@ -10,6 +10,10 @@ import { toast } from "sonner";
 import { AlertTriangle, Pencil, X } from "lucide-react";
 import { KalyanAdminService } from "@/services/kalyanAdmin.service";
 import { RESULT_STATUS_STYLE } from "@/types/kalyan";
+import {
+  getKalyanMarketSessionLabel,
+  getKalyanMarketSessionOptionLabel,
+} from "@/lib/kalyan-market-display";
 
 const schema = z.object({
   resultDate: z.string().min(1, "Date required"),
@@ -27,20 +31,11 @@ type FormData = z.infer<typeof schema>;
 const LIMIT = 20;
 
 function getGameName(result: any) {
-  const rawName =
-    result?.market?.name ??
-    result?.market?.openName ??
-    result?.market?.closeName ??
-    result?.gameName ??
-    result?.marketName ??
-    result?.marketId ??
-    "-";
+  if (result?.market) {
+    return getKalyanMarketSessionLabel(result.market, getSessionType(result));
+  }
 
-  return String(rawName)
-    .replace(/\bopen\b/gi, "")
-    .replace(/\bclose\b/gi, "")
-    .replace(/\s+/g, " ")
-    .trim();
+  return String(result?.gameName ?? result?.marketName ?? result?.marketId ?? "-").trim();
 }
 
 function getSessionType(result: any): "OPEN" | "CLOSE" | undefined {
@@ -210,7 +205,7 @@ export default function KalyanResultUpdatePage() {
           <option value="">All Markets</option>
           {markets.map((m: any) => (
             <option key={m.id} value={m.id}>
-              {m.name}
+              {getKalyanMarketSessionOptionLabel(m)}
             </option>
           ))}
         </select>

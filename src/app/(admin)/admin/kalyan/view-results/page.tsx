@@ -5,29 +5,29 @@ import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Eye, Trophy } from "lucide-react";
 import { KalyanAdminService } from "@/services/kalyanAdmin.service";
+import {
+  getKalyanMarketBaseName,
+  getKalyanMarketSessionOptionLabel,
+  normalizeKalyanMarketText,
+} from "@/lib/kalyan-market-display";
 
 const LIMIT = 20;
 
 function normalizeText(value?: string) {
-  return String(value ?? "")
-    .replace(/\bopen\b/gi, "")
-    .replace(/\bclose\b/gi, "")
-    .replace(/\s+/g, " ")
-    .trim();
+  return normalizeKalyanMarketText(value);
 }
 
 function getGameName(result: any) {
-  return (
-    normalizeText(
-      result?.title ??
-        result?.market?.name ??
-        result?.market?.openName ??
-        result?.market?.closeName ??
-        result?.gameName ??
-        result?.marketName ??
-        result?.marketId,
-    ) || "-"
-  );
+  if (result?.market) {
+    return getKalyanMarketBaseName(result.market) || "-";
+  }
+
+  return normalizeText(
+    result?.title ??
+      result?.gameName ??
+      result?.marketName ??
+      result?.marketId,
+  ) || "-";
 }
 
 function hasOpenResult(result: any) {
@@ -314,7 +314,7 @@ export default function KalyanViewResultsPage() {
           <option value="">All Games</option>
           {markets.map((market: any) => (
             <option key={market.id} value={market.id}>
-              {normalizeText(market.name) || normalizeText(market.openName) || normalizeText(market.closeName)}
+              {getKalyanMarketSessionOptionLabel(market)}
             </option>
           ))}
         </select>

@@ -7,6 +7,10 @@ import { toast } from "sonner";
 import { History, Pencil, Search, Trash2 } from "lucide-react";
 import { KalyanAdminService } from "@/services/kalyanAdmin.service";
 import { PLAY_TYPE_LABEL, ENTRY_STATUS_STYLE, type PlayType } from "@/types/kalyan";
+import {
+  getKalyanMarketOptionLabel,
+  getKalyanMarketSessionLabel,
+} from "@/lib/kalyan-market-display";
 
 const LIMIT = 20;
 const PLAY_TYPES = Object.keys(PLAY_TYPE_LABEL) as PlayType[];
@@ -20,19 +24,26 @@ function getPlayTypeLabel(value: unknown) {
 }
 
 function resolveGameName(entry: any) {
-  return (
-    entry?.gameName?.trim?.() ||
-    entry?.market?.name ||
-    entry?.market?.openName ||
-    entry?.market?.closeName ||
-    entry?.items?.[0]?.gameName ||
-    entry?.marketId ||
-    "-"
-  );
+  if (entry?.market) {
+    return getKalyanMarketSessionLabel(entry.market, resolveSessionType(entry));
+  }
+
+  const gameName = entry?.gameName?.trim?.() || entry?.items?.[0]?.gameName || entry?.marketId || "-";
+  const sessionType = resolveSessionType(entry);
+  if (sessionType) {
+    const sessionLabel = sessionType === "CLOSE" ? "Close" : "Open";
+    return `${gameName} (${sessionLabel})`;
+  }
+  return gameName;
 }
 
 function resolveSessionType(entry: any): "OPEN" | "CLOSE" | undefined {
-  const value = entry?.sessionType ?? entry?.session ?? entry?.market?.sessionType;
+  const value =
+    entry?.sessionType ??
+    entry?.session ??
+    entry?.market?.sessionType ??
+    entry?.items?.[0]?.sessionType ??
+    entry?.items?.[0]?.session;
   if (!value) return undefined;
 
   const normalizedValue = String(value).toUpperCase();
@@ -44,34 +55,11 @@ function resolveSessionType(entry: any): "OPEN" | "CLOSE" | undefined {
 }
 
 function formatGameName(entry: any) {
-  const baseGameName = resolveGameName(entry);
-  const sessionType = resolveSessionType(entry);
-
-  if (!sessionType || baseGameName === "-") {
-    return baseGameName;
-  }
-
-  return `${baseGameName} (${sessionType === "CLOSE" ? "Close" : "Open"})`;
+  return resolveGameName(entry);
 }
 
 function renderGameName(entry: any) {
-  const baseGameName = resolveGameName(entry);
-  const sessionType = resolveSessionType(entry);
-
-  if (!sessionType || baseGameName === "-") {
-    return baseGameName;
-  }
-
-  const sessionLabel = sessionType === "CLOSE" ? "Close" : "Open";
-  const sessionClassName =
-    sessionType === "CLOSE" ? "text-rose-400" : "text-emerald-400";
-
-  return (
-    <>
-      {baseGameName}{" "}
-      <span className={sessionClassName}>({sessionLabel})</span>
-    </>
-  );
+  return resolveGameName(entry);
 }
 
 function resolvePlayType(entry: any) {
@@ -105,6 +93,7 @@ export default function KalyanPlayHistoryPage() {
   const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState("");
   const [marketFilter, setMarketFilter] = useState("");
+  const [sessionFilter, setSessionFilter] = useState<"" | "OPEN" | "CLOSE">("");
   const [playTypeFilter, setPlayTypeFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [dateFilter, setDateFilter] = useState("");
@@ -128,6 +117,7 @@ export default function KalyanPlayHistoryPage() {
       "kalyan-entries",
       search,
       marketFilter,
+      sessionFilter,
       playTypeFilter,
       statusFilter,
       dateFilter,
@@ -158,9 +148,14 @@ export default function KalyanPlayHistoryPage() {
     isCancelledStatus(value?.status) ||
     value?.isRemoved === true ||
     Boolean(value?.removedAt);
-  const entries = rawEntries.filter(
-    (entry) => !removedEntryIds.includes(String(entry?.id)) && !isRemovedEntity(entry),
-  );
+  const entries = rawEntries.filter((entry) => {
+    if (removedEntryIds.includes(String(entry?.id)) || isRemovedEntity(entry)) return false;
+    if (sessionFilter) {
+      const st = resolveSessionType(entry);
+      if (st !== sessionFilter) return false;
+    }
+    return true;
+  });
   const total: number = entries.length;
   const totalPages = Math.ceil(total / LIMIT);
   const rows = entries.flatMap((entry: any) => {
@@ -177,6 +172,7 @@ export default function KalyanPlayHistoryPage() {
           entryId: entry.id,
           userName: entry.user?.name ?? entry.user?.username ?? "-",
           gameName: formatGameName(entry),
+          sessionType: resolveSessionType(entry),
           category: resolvePlayType(entry),
           betNumber: resolveBetNumber(entry),
           betAmount: Number(entry.totalAmount ?? 0),
@@ -193,6 +189,7 @@ export default function KalyanPlayHistoryPage() {
       entryId: entry.id,
       userName: entry.user?.name ?? entry.user?.username ?? "-",
       gameName: formatGameName(entry),
+      sessionType: resolveSessionType(entry),
       category: item.playType || entry.playType || "-",
       betNumber: item.selectedNumber || "-",
       betAmount: Number(item.amount ?? entry.totalAmount ?? 0),
@@ -295,19 +292,27 @@ export default function KalyanPlayHistoryPage() {
         </div>
 
         <select
-          value={marketFilter}
+          value={marketFilter ? `${marketFilter}${sessionFilter ? `:${sessionFilter}` : ""}` : ""}
           onChange={(e) => {
-            setMarketFilter(e.target.value);
+            const [mid, session] = e.target.value.split(":");
+            setMarketFilter(mid);
+            setSessionFilter((session as "" | "OPEN" | "CLOSE") || "");
             setPage(1);
           }}
           className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-1.5 text-xs text-white outline-none"
         >
           <option value="">All Markets</option>
-          {markets.map((market: any) => (
-            <option key={market.id} value={market.id}>
-              {market.name}
-            </option>
-          ))}
+          {markets.map((market: any) => {
+            const baseName = getKalyanMarketOptionLabel(market);
+            return [
+              <option key={`${market.id}:OPEN`} value={`${market.id}:OPEN`}>
+                {baseName} — Open
+              </option>,
+              <option key={`${market.id}:CLOSE`} value={`${market.id}:CLOSE`}>
+                {baseName} — Close
+              </option>,
+            ];
+          })}
         </select>
 
         <select
@@ -412,6 +417,11 @@ export default function KalyanPlayHistoryPage() {
                   </td>
                   <td className="border-r border-slate-700/40 px-4 py-3 text-center text-xs text-slate-300 last:border-r-0">
                     {renderGameName(row.entry)}
+                    {row.sessionType && (
+                      <span className={`mt-0.5 block text-[10px] font-semibold uppercase tracking-wide ${row.sessionType === "OPEN" ? "text-emerald-400" : "text-rose-400"}`}>
+                        {row.sessionType === "OPEN" ? "Open" : "Close"}
+                      </span>
+                    )}
                   </td>
                   <td className="border-r border-slate-700/40 px-4 py-3 text-center text-xs text-slate-300 last:border-r-0">
                     {row.category}

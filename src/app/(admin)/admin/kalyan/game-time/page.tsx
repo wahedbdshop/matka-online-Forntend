@@ -14,6 +14,10 @@ import {
   formatUtcScheduleTimeForBangladeshDisplay,
 } from "@/lib/timezone";
 import { KalyanAdminService } from "@/services/kalyanAdmin.service";
+import {
+  getKalyanMarketSessionLabel,
+  getKalyanMarketSessionOptionLabel,
+} from "@/lib/kalyan-market-display";
 
 const MARKET_LIST_LIMIT = 1000;
 
@@ -320,7 +324,7 @@ export default function KalyanGameTimePage() {
           <option value="">All Games</option>
           {markets.map((market: any) => (
             <option key={market.id} value={market.id}>
-              {market.openName ?? market.closeName ?? market.name}
+              {getKalyanMarketSessionOptionLabel(market)}
             </option>
           ))}
         </select>
@@ -562,7 +566,16 @@ function MarketTimingRow({
       <td className="border-r border-slate-700/40 px-4 py-3 text-center text-xs text-slate-500 last:border-r-0">{index + 1}</td>
       <td className="border-r border-slate-700/40 px-4 py-3 text-center last:border-r-0">
         <div className="flex items-center justify-center gap-2">
-          <span className="font-medium text-white">{timing.gameName ?? market.openName ?? market.closeName ?? market.name}</span>
+          <span className="font-medium text-white">
+            {getKalyanMarketSessionLabel(
+              {
+                ...market,
+                openName: timing.sessionType === "OPEN" ? timing.gameName ?? market.openName : market.openName,
+                closeName: timing.sessionType === "CLOSE" ? timing.gameName ?? market.closeName : market.closeName,
+              },
+              timing.sessionType,
+            )}
+          </span>
           <span className={`inline-flex rounded-full border px-2 py-0.5 text-[10px] font-medium ${SESSION_STYLES[timing.sessionType] ?? SESSION_STYLES.OPEN}`}>
             {timing.sessionType}
           </span>
