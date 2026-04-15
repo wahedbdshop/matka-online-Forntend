@@ -160,7 +160,7 @@ export function WinnerCard({
 
   return (
     <div
-      className={`overflow-hidden rounded-[24px] border shadow-[0_18px_40px_rgba(8,12,26,0.35)] ${styles.wrapper}`}
+      className={`overflow-hidden rounded-xl border shadow-[0_18px_40px_rgba(8,12,26,0.35)] ${styles.wrapper}`}
     >
       <div
         className={`flex items-center gap-2 border-b px-3 py-1.5 ${styles.headerBorder} ${styles.headerBg}`}
