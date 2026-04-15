@@ -2,6 +2,7 @@
 /* eslint-disable @next/next/no-img-element */
 "use client";
 
+import Image from "next/image";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/store/auth.store";
@@ -16,6 +17,18 @@ function VisaLogo() {
         VISA
       </text>
     </svg>
+  );
+}
+
+function BkashLogo() {
+  return (
+    <Image
+      src="/bkash.jpg?v=3"
+      alt="bKash"
+      width={110}
+      height={34}
+      className="h-[34px] w-auto object-contain"
+    />
   );
 }
 
@@ -162,6 +175,7 @@ function UsdtLogo() {
 }
 
 const STATIC_METHODS = [
+  { id: "bkash",      logo: <BkashLogo /> },
   { id: "visa",       logo: <VisaLogo /> },
   { id: "mastercard", logo: <MastercardLogo /> },
   { id: "paypal",     logo: <PaypalLogo /> },
@@ -176,15 +190,38 @@ const STATIC_METHODS = [
 ];
 
 // Local public logos override (takes priority over API logo)
-const V = "?v=2";
+const V = "?v=3";
 const LOCAL_LOGOS: Record<string, string> = {
   bkash:        `/bkash.jpg${V}`,
-  nagad:        `/nagad.png${V}`,
+  nagad:        `/nagad.jpg${V}`,
   rocket:       `/rocket.png${V}`,
   bank:         `/Bank.jpeg${V}`,
   "local bank": `/Bank.jpeg${V}`,
   localbank:    `/Bank.jpeg${V}`,
 };
+
+function normalizeMethodKey(value: string) {
+  return String(value ?? "").toLowerCase().replace(/\s+/g, "").trim();
+}
+
+function isStaticMethodMatch(value: string) {
+  const key = normalizeMethodKey(value);
+
+  if (!key) return false;
+  if (key.includes("bkash") || key.includes("nagad")) return true;
+
+  return STATIC_METHODS.some((method) => normalizeMethodKey(method.id) === key);
+}
+
+function isStaticMethodDuplicate(method: any) {
+  const nameKey = normalizeMethodKey(method?.name);
+  const logoKey = normalizeMethodKey(method?.logo);
+
+  if (isStaticMethodMatch(nameKey)) return true;
+  if (logoKey.includes("bkash") || logoKey.includes("nagad")) return true;
+
+  return false;
+}
 
 // ── API method card (logo from server) ────────────────────────────────────
 function ApiLogoCard({ name, logo }: { name: string; logo?: string }) {
@@ -245,10 +282,17 @@ export function PaymentMethodsRow({ methods }: { methods: any[] }) {
   const router = useRouter();
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
 
-  const staticIds = new Set(STATIC_METHODS.map((m) => m.id));
-  const apiMethods = methods.filter(
-    (m: any) => !staticIds.has(String(m.name ?? "").toLowerCase().replace(/\s+/g, "")),
-  );
+  const seenApiMethods = new Set<string>();
+  const apiMethods = methods.filter((m: any) => {
+    const key = normalizeMethodKey(m.name);
+
+    if (!key || isStaticMethodDuplicate(m) || seenApiMethods.has(key)) {
+      return false;
+    }
+
+    seenApiMethods.add(key);
+    return true;
+  });
 
   const handleClick = () => {
     router.push(isAuthenticated ? "/deposit" : "/login");
@@ -267,7 +311,7 @@ export function PaymentMethodsRow({ methods }: { methods: any[] }) {
             key={m.id}
             type="button"
             onClick={handleClick}
-            className="flex items-center justify-center rounded-lg bg-white px-3 py-2.5 min-h-13 cursor-pointer select-none transition-all duration-150 active:scale-95 active:brightness-90 hover:shadow-md hover:shadow-black/30"
+            className="flex items-center justify-center rounded-md border border-slate-200 bg-white px-3 py-2.5 min-h-13 shadow-sm shadow-white/10 cursor-pointer select-none transition-all duration-150 active:scale-95 active:brightness-90 hover:border-slate-300 hover:shadow-md hover:shadow-black/20"
           >
             <ApiLogoCard name={m.name} logo={m.logo} />
           </button>
@@ -277,7 +321,7 @@ export function PaymentMethodsRow({ methods }: { methods: any[] }) {
         {STATIC_METHODS.map((m) => (
           <div
             key={m.id}
-            className="flex items-center justify-center rounded-lg bg-white px-3 py-2.5 min-h-13"
+            className="flex items-center justify-center rounded-md border border-slate-200 bg-white px-3 py-2.5 min-h-13 shadow-sm shadow-white/10"
           >
             {m.logo}
           </div>

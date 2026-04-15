@@ -25,6 +25,13 @@ type SessionUser = {
   status?: string;
 };
 
+type SessionUserLookupResult = {
+  user: SessionUser | null;
+  status: number | null;
+  isTerminalError: boolean;
+  isTransientError: boolean;
+};
+
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
 const SOCKET_URL = process.env.NEXT_PUBLIC_SOCKET_URL;
 
@@ -85,7 +92,14 @@ function withSecurityHeaders(response: NextResponse) {
 }
 
 async function getSessionUser(token: string) {
-  if (!API_URL) return null;
+  if (!API_URL) {
+    return {
+      user: null,
+      status: null,
+      isTerminalError: false,
+      isTransientError: true,
+    } satisfies SessionUserLookupResult;
+  }
 
   try {
     const response = await fetch(`${API_URL}/user/profile`, {
@@ -97,15 +111,41 @@ async function getSessionUser(token: string) {
       cache: "no-store",
     });
 
-    if (!response.ok) return null;
+    if (!response.ok) {
+      return {
+        user: null,
+        status: response.status,
+        isTerminalError: response.status === 401,
+        isTransientError: response.status !== 401,
+      } satisfies SessionUserLookupResult;
+    }
 
     const body = (await response.json()) as {
       data?: SessionUser;
     };
 
-    return body.data ?? null;
+    if (!body.data) {
+      return {
+        user: null,
+        status: response.status,
+        isTerminalError: false,
+        isTransientError: true,
+      } satisfies SessionUserLookupResult;
+    }
+
+    return {
+      user: body.data,
+      status: response.status,
+      isTerminalError: false,
+      isTransientError: false,
+    } satisfies SessionUserLookupResult;
   } catch {
-    return null;
+    return {
+      user: null,
+      status: null,
+      isTerminalError: false,
+      isTransientError: true,
+    } satisfies SessionUserLookupResult;
   }
 }
 
@@ -131,6 +171,8 @@ export async function proxy(request: NextRequest) {
   let refreshedSession:
     | Awaited<ReturnType<typeof refreshBackendSession>>
     | null = null;
+  let refreshHadTerminalFailure = false;
+  let refreshHadTransientFailure = false;
 
   const finalizeResponse = (response: NextResponse) => {
     if (refreshedSession?.accessToken) {
@@ -141,17 +183,26 @@ export async function proxy(request: NextRequest) {
   };
 
   if (!token && refreshToken) {
-    refreshedSession = await refreshBackendSession({
+    const refreshResult = await refreshBackendSession({
       cookieHeader: request.headers.get("cookie"),
       refreshToken,
     });
 
-    if (refreshedSession?.accessToken) {
-      token = refreshedSession.accessToken;
+    if (refreshResult?.accessToken) {
+      refreshedSession = refreshResult;
+      token = refreshResult.accessToken;
+    } else if (refreshResult?.isTerminalError) {
+      refreshHadTerminalFailure = true;
+    } else if (refreshResult?.isTransientError) {
+      refreshHadTransientFailure = true;
     }
   }
 
   if (!token && isProtectedRoute) {
+    if (refreshHadTransientFailure && refreshToken) {
+      return finalizeResponse(NextResponse.next());
+    }
+
     const loginPath = pathname.startsWith("/admin") ? "/admin/login" : "/login";
     return withSecurityHeaders(
       createClearedAuthRedirect(new URL(loginPath, request.url)),
@@ -162,21 +213,35 @@ export async function proxy(request: NextRequest) {
     return finalizeResponse(NextResponse.next());
   }
 
-  let sessionUser = await getSessionUser(token);
+  let sessionLookup = await getSessionUser(token);
+  let sessionUser = sessionLookup.user;
 
   if (!sessionUser && refreshToken) {
-    refreshedSession = await refreshBackendSession({
+    const refreshResult = await refreshBackendSession({
       cookieHeader: request.headers.get("cookie"),
       refreshToken,
     });
 
-    if (refreshedSession?.accessToken) {
-      token = refreshedSession.accessToken;
-      sessionUser = await getSessionUser(token);
+    if (refreshResult?.accessToken) {
+      refreshedSession = refreshResult;
+      token = refreshResult.accessToken;
+      sessionLookup = await getSessionUser(token);
+      sessionUser = sessionLookup.user;
+    } else if (refreshResult?.isTerminalError) {
+      refreshHadTerminalFailure = true;
+    } else if (refreshResult?.isTransientError) {
+      refreshHadTransientFailure = true;
     }
   }
 
   if (!sessionUser) {
+    if (
+      !refreshHadTerminalFailure &&
+      (sessionLookup.isTransientError || refreshHadTransientFailure)
+    ) {
+      return finalizeResponse(NextResponse.next());
+    }
+
     const loginPath = pathname.startsWith("/admin") ? "/admin/login" : "/login";
     return withSecurityHeaders(
       createClearedAuthRedirect(new URL(loginPath, request.url)),

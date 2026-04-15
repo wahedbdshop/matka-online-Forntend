@@ -6,6 +6,14 @@ import { useAuthStore } from "@/store/auth.store";
 const BASE = "/kalyan";
 const MARKET_LIST_LIMIT = 1000;
 
+const KALYAN_RATE_ORDER = [
+  "GAME_TOTAL",
+  "SINGLE_PATTI",
+  "DOUBLE_PATTI",
+  "TRIPLE_PATTI",
+  "JORI",
+];
+
 const DEFAULT_KALYAN_RATES = [
   { playType: "GAME_TOTAL", rate: 900, status: "ACTIVE" },
   { playType: "SINGLE_PATTI", rate: 14000, status: "ACTIVE" },
@@ -13,6 +21,8 @@ const DEFAULT_KALYAN_RATES = [
   { playType: "TRIPLE_PATTI", rate: 60000, status: "ACTIVE" },
   { playType: "JORI", rate: 9000, status: "ACTIVE" },
 ];
+
+const KALYAN_RATES_CACHE_KEY = "public-kalyan-rates-cache-v1";
 
 const normalizeRateItem = (item: any) => ({
   ...item,
@@ -24,16 +34,72 @@ const normalizeRateItem = (item: any) => ({
     (item.isActive === false ? "INACTIVE" : "ACTIVE"),
 });
 
+const extractKalyanRateItems = (payload: any): any[] => {
+  if (Array.isArray(payload)) return payload;
+  if (Array.isArray(payload?.data)) return payload.data;
+  if (Array.isArray(payload?.rates)) return payload.rates;
+  if (Array.isArray(payload?.items)) return payload.items;
+  if (Array.isArray(payload?.data?.rates)) return payload.data.rates;
+  if (Array.isArray(payload?.data?.items)) return payload.data.items;
+
+  return [];
+};
+
 const normalizeKalyanRates = (items: any[] = []) => {
   const normalized = items.map(normalizeRateItem);
+  const orderMap = new Map(
+    KALYAN_RATE_ORDER.map((playType, index) => [playType, index]),
+  );
+
+  return [...normalized].sort((left, right) => {
+    const leftOrder = orderMap.get(String(left?.playType)) ?? Number.MAX_SAFE_INTEGER;
+    const rightOrder = orderMap.get(String(right?.playType)) ?? Number.MAX_SAFE_INTEGER;
+
+    if (leftOrder !== rightOrder) {
+      return leftOrder - rightOrder;
+    }
+
+    return String(left?.playType ?? "").localeCompare(String(right?.playType ?? ""));
+  });
+};
+
+const mergeWithDefaultKalyanRates = (items: any[] = []) => {
+  const normalized = normalizeKalyanRates(items);
   const byPlayType = new Map(
-    normalized.map((item) => [item.playType, item]),
+    normalized.map((item) => [String(item?.playType), item]),
   );
 
   return DEFAULT_KALYAN_RATES.map((fallback) => ({
     ...fallback,
     ...byPlayType.get(fallback.playType),
   }));
+};
+
+const readCachedKalyanRates = () => {
+  if (typeof window === "undefined") return [];
+
+  try {
+    const raw = window.localStorage.getItem(KALYAN_RATES_CACHE_KEY);
+    if (!raw) return [];
+
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? normalizeKalyanRates(parsed) : [];
+  } catch {
+    return [];
+  }
+};
+
+const writeCachedKalyanRates = (items: any[]) => {
+  if (typeof window === "undefined") return;
+
+  try {
+    window.localStorage.setItem(
+      KALYAN_RATES_CACHE_KEY,
+      JSON.stringify(items),
+    );
+  } catch {
+    // Ignore localStorage failures in restricted/private contexts.
+  }
 };
 
 const PLAY_TYPE_ENUM_MAP: Record<string, string> = {
@@ -451,16 +517,55 @@ export const KalyanUserService = {
   getGameRates: async (): Promise<ApiResponse<any>> => {
     const token = useAuthStore.getState().token;
     const client = token ? api : publicApi;
+    const paths = token
+      ? [`${BASE}/rates`]
+      : [`${BASE}/rates/public`, `${BASE}/rates`];
     try {
-      const res = await client.get<ApiResponse<any>>(`${BASE}/rates`);
-      return {
-        ...res.data,
-        data: normalizeKalyanRates(
-          Array.isArray(res.data?.data) ? res.data.data : [],
-        ),
-      };
+      for (const path of paths) {
+        try {
+          const res = await client.get<ApiResponse<any>>(path);
+          const rateItems = extractKalyanRateItems(res.data);
+          const normalizedRates = normalizeKalyanRates(rateItems);
+          const mergedRates = normalizedRates.length
+            ? mergeWithDefaultKalyanRates(rateItems)
+            : DEFAULT_KALYAN_RATES;
+
+          if (normalizedRates.length) {
+            writeCachedKalyanRates(mergedRates);
+          }
+
+          return {
+            ...res.data,
+            data: mergedRates,
+          };
+        } catch (error) {
+          const status =
+            typeof error === "object" &&
+            error !== null &&
+            "response" in error &&
+            typeof error.response === "object" &&
+            error.response !== null &&
+            "status" in error.response
+              ? error.response.status
+              : null;
+
+          if (status !== 404) {
+            throw error;
+          }
+        }
+      }
+
+      throw new Error("No Kalyan rate endpoint available.");
     } catch {
-      return { success: true, message: "ok", data: DEFAULT_KALYAN_RATES };
+      const cachedRates = readCachedKalyanRates();
+
+      return {
+        success: true,
+        message: "ok",
+        data: cachedRates.length
+          ? mergeWithDefaultKalyanRates(cachedRates)
+          : DEFAULT_KALYAN_RATES,
+      };
     }
   },
 

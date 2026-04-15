@@ -20,16 +20,22 @@ export type SessionTokens = {
 
 export type RefreshedSession = SessionTokens & {
   user?: SessionUser | null;
+  errorStatus?: number | null;
+  isTerminalError?: boolean;
+  isTransientError?: boolean;
 };
 
 const REFRESH_PATH_CANDIDATES = ["/auth/refresh-token"];
 const isProduction = process.env.NODE_ENV === "production";
+
+const THIRTY_DAYS = 60 * 60 * 24 * 30;
 
 export const serverAuthCookieOptions = {
   httpOnly: true,
   sameSite: (isProduction ? "none" : "lax") as "none" | "lax",
   secure: isProduction,
   path: "/",
+  maxAge: THIRTY_DAYS,
 };
 
 export const serverAuthFlagCookieOptions = {
@@ -37,6 +43,7 @@ export const serverAuthFlagCookieOptions = {
   sameSite: (isProduction ? "none" : "lax") as "none" | "lax",
   secure: isProduction,
   path: "/",
+  maxAge: THIRTY_DAYS,
 };
 
 function readString(
@@ -106,6 +113,10 @@ export function createClearedAuthRedirect(url: URL) {
   return response;
 }
 
+function isTerminalRefreshStatus(status: number | null) {
+  return status === 401 || status === 429;
+}
+
 export async function refreshBackendSession(options: {
   cookieHeader?: string | null;
   refreshToken?: string | null;
@@ -115,6 +126,9 @@ export async function refreshBackendSession(options: {
   if (!apiUrl || !options.refreshToken) {
     return null;
   }
+
+  let lastStatus: number | null = null;
+  let sawTransientFailure = false;
 
   for (const path of REFRESH_PATH_CANDIDATES) {
     try {
@@ -127,6 +141,17 @@ export async function refreshBackendSession(options: {
       });
 
       if (!response.ok) {
+        lastStatus = response.status;
+
+        if (isTerminalRefreshStatus(response.status)) {
+          return {
+            errorStatus: response.status,
+            isTerminalError: true,
+            isTransientError: false,
+          };
+        }
+
+        sawTransientFailure = true;
         continue;
       }
 
@@ -137,12 +162,16 @@ export async function refreshBackendSession(options: {
           : null;
 
       if (!data) {
+        lastStatus = response.status;
+        sawTransientFailure = true;
         continue;
       }
 
       const accessToken = readString(data, "accessToken") ?? readString(data, "token");
 
       if (!accessToken) {
+        lastStatus = response.status;
+        sawTransientFailure = true;
         continue;
       }
 
@@ -156,10 +185,22 @@ export async function refreshBackendSession(options: {
         refreshToken,
         sessionToken,
         user,
+        errorStatus: null,
+        isTerminalError: false,
+        isTransientError: false,
       };
     } catch {
+      sawTransientFailure = true;
       continue;
     }
+  }
+
+  if (sawTransientFailure) {
+    return {
+      errorStatus: lastStatus,
+      isTerminalError: false,
+      isTransientError: true,
+    };
   }
 
   return null;

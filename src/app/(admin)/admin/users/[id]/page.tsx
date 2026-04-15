@@ -47,6 +47,7 @@ export default function UserDetailPage({
   const [notifOpen, setNotifOpen] = useState(false);
   const [notifPage, setNotifPage] = useState(1);
 
+
   const { data, isLoading } = useQuery({
     queryKey: ["admin-user-detail", id],
     queryFn: () => AdminService.getUserById(id),
@@ -64,6 +65,7 @@ export default function UserDetailPage({
   const notifications = notifData?.data?.notifications ?? [];
   const notifTotal = notifData?.data?.total ?? 0;
   const notifPages = Math.ceil(notifTotal / 20);
+
 
   // ── Mutations ──
   const { mutate: banUser, isPending: banning } = useMutation({
@@ -524,81 +526,56 @@ export default function UserDetailPage({
 
       {/* ── Account Restrictions ── */}
       <div className="rounded-xl border border-slate-700 bg-slate-800/50 p-5 space-y-4">
-        <h2 className="text-sm font-semibold text-white">
-          Account Restrictions
-        </h2>
-        <div className="grid grid-cols-2 gap-3">
-          {/* ✅ Deposit toggle যোগ করো */}
-          <div className="rounded-lg border border-slate-700 bg-slate-900 p-3 flex items-center justify-between">
-            <div>
-              <p className="text-xs font-medium text-white">Deposit</p>
-              <p className="text-[10px] text-slate-500 mt-0.5">
-                {(user.canDeposit ?? true) ? "Enabled" : "Disabled"}
-              </p>
-            </div>
-            <button
-              onClick={() => toggleDeposit(!(user.canDeposit ?? true))}
-              disabled={togglingDeposit}
-              className={`relative h-6 w-11 rounded-full transition-colors disabled:opacity-50 ${
-                (user.canDeposit ?? true) ? "bg-green-500" : "bg-slate-600"
-              }`}
+        <h2 className="text-sm font-semibold text-white">Account Restrictions</h2>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          {[
+            {
+              label: "Deposit",
+              value: user.canDeposit ?? true,
+              toggling: togglingDeposit,
+              onToggle: () => toggleDeposit(!(user.canDeposit ?? true)),
+            },
+            {
+              label: "Balance Transfer",
+              value: user.canTransfer ?? true,
+              toggling: togglingTransfer,
+              onToggle: () => toggleTransfer(!(user.canTransfer ?? true)),
+            },
+            {
+              label: "Withdrawal",
+              value: user.canWithdraw ?? true,
+              toggling: togglingWithdraw,
+              onToggle: () => toggleWithdraw(!(user.canWithdraw ?? true)),
+            },
+          ].map((item) => (
+            <div
+              key={item.label}
+              className="rounded-xl border border-slate-700 bg-slate-900 px-4 py-3 flex items-center justify-between gap-4"
             >
-              <span
-                className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${
-                  (user.canDeposit ?? true)
-                    ? "translate-x-5"
-                    : "translate-x-0.5"
+              <div>
+                <p className="text-xs font-semibold text-white">{item.label}</p>
+                <p className={`text-[10px] mt-0.5 font-medium ${item.value ? "text-green-400" : "text-red-400"}`}>
+                  {item.value ? "Enabled" : "Disabled"}
+                </p>
+              </div>
+              {/* Toggle */}
+              <button
+                onClick={item.onToggle}
+                disabled={item.toggling}
+                className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full border-2 transition-all duration-200 disabled:opacity-50 ${
+                  item.value
+                    ? "border-green-500 bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.4)]"
+                    : "border-slate-600 bg-slate-700"
                 }`}
-              />
-            </button>
-          </div>
-          {/* Balance Transfer */}
-          <div className="rounded-lg border border-slate-700 bg-slate-900 p-3 flex items-center justify-between">
-            <div>
-              <p className="text-xs font-medium text-white">Balance Transfer</p>
-              <p className="text-[10px] text-slate-500 mt-0.5">
-                {user.canTransfer ? "Enabled" : "Disabled"}
-              </p>
+              >
+                <span
+                  className={`inline-block h-4 w-4 rounded-full bg-white shadow-md transition-transform duration-200 ${
+                    item.value ? "translate-x-5" : "translate-x-0.5"
+                  }`}
+                />
+              </button>
             </div>
-            <button
-              onClick={() => toggleTransfer(!(user.canTransfer ?? true))}
-              disabled={togglingTransfer}
-              className={`relative h-6 w-11 rounded-full transition-colors disabled:opacity-50 ${
-                (user.canTransfer ?? true) ? "bg-green-500" : "bg-slate-600"
-              }`}
-            >
-              <span
-                className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${
-                  (user.canTransfer ?? true)
-                    ? "translate-x-5"
-                    : "translate-x-0.5"
-                }`}
-              />
-            </button>
-          </div>
-
-          {/* Withdrawal */}
-          <div className="rounded-lg border border-slate-700 bg-slate-900 p-3 flex items-center justify-between">
-            <div>
-              <p className="text-xs font-medium text-white">Withdrawal</p>
-              <p className="text-[10px] text-slate-500 mt-0.5">
-                {user.canWithdraw ? "Enabled" : "Disabled"}
-              </p>
-            </div>
-            <button
-              onClick={() => toggleWithdraw(!user.canWithdraw)}
-              disabled={togglingWithdraw}
-              className={`relative h-6 w-11 rounded-full transition-colors disabled:opacity-50 ${
-                user.canWithdraw ? "bg-green-500" : "bg-slate-600"
-              }`}
-            >
-              <span
-                className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${
-                  user.canWithdraw ? "translate-x-5" : "translate-x-0.5"
-                }`}
-              />
-            </button>
-          </div>
+          ))}
         </div>
       </div>
 
@@ -776,6 +753,7 @@ export default function UserDetailPage({
           </div>
         </div>
       )}
+
     </div>
   );
 }

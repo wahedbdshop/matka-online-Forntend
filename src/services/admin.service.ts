@@ -20,6 +20,7 @@ export interface SmsWebhookLog {
   amount: string;
   paymentMethod: string;
   depositRequestId?: string | null;
+  username?: string | null;
   status: SmsWebhookStatus;
   createdAt: string;
 }
@@ -230,6 +231,42 @@ export const AdminService = {
   getUserWallets: async (userId: string) => {
     const res = await api.get<ApiResponse<any>>(
       `/admin/users/${userId}/wallets`,
+    );
+    return res.data;
+  },
+
+  getUserWithdrawalAccounts: async (userId: string) => {
+    const res = await api.get<ApiResponse<any>>(
+      `/admin/users/${userId}/saved-accounts`,
+    );
+    return res.data;
+  },
+
+  addUserWithdrawalAccount: async (
+    userId: string,
+    payload: { paymentMethod: string; accountNumber: string; nickname?: string },
+  ) => {
+    const res = await api.post<ApiResponse<any>>(
+      `/admin/users/${userId}/saved-accounts`,
+      payload,
+    );
+    return res.data;
+  },
+
+  updateUserWithdrawalAccount: async (
+    accountId: string,
+    payload: { accountNumber?: string; nickname?: string },
+  ) => {
+    const res = await api.patch<ApiResponse<any>>(
+      `/admin/saved-accounts/${accountId}`,
+      payload,
+    );
+    return res.data;
+  },
+
+  deleteUserWithdrawalAccount: async (accountId: string) => {
+    const res = await api.delete<ApiResponse<any>>(
+      `/admin/saved-accounts/${accountId}`,
     );
     return res.data;
   },

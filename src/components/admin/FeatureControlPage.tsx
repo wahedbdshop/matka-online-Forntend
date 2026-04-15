@@ -184,13 +184,15 @@ export function FeatureControlPage({ feature }: { feature: Feature }) {
 
           <button
             onClick={() => toggle({ key: cfg.toggleKey, value: !isOn })}
-            className={`relative h-7 w-14 rounded-full transition-all duration-300 ${
-              isOn ? colors.toggleOn : "bg-red-500/60"
+            className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full border-2 transition-all duration-200 ${
+              isOn
+                ? `${colors.toggleOn} border-transparent shadow-[0_0_8px_rgba(0,0,0,0.3)]`
+                : "bg-slate-700 border-slate-600"
             }`}
           >
             <span
-              className={`absolute top-1 h-5 w-5 rounded-full bg-white shadow-md transition-transform duration-300 ${
-                isOn ? "translate-x-8" : "translate-x-1"
+              className={`inline-block h-4 w-4 rounded-full bg-white shadow-md transition-transform duration-200 ${
+                isOn ? "translate-x-5" : "translate-x-0.5"
               }`}
             />
           </button>

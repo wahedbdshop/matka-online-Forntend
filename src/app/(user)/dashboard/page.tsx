@@ -179,6 +179,7 @@ export default function DashboardPage() {
               "💰 1% Register bonus & quick customer support",
               "🌍 www.matkaonline24.online",
               "🌍 www.matkaonline24.com",
+              "🌍 www.matka24.org",
             ].map((t) => (
               <p key={t}>{t}</p>
             ))}

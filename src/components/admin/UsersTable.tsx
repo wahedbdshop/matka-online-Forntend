@@ -82,6 +82,8 @@ export function UsersTable({
         search: search || undefined,
         page,
         limit: LIMIT,
+        orderBy: "balance",
+        order: "desc",
         ...extraParams,
       }),
   });

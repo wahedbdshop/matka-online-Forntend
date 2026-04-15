@@ -338,6 +338,7 @@ export default function AdminSmsAutoDepositPage() {
                   "Amount",
                   "Method",
                   "Deposit Request",
+                  "Username",
                   "Status",
                   "Received",
                 ].map((header) => (
@@ -354,7 +355,7 @@ export default function AdminSmsAutoDepositPage() {
               {logsLoading ? (
                 Array.from({ length: 8 }).map((_, rowIndex) => (
                   <tr key={rowIndex} className="border-b border-slate-800/70">
-                    {Array.from({ length: 8 }).map((__, cellIndex) => (
+                    {Array.from({ length: 9 }).map((__, cellIndex) => (
                       <td key={cellIndex} className="px-4 py-3">
                         <div className="h-4 w-16 animate-pulse rounded bg-slate-800" />
                       </td>
@@ -364,7 +365,7 @@ export default function AdminSmsAutoDepositPage() {
               ) : logs.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={8}
+                    colSpan={9}
                     className="px-4 py-10 text-center text-sm text-slate-500"
                   >
                     No SMS logs found for this filter.
@@ -401,6 +402,9 @@ export default function AdminSmsAutoDepositPage() {
                     </td>
                     <td className="px-4 py-3 font-mono text-xs text-slate-400">
                       {log.depositRequestId || "-"}
+                    </td>
+                    <td className="px-4 py-3 text-xs text-slate-300">
+                      {log.username || "-"}
                     </td>
                     <td className="px-4 py-3">
                       <span

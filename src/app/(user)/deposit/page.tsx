@@ -1212,10 +1212,13 @@ export default function DepositPage() {
                       <input
                         value={senderNumber}
                         onChange={(e) => {
-                          setSenderNumber(e.target.value);
+                          const val = e.target.value.replace(/\D/g, "").slice(0, 11);
+                          setSenderNumber(val);
                           setTxnError("");
                         }}
                         placeholder="e.g. 017XXXXXXXX"
+                        maxLength={11}
+                        inputMode="numeric"
                         className="w-full rounded-xl border border-slate-600 bg-slate-700/50 px-4 py-3 text-white text-sm outline-none focus:border-purple-500 placeholder:text-slate-500"
                       />
                     </div>

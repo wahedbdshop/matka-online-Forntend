@@ -20,6 +20,7 @@ import {
   Plus,
 } from "lucide-react";
 import { WithdrawalService } from "@/services/withdrawal.service";
+import { DepositService } from "@/services/deposit.service";
 import { AdminService } from "@/services/admin.service";
 import { UserService } from "@/services/user.service"; // profile fetch
 import { cn } from "@/lib/utils";
@@ -51,6 +52,7 @@ interface SavedAccount {
   branchName?: string;
   accountHolderName?: string;
   swiftCode?: string;
+  addedByAdmin?: boolean;
 }
 
 // ─── Constants ────────────────────────────────────────────────
@@ -293,6 +295,16 @@ export default function WithdrawPage() {
   });
   const withdrawals = historyData?.data?.withdrawals ?? [];
 
+  // Pending deposit check
+  const { data: depositData } = useQuery({
+    queryKey: ["my-deposits-pending-check"],
+    queryFn: () => DepositService.getMyDeposits(1, 5),
+    enabled: isWithdrawOn,
+  });
+  const hasPendingDeposit = (depositData?.data?.deposits ?? []).some(
+    (d: any) => d.status === "PENDING",
+  );
+
   // ── Derived ───────────────────────────────────────────────
   const isBank = selectedMethod?.type === "BANK";
   const isMobile = selectedMethod?.type === "MOBILE";
@@ -309,14 +321,36 @@ export default function WithdrawPage() {
     [minAmount, maxAmount],
   );
 
-  // Saved accounts for current method
+  // All active mobile method names (lowercase)
+  const mobileMethodNames = useMemo(
+    () =>
+      new Set(
+        methods
+          .filter((m) => m.type === "MOBILE")
+          .map((m) => m.name.toLowerCase()),
+      ),
+    [methods],
+  );
+
+  // Saved accounts for current method.
+  // For MOBILE methods: show accounts saved under ANY mobile method, deduped by
+  // accountNumber so a number saved via bkash also appears in nagad/rocket.
   const methodSavedAccounts = useMemo(() => {
     if (!selectedMethod) return [];
+    if (isMobile) {
+      const seen = new Set<string>();
+      return allSavedAccounts.filter((a) => {
+        if (!mobileMethodNames.has(a.paymentMethod.toLowerCase())) return false;
+        if (seen.has(a.accountNumber)) return false;
+        seen.add(a.accountNumber);
+        return true;
+      });
+    }
     return allSavedAccounts.filter(
       (a) =>
         a.paymentMethod.toLowerCase() === selectedMethod.name.toLowerCase(),
     );
-  }, [allSavedAccounts, selectedMethod]);
+  }, [allSavedAccounts, selectedMethod, isMobile, mobileMethodNames]);
 
   // Phone as virtual "default" account for mobile (if not already saved)
   const phoneIsAlreadySaved = methodSavedAccounts.some(
@@ -349,9 +383,15 @@ export default function WithdrawPage() {
 
   const currentMobileSavedCount =
     methodSavedAccounts.length + (showPhoneDefault ? 1 : 0);
-  const canAddMoreMobile = currentMobileSavedCount < 3;
   const currentBankSavedCount = methodSavedAccounts.length;
-  const canAddMoreBank = currentBankSavedCount < 3;
+
+  // Limit is per-method (max 3 real saved entries, not counting the virtual phone default).
+  // addedByAdmin is optional — if backend supports it, admin-added won't count against quota.
+  const userSavedForMethod = methodSavedAccounts.filter(
+    (a) => !a.addedByAdmin,
+  ).length;
+  const canAddMoreMobile = userSavedForMethod < 3;
+  const canAddMoreBank = userSavedForMethod < 3;
   const finalAccountNumber = selectedAccountNumber || newAccountInput;
   const methodEmoji = selectedMethod
     ? (METHOD_EMOJI[selectedMethod.name.toLowerCase()] ?? "💳")
@@ -403,6 +443,27 @@ export default function WithdrawPage() {
       toast.success(
         "Withdrawal request submitted! Your balance has been updated.",
       );
+
+      // Save account number for ALL other active mobile methods (fire-and-forget)
+      if (selectedMethod?.type === "MOBILE" && variables.accountNumber) {
+        const otherMobileMethods = methods.filter(
+          (m) =>
+            m.type === "MOBILE" &&
+            m.name.toLowerCase() !== selectedMethod.name.toLowerCase(),
+        );
+        const alreadySavedNumbers = new Set(
+          allSavedAccounts.map((a) => a.accountNumber),
+        );
+        for (const m of otherMobileMethods) {
+          if (!alreadySavedNumbers.has(variables.accountNumber)) {
+            WithdrawalService.saveAccount({
+              paymentMethod: m.name,
+              accountNumber: variables.accountNumber,
+            }).catch(() => {/* silent */});
+          }
+        }
+      }
+
       queryClient.invalidateQueries({ queryKey: ["my-withdrawals"] });
       queryClient.invalidateQueries({ queryKey: ["saved-accounts"] });
       queryClient.invalidateQueries({ queryKey: ["profile"] });
@@ -704,6 +765,21 @@ export default function WithdrawPage() {
 
               {/* ══ STEP 2: Amount ══ */}
               {step === "amount" && selectedMethod && (
+                <div className="space-y-3">
+                {/* Pending deposit warning */}
+                {hasPendingDeposit && (
+                  <div className="flex items-start gap-3 rounded-2xl border border-amber-500/30 bg-amber-500/10 px-4 py-3">
+                    <Clock className="h-4 w-4 text-amber-400 mt-0.5 shrink-0" />
+                    <div>
+                      <p className="text-xs font-semibold text-amber-300">
+                        Pending Deposit Found
+                      </p>
+                      <p className="text-[11px] text-amber-400/80 mt-0.5">
+                        You have a deposit request under review. Please wait for it to be approved before submitting a withdrawal.
+                      </p>
+                    </div>
+                  </div>
+                )}
                 <div className="rounded-2xl border border-slate-700/50 bg-slate-800/40 p-4 space-y-4">
                   <div className="flex items-center justify-between">
                     <p className="text-xs font-medium text-slate-400 uppercase tracking-wider">
@@ -798,6 +874,7 @@ export default function WithdrawPage() {
                   >
                     Continue →
                   </button>
+                </div>
                 </div>
               )}
 
@@ -904,18 +981,17 @@ export default function WithdrawPage() {
                                 </div>
                               )}
 
-                              {!canAddMoreMobile &&
-                                displayAccounts.length === 0 && (
+                              {!canAddMoreMobile && (
                                 <p className="text-[11px] text-amber-400">
-                                  ⚠️ Max 3 accounts reached. Select one above.
+                                  ⚠️ Max 3 saved numbers reached for this method.
                                 </p>
                               )}
                             </div>
                           </>
                         )}
 
-                        {/* New number input */}
-                        {(showAddForm || displayAccounts.length === 0) &&
+                        {/* New number input — show if +Add clicked, or no real saved accounts yet */}
+                        {(showAddForm || methodSavedAccounts.length === 0) &&
                           canAddMoreMobile && (
                             <div>
                               <label className="text-[11px] text-slate-400 mb-1.5 block">
@@ -927,7 +1003,8 @@ export default function WithdrawPage() {
                               <input
                                 value={newAccountInput}
                                 onChange={(e) => {
-                                  setNewAccountInput(e.target.value);
+                                  const val = e.target.value.replace(/\D/g, "").slice(0, 11);
+                                  setNewAccountInput(val);
                                   setSelectedAccountNumber("");
                                   setFieldErrors((p) => ({
                                     ...p,
@@ -935,6 +1012,8 @@ export default function WithdrawPage() {
                                   }));
                                 }}
                                 placeholder={`Enter ${selectedMethod.name} number`}
+                                maxLength={11}
+                                inputMode="numeric"
                                 className="w-full rounded-xl border border-slate-600 bg-slate-700/50 px-4 py-3 text-white text-sm outline-none focus:border-rose-500 placeholder:text-slate-500"
                               />
                               <p className="text-[10px] text-slate-600 mt-1">
@@ -1019,8 +1098,7 @@ export default function WithdrawPage() {
                             </div>
                             {!canAddMoreBank && (
                               <p className="text-[11px] text-amber-400">
-                                Max 3 saved bank accounts reached. Select one
-                                above.
+                                ⚠️ Max 3 saved bank accounts reached for this method.
                               </p>
                             )}
                           </>

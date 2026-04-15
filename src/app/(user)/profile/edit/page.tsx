@@ -1,11 +1,12 @@
 "use client";
 
+import Link from "next/link";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Loader2, User, Phone, Globe, Mail } from "lucide-react";
+import { ArrowLeft, Loader2, User, Phone, Globe, Mail } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -16,39 +17,13 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { UserService } from "@/services/user.service";
 import { useAuthStore } from "@/store/auth.store";
 import { api } from "@/lib/axios";
 
-const COUNTRIES = [
-  "Bangladesh",
-  "India",
-  "Pakistan",
-  "United States",
-  "United Kingdom",
-  "Saudi Arabia",
-  "UAE",
-  "Malaysia",
-  "Singapore",
-  "Australia",
-  "Canada",
-  "Qatar",
-  "Kuwait",
-  "Bahrain",
-  "Oman",
-];
 
 const schema = z.object({
   name: z.string().min(1, "Name is required"),
-  phone: z.string().min(7, "Invalid phone number").optional().or(z.literal("")),
-  country: z.string().optional(),
 });
 
 type FormData = z.infer<typeof schema>;
@@ -68,8 +43,6 @@ export default function EditProfilePage() {
     resolver: zodResolver(schema),
     values: {
       name: profile?.name ?? "",
-      phone: profile?.phone ?? "",
-      country: profile?.country ?? "",
     },
   });
 
@@ -95,7 +68,14 @@ export default function EditProfilePage() {
 
   return (
     <div className="space-y-5 max-w-lg">
-      <div>
+      <div className="space-y-3">
+        <Link
+          href="/profile"
+          className="inline-flex items-center gap-2 rounded-full border border-slate-700 bg-slate-900/70 px-3 py-1.5 text-xs font-medium text-slate-300 transition-colors hover:border-slate-600 hover:bg-slate-800 hover:text-white"
+        >
+          <ArrowLeft className="h-3.5 w-3.5" />
+          Back
+        </Link>
         <h1 className="text-xl font-bold text-white">Edit Profile</h1>
         <p className="text-xs text-slate-500 mt-0.5">
           Update your personal information
@@ -150,62 +130,41 @@ export default function EditProfilePage() {
               )}
             />
 
-            {/* Phone */}
-            <FormField
-              control={form.control}
-              name="phone"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-slate-400 text-xs">
-                    Phone Number
-                  </FormLabel>
-                  <FormControl>
-                    <div className="relative">
-                      <Phone className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
-                      <Input
-                        {...field}
-                        placeholder="01XXXXXXXXX"
-                        className="pl-10 bg-slate-700/50 border-slate-600 text-white placeholder:text-slate-500"
-                      />
-                    </div>
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            {/* Phone — readonly */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-slate-400">
+                Phone Number
+              </label>
+              <div className="relative">
+                <Phone className="absolute left-3 top-2.5 h-4 w-4 text-slate-500" />
+                <input
+                  value={profile?.phone ?? ""}
+                  readOnly
+                  className="w-full rounded-lg border border-slate-700 bg-slate-900/50 px-3 py-2 pl-10 text-sm text-slate-500 cursor-not-allowed"
+                />
+              </div>
+              <p className="text-[10px] text-slate-600">
+                Phone number cannot be changed
+              </p>
+            </div>
 
-            {/* Country */}
-            <FormField
-              control={form.control}
-              name="country"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-slate-400 text-xs">
-                    Country
-                  </FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
-                    <FormControl>
-                      <SelectTrigger className="bg-slate-700/50 border-slate-600 text-white">
-                        <Globe className="mr-2 h-4 w-4 text-slate-400" />
-                        <SelectValue placeholder="Select country" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent className="bg-slate-800 border-slate-600 text-white max-h-56">
-                      {COUNTRIES.map((c) => (
-                        <SelectItem
-                          key={c}
-                          value={c}
-                          className="focus:bg-slate-700 focus:text-white"
-                        >
-                          {c}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            {/* Country — readonly */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-slate-400">
+                Country
+              </label>
+              <div className="relative">
+                <Globe className="absolute left-3 top-2.5 h-4 w-4 text-slate-500" />
+                <input
+                  value={profile?.country ?? ""}
+                  readOnly
+                  className="w-full rounded-lg border border-slate-700 bg-slate-900/50 px-3 py-2 pl-10 text-sm text-slate-500 cursor-not-allowed"
+                />
+              </div>
+              <p className="text-[10px] text-slate-600">
+                Country cannot be changed
+              </p>
+            </div>
 
             <Button
               type="submit"
