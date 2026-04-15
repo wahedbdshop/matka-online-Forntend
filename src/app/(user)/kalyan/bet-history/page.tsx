@@ -156,8 +156,8 @@ export default function BetHistoryPage() {
       entry.market?.name ||
       `Market #${entry.marketId.slice(-6)}`;
     const sessionLabel =
-      entry.sessionType === "CLOSE" ? " Close" : entry.sessionType === "OPEN" ? " Open" : "";
-    const gameName = `${baseGameName}${sessionLabel}`;
+      entry.sessionType === "CLOSE" ? "Close" : entry.sessionType === "OPEN" ? "Open" : "";
+    const gameName = baseGameName;
 
     if (items.length === 0) {
       return [
@@ -168,6 +168,7 @@ export default function BetHistoryPage() {
             entry.user?.username?.trim() ||
             currentUserName,
           gameName,
+          sessionLabel,
           category: resolveCategoryLabel(entry),
           betNumber: "-",
           amount: entry.totalAmount,
@@ -184,6 +185,7 @@ export default function BetHistoryPage() {
         entry.user?.username?.trim() ||
         currentUserName,
       gameName,
+      sessionLabel,
       category: resolveCategoryLabel(entry, item),
       betNumber: item.selectedNumber,
       amount: item.amount,
@@ -258,7 +260,14 @@ export default function BetHistoryPage() {
                     >
                       <td className="w-[6%] border-r border-slate-700/60 px-1 py-2 font-semibold text-slate-300 sm:px-2 whitespace-nowrap">{index + 1}</td>
                       <td className="w-[13%] border-r border-slate-700/60 px-1 py-2 font-medium text-white sm:px-2 text-[8px] leading-tight break-words">{row.userName}</td>
-                      <td className="w-[16%] border-r border-slate-700/60 px-1 py-2 font-medium text-slate-100 sm:px-2 text-[8px] leading-tight break-words">{row.gameName}</td>
+                      <td className="w-[16%] border-r border-slate-700/60 px-1 py-2 font-medium text-slate-100 sm:px-2 text-[8px] leading-tight break-words">
+                        {row.gameName}
+                        {row.sessionLabel && (
+                          <span className={`block font-semibold ${row.sessionLabel === "Open" ? "text-green-400" : "text-red-400"}`}>
+                            {row.sessionLabel}
+                          </span>
+                        )}
+                      </td>
                       <td className="w-[13%] border-r border-slate-700/60 px-1 py-2 text-[7px] leading-none text-slate-300 whitespace-nowrap sm:px-2 sm:text-[8px]">
                         {row.category}
                       </td>

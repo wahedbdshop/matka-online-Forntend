@@ -5,6 +5,7 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Search, Trash2 } from "lucide-react";
 import { AdminService } from "@/services/admin.service";
+import { formatBangladeshDateTime } from "@/lib/bangladesh-time";
 
 const PLAY_TYPE_LABEL: Record<string, string> = {
   THREE_UP_DIRECT: "3Up Direct",
@@ -71,17 +72,6 @@ export default function ThaiRemovedHistoryPage() {
   const bets = data?.data?.bets ?? [];
   const total = data?.data?.total ?? 0;
   const totalPages = Math.ceil(total / LIMIT);
-
-  const formatDate = (d?: string) => {
-    if (!d) return "-";
-    return new Date(d).toLocaleString("en-BD", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  };
 
   return (
     <div className="space-y-5">
@@ -189,8 +179,8 @@ export default function ThaiRemovedHistoryPage() {
                 "Bet Number",
                 "Amount",
                 "Status",
-                "Placed At",
-                "Removed At",
+                "Placed At (BD Time)",
+                "Removed At (BD Time)",
               ].map((h) => (
                 <th
                   key={h}
@@ -261,10 +251,14 @@ export default function ThaiRemovedHistoryPage() {
                     </span>
                   </td>
                   <td className="px-4 py-3 text-xs text-slate-400">
-                    {formatDate(bet.placedAt)}
+                    {formatBangladeshDateTime(bet.placedAt, {
+                      timeZone: bet.round?.scheduleTimeZone,
+                    })}
                   </td>
                   <td className="px-4 py-3 text-xs text-slate-400">
-                    {formatDate(bet.historyDeleteAt)}
+                    {formatBangladeshDateTime(bet.historyDeleteAt, {
+                      timeZone: bet.round?.scheduleTimeZone,
+                    })}
                   </td>
                 </tr>
               ))

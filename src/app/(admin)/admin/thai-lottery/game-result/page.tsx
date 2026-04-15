@@ -6,6 +6,7 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Search, Trophy } from "lucide-react";
 import { AdminService } from "@/services/admin.service";
+import { formatBangladeshDateTime } from "@/lib/bangladesh-time";
 
 const PLAY_TYPE_LABEL: Record<string, string> = {
   THREE_UP_DIRECT: "3Up Direct",
@@ -65,17 +66,6 @@ export default function ThaiGameResultPage() {
   const bets = data?.data?.bets ?? [];
   const total = data?.data?.total ?? 0;
   const totalPages = Math.ceil(total / LIMIT);
-
-  const formatDate = (d?: string) => {
-    if (!d) return "-";
-    return new Date(d).toLocaleString("en-BD", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  };
 
   return (
     <div className="space-y-5">
@@ -186,7 +176,7 @@ export default function ThaiGameResultPage() {
                 Win Amount
               </th>
               <th className="px-4 py-3 text-xs font-medium text-slate-400">
-                Date
+                Date (BD Time)
               </th>
             </tr>
           </thead>
@@ -252,8 +242,11 @@ export default function ThaiGameResultPage() {
                       ${winUsd.toFixed(2)}
                     </td>
                     <td className="px-4 py-3 text-xs text-slate-400">
-                      {formatDate(bet.settledAt ?? bet.placedAt)}
-                    </td>
+                        {formatBangladeshDateTime(
+                          bet.settledAt ?? bet.placedAt,
+                          { timeZone: bet.round?.scheduleTimeZone },
+                        )}
+                      </td>
                   </tr>
                 );
               })

@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { ChevronLeft, ReceiptText } from "lucide-react";
 import { ThaiPublicResultService } from "@/services/thai-public-result.service";
+import { formatBangladeshDate } from "@/lib/bangladesh-time";
 
 const LIMIT = 20;
 
@@ -13,13 +14,19 @@ const formatDate = (
   date?: string,
 ): { compact: string; year: string } => {
   if (!date) return { compact: "-", year: "-" };
-  const d = new Date(date);
   return {
-    compact: d.toLocaleDateString("en-GB", {
+    compact: formatBangladeshDate(date, {
+      locale: "en-GB",
       day: "2-digit",
       month: "short",
+      year: undefined,
     }),
-    year: d.toLocaleDateString("en-GB", { year: "2-digit" }),
+    year: formatBangladeshDate(date, {
+      locale: "en-GB",
+      year: "2-digit",
+      month: undefined,
+      day: undefined,
+    }),
   };
 };
 

@@ -12,19 +12,14 @@ import {
   RotateCcw,
 } from "lucide-react";
 import { AdminService } from "@/services/admin.service";
-import { formatAbsoluteUtcDateTimeForBangladeshDisplay } from "@/lib/timezone";
 import { cn } from "@/lib/utils";
+import { formatBangladeshDateTime } from "@/lib/bangladesh-time";
 
 const STATUS_STYLE: Record<string, string> = {
   OPEN: "bg-green-500/15 text-green-400 border-green-500/30",
   CLOSED: "bg-slate-500/15 text-slate-300 border-slate-500/30",
   RESULTED: "bg-blue-500/15  text-blue-400  border-blue-500/30",
   CANCELLED: "bg-red-500/15   text-red-400   border-red-500/30",
-};
-
-const formatDate = (d?: string) => {
-  if (!d) return "-";
-  return formatAbsoluteUtcDateTimeForBangladeshDisplay(d, { includeTimezone: true });
 };
 
 export default function ThaiRoundOverviewPage() {
@@ -61,7 +56,9 @@ export default function ThaiRoundOverviewPage() {
       icon: Clock,
       label: "Close Time",
       desc: round.closeTime
-        ? `Set: ${formatDate(round.closeTime)}`
+        ? `Set: ${formatBangladeshDateTime(round.closeTime, {
+            timeZone: round.scheduleTimeZone,
+          })}`
         : "Not set yet",
       color: "border-yellow-500/30 bg-yellow-500/5 hover:bg-yellow-500/10",
       iconColor: "text-yellow-400",
@@ -117,7 +114,11 @@ export default function ThaiRoundOverviewPage() {
             Round #{round.issueNumber}
           </h1>
           <p className="text-xs text-slate-400">
-            Draw: {formatDate(round.drawDate)}
+            Draw:{" "}
+            {formatBangladeshDateTime(round.drawDate, {
+              timeZone: round.scheduleTimeZone,
+            })}{" "}
+            BD Time
           </p>
         </div>
         <span
@@ -134,8 +135,25 @@ export default function ThaiRoundOverviewPage() {
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         {[
           { label: "Status", value: round.status },
-          { label: "Close Time", value: formatDate(round.closeTime) },
-          { label: "Resulted At", value: formatDate(round.resultedAt) },
+          {
+            label: "Close Time (BD)",
+            value: formatBangladeshDateTime(round.closeTime, {
+              timeZone: round.scheduleTimeZone,
+            }),
+          },
+          {
+            label: "Created At (BD)",
+            value: formatBangladeshDateTime(round.createdAt, {
+              timeZone: round.scheduleTimeZone,
+            }),
+          },
+          {
+            label: "Resulted At (BD)",
+            value: formatBangladeshDateTime(round.resultedAt, {
+              timeZone: round.scheduleTimeZone,
+            }),
+          },
+          { label: "Schedule TZ", value: round.scheduleTimeZone ?? "Asia/Dhaka" },
           { label: "Edit Count", value: `${round.editCount ?? 0} / 4` },
         ].map((item) => (
           <div

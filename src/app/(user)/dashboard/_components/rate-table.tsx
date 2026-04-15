@@ -1,8 +1,68 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { Star } from "lucide-react";
 
-export function RateTable({ title, rates }: { title: string; rates: any[] }) {
+const EXAMPLE_BET = 100;
+
+function PayoutsTable({ title, rates }: { title: string; rates: any[] }) {
+  return (
+    <div className="overflow-hidden rounded-2xl border border-[#1e3560] bg-[#111f38] shadow-lg">
+      {/* Title */}
+      <div className="border-b border-[#1e3560] bg-[#0c1628] px-4 py-3">
+        <p className="text-sm font-bold text-white">{title} Rates</p>
+      </div>
+
+      {/* Column Headers */}
+      <div className="grid grid-cols-3 items-center gap-2 border-b border-yellow-500/30 bg-yellow-500/8 px-4 py-2.5">
+        <p className="text-[9px] font-bold uppercase tracking-widest text-yellow-400 text-left">
+          Play Type
+        </p>
+        <p className="text-[9px] font-bold uppercase tracking-widest text-yellow-400 text-center">
+          Bet Rs.
+        </p>
+        <p className="text-[9px] font-bold uppercase tracking-widest text-yellow-400 text-right">
+          Win Rs.
+        </p>
+      </div>
+
+      {/* Rows */}
+      <div className="divide-y divide-[#0f2244]/60">
+        {rates.map((r: any, idx: number) => (
+          <div
+            key={r.id ?? r.playType}
+            className={`grid grid-cols-3 items-center gap-2 px-4 py-3 transition-colors hover:bg-white/2 ${
+              idx % 2 !== 0 ? "bg-[#0c1628]/40" : ""
+            }`}
+          >
+            <span className="text-xs font-medium text-slate-300">
+              {r.label ?? r.playType}
+            </span>
+            <span className="text-center font-mono text-xs text-slate-400">
+              {EXAMPLE_BET}
+            </span>
+            <span className="text-right font-mono text-xs font-black text-green-400">
+              {Number(r.multiplier ?? r.rate ?? 0).toLocaleString("en-IN")}
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+export function RateTable({
+  title,
+  rates,
+  variant,
+}: {
+  title: string;
+  rates: any[];
+  variant?: "payouts";
+}) {
   if (!rates?.length) return null;
+
+  if (variant === "payouts") {
+    return <PayoutsTable title={title} rates={rates} />;
+  }
 
   return (
     <div className="overflow-hidden rounded-2xl border border-[#1e3560] bg-[#111f38] shadow-lg">
@@ -12,7 +72,7 @@ export function RateTable({ title, rates }: { title: string; rates: any[] }) {
       </div>
 
       {/* Table Header */}
-      <div className="grid grid-cols-[36px_1fr_72px_76px] items-center gap-2 border-b border-yellow-500/30 bg-yellow-500/[0.08] px-4 py-2.5">
+      <div className="grid grid-cols-[36px_1fr_72px_76px] items-center gap-2 border-b border-yellow-500/30 bg-yellow-500/8 px-4 py-2.5">
         {[
           { label: "Sl.No", cls: "text-left" },
           { label: "Name", cls: "text-left" },
@@ -40,7 +100,7 @@ export function RateTable({ title, rates }: { title: string; rates: any[] }) {
           return (
             <div
               key={r.id ?? r.playType}
-              className={`grid grid-cols-[36px_1fr_72px_76px] items-center gap-2 px-4 py-3 transition-colors hover:bg-white/[0.02] ${
+              className={`grid grid-cols-[36px_1fr_72px_76px] items-center gap-2 px-4 py-3 transition-colors hover:bg-white/2 ${
                 isGold
                   ? "bg-yellow-500/[0.04]"
                   : idx % 2 !== 0

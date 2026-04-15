@@ -7,6 +7,7 @@ import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { ChevronLeft, Search } from "lucide-react";
 import { AdminService } from "@/services/admin.service";
 import { api } from "@/lib/axios";
+import { formatBangladeshDateTime } from "@/lib/bangladesh-time";
 
 const PLAY_TYPE_LABEL: Record<string, string> = {
   THREE_UP_DIRECT: "3Up Direct",
@@ -73,16 +74,6 @@ function BetsContent() {
   const bets = data?.data?.bets ?? [];
   const total = data?.data?.total ?? 0;
   const totalPages = Math.ceil(total / LIMIT);
-
-  const formatDate = (d?: string) => {
-    if (!d) return "-";
-    return new Date(d).toLocaleString("en-BD", {
-      day: "2-digit",
-      month: "short",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  };
 
   return (
     <div className="space-y-5">
@@ -216,7 +207,7 @@ function BetsContent() {
                 Status
               </th>
               <th className="px-4 py-3 text-xs font-medium text-slate-400">
-                Time
+                Time (BD)
               </th>
             </tr>
           </thead>
@@ -313,7 +304,9 @@ function BetsContent() {
 
                       {/* Time */}
                       <td className="px-4 py-3 text-xs text-slate-400">
-                        {formatDate(bet.placedAt)}
+                        {formatBangladeshDateTime(bet.placedAt, {
+                          timeZone: bet.round?.scheduleTimeZone,
+                        })}
                       </td>
                     </tr>
                   );

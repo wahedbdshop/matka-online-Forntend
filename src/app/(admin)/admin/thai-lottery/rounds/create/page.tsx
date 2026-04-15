@@ -6,11 +6,8 @@ import { useMutation } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { ChevronLeft } from "lucide-react";
-import {
-  formatAbsoluteUtcDateTimeForBangladeshDisplay,
-  toUtcIsoFromBangladeshDateTimeInput,
-} from "@/lib/timezone";
 import { AdminService } from "@/services/admin.service";
+import { bangladeshDateTimeInputToIso } from "@/lib/bangladesh-time";
 
 export default function CreateThaiRoundPage() {
   const router = useRouter();
@@ -33,7 +30,7 @@ export default function CreateThaiRoundPage() {
     }
     mutate({
       issueNumber: form.issueNumber,
-      drawDate: toUtcIsoFromBangladeshDateTimeInput(form.drawDate),
+      drawDate: bangladeshDateTimeInputToIso(form.drawDate),
     });
   };
 
@@ -72,7 +69,7 @@ export default function CreateThaiRoundPage() {
 
         <div className="space-y-1.5">
           <label className="text-xs font-medium text-slate-400">
-            Draw Date (Bangladesh)
+            Draw Date (Bangladesh Time)
           </label>
           <input
             type="datetime-local"
@@ -80,16 +77,11 @@ export default function CreateThaiRoundPage() {
             onChange={(e) =>
               setForm((p) => ({ ...p, drawDate: e.target.value }))
             }
+            placeholder="YYYY-MM-DD HH:mm (BD Time)"
             className="w-full rounded-lg border border-slate-600 bg-slate-700 px-3 py-2.5 text-sm text-white outline-none focus:border-blue-500"
           />
-          <p className="text-[10px] text-slate-500">
-            Enter Bangladesh time. It will be converted to UTC before saving.
-            {form.drawDate
-              ? ` Saves as ${formatAbsoluteUtcDateTimeForBangladeshDisplay(
-                  toUtcIsoFromBangladeshDateTimeInput(form.drawDate),
-                  { includeTimezone: true },
-                )}.`
-              : ""}
+          <p className="text-[11px] text-slate-500">
+            Enter the official draw schedule in Bangladesh Time (Asia/Dhaka).
           </p>
         </div>
 
@@ -98,7 +90,8 @@ export default function CreateThaiRoundPage() {
             Once created, the round will immediately be marked as{" "}
             <strong>OPEN</strong>
             and users will be able to place bets right away. You can set the
-            close time separately afterward.
+            close time separately afterward. Displayed draw date and issue
+            number should match the Bangladesh schedule.
           </p>
         </div>
 

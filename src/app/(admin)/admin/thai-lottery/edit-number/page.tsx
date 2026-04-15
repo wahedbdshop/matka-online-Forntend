@@ -6,6 +6,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Search, Pencil, X, Check } from "lucide-react";
 import { toast } from "sonner";
 import { AdminService } from "@/services/admin.service";
+import { formatBangladeshDateTime } from "@/lib/bangladesh-time";
 
 const PLAY_TYPE_LABEL: Record<string, string> = {
   THREE_UP_DIRECT: "3Up Direct",
@@ -102,16 +103,6 @@ export default function ThaiEditNumberPage() {
     setEditBet(bet);
     setNewBetNumber(bet.betNumber);
     setNewAmount(Number(bet.actualAmount ?? bet.amount).toFixed(2)); // USD as-is
-  };
-
-  const formatDate = (d?: string) => {
-    if (!d) return "-";
-    return new Date(d).toLocaleString("en-BD", {
-      day: "2-digit",
-      month: "short",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
   };
 
   const expectedLen = editBet ? (DIGIT_LENGTH[editBet.playType] ?? 3) : 3;
@@ -221,7 +212,7 @@ export default function ThaiEditNumberPage() {
                 "Category",
                 "Bet Number",
                 "Amount",
-                "Date Time",
+                "Date Time (BD)",
                 "Action",
               ].map((h) => (
                 <th
@@ -289,7 +280,9 @@ export default function ThaiEditNumberPage() {
                     {fmtUsd(Number(bet.actualAmount ?? bet.amount ?? 0))}
                   </td>
                   <td className="px-4 py-3 text-xs text-slate-400">
-                    {formatDate(bet.placedAt)}
+                    {formatBangladeshDateTime(bet.placedAt, {
+                      timeZone: bet.round?.scheduleTimeZone,
+                    })}
                   </td>
                   <td className="px-4 py-3">
                     <button

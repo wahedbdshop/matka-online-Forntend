@@ -1,8 +1,8 @@
 "use client";
 
-import moment from "moment-timezone";
+import { BANGLADESH_TIMEZONE } from "@/lib/bangladesh-time";
 
-const KALYAN_TIMEZONE = "Asia/Dhaka";
+const KALYAN_TIMEZONE = BANGLADESH_TIMEZONE;
 
 function parseTimeToMinutes(time: string): number | null {
   const [hours, minutes] = time.split(":").map(Number);
@@ -22,8 +22,18 @@ function parseTimeToMinutes(time: string): number | null {
 }
 
 export function getCurrentMinutesInDhaka(date = new Date()): number {
-  const current = moment(date).tz(KALYAN_TIMEZONE);
-  return current.hours() * 60 + current.minutes();
+  const formatter = new Intl.DateTimeFormat("en-GB", {
+    timeZone: KALYAN_TIMEZONE,
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  });
+
+  const parts = formatter.formatToParts(date);
+  const hour = Number(parts.find((part) => part.type === "hour")?.value ?? "0");
+  const minute = Number(parts.find((part) => part.type === "minute")?.value ?? "0");
+
+  return hour * 60 + minute;
 }
 
 export function isDhakaTimeWithinWindow(

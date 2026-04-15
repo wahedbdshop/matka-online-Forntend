@@ -36,7 +36,7 @@ export function PopupBanner({ popup }: { popup: any }) {
               alt=""
               loading="eager"
               decoding="async"
-              className="w-full rounded-2xl"
+              className="w-full rounded-xl"
             />
           </Link>
         ) : (
@@ -45,7 +45,7 @@ export function PopupBanner({ popup }: { popup: any }) {
             alt=""
             loading="eager"
             decoding="async"
-            className="w-full rounded-2xl"
+            className="w-full rounded-xl"
           />
         )}
         <button

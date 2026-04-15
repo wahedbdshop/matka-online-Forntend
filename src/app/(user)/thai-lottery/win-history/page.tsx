@@ -7,6 +7,10 @@ import { createPortal } from "react-dom";
 import { useQuery } from "@tanstack/react-query";
 import { ChevronLeft, Trophy, Star, TrendingUp, Eye } from "lucide-react";
 import { ThaiLotteryUserService } from "@/services/thai-lottery.service";
+import {
+  formatBangladeshDate,
+  formatBangladeshTime,
+} from "@/lib/bangladesh-time";
 
 const LIMIT = 20;
 
@@ -22,15 +26,9 @@ const PLAY_TYPE_LABEL: Record<string, string> = {
 };
 
 const formatDateShort = (date?: string): { top: string; btm: string } => {
-  if (!date) return { top: "-", btm: "" };
-  const d = new Date(date);
   return {
-    top: d.toLocaleDateString("en-BD", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-    }),
-    btm: d.toLocaleTimeString("en-BD", { hour: "2-digit", minute: "2-digit" }),
+    top: formatBangladeshDate(date),
+    btm: date ? formatBangladeshTime(date) : "",
   };
 };
 

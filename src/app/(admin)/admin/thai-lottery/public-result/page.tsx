@@ -6,8 +6,11 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Eye, EyeOff, X, Check } from "lucide-react";
 import { toast } from "sonner";
-import { formatAbsoluteUtcDateForLocalDisplay } from "@/lib/timezone";
 import { AdminService } from "@/services/admin.service";
+import {
+  formatBangladeshDate,
+  formatBangladeshDateTime,
+} from "@/lib/bangladesh-time";
 
 const LIMIT = 20;
 
@@ -46,11 +49,6 @@ export default function ThaiPublicResultPage() {
     onError: (e: any) => toast.error(e?.response?.data?.message || "Failed"),
   });
 
-  const formatDate = (d?: string) => {
-    if (!d) return "-";
-    return formatAbsoluteUtcDateForLocalDisplay(d);
-  };
-
   return (
     <div className="space-y-5">
       {/* Header */}
@@ -84,7 +82,10 @@ export default function ThaiPublicResultPage() {
                 Down Direct
               </th>
               <th className="px-4 py-3 text-xs font-medium text-slate-400">
-                Date
+                Draw Date (BD)
+              </th>
+              <th className="px-4 py-3 text-xs font-medium text-slate-400">
+                Resulted At (BD Time)
               </th>
               <th className="px-4 py-3 text-xs font-medium text-slate-400">
                 Published
@@ -134,7 +135,16 @@ export default function ThaiPublicResultPage() {
                     )}
                   </td>
                   <td className="px-4 py-3 text-xs text-slate-400">
-                    {formatDate(round.drawDate)}
+                    {formatBangladeshDate(
+                      round.drawDate,
+                      { timeZone: round.scheduleTimeZone },
+                    )}
+                  </td>
+                  <td className="px-4 py-3 text-xs text-slate-400">
+                    {formatBangladeshDateTime(
+                      round.resultedAt,
+                      { timeZone: round.scheduleTimeZone },
+                    )}
                   </td>
                   <td className="px-4 py-3">
                     {round.isPublicResultPublished ? (

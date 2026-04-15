@@ -8,6 +8,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Search, History } from "lucide-react";
 import { AdminService } from "@/services/admin.service";
 import { useCurrency } from "@/hooks/use-currency";
+import { formatBangladeshDateTime } from "@/lib/bangladesh-time";
 
 const LIMIT = 20;
 
@@ -44,17 +45,6 @@ export default function ThaiEditHistoryPage() {
   const logs = data?.data?.logs ?? [];
   const total = data?.data?.total ?? 0;
   const totalPages = Math.ceil(total / LIMIT);
-
-  const formatDate = (d?: string) => {
-    if (!d) return "-";
-    return new Date(d).toLocaleString("en-BD", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  };
 
   return (
     <div className="space-y-5">
@@ -135,7 +125,7 @@ export default function ThaiEditHistoryPage() {
                 "Old Amount",
                 "New Amount",
                 "Edited By",
-                "Date",
+                "Edited At (BD Time)",
               ].map((h) => (
                 <th
                   key={h}
@@ -245,7 +235,9 @@ export default function ThaiEditHistoryPage() {
                       {log.admin?.name ?? "-"}
                     </td>
                     <td className="px-4 py-3 text-xs text-slate-400">
-                      {formatDate(log.editedAt)}
+                      {formatBangladeshDateTime(log.editedAt, {
+                        timeZone: log.bet?.round?.scheduleTimeZone,
+                      })}
                     </td>
                   </tr>
                 );

@@ -336,7 +336,7 @@ export default function LandingPage() {
             {isHotTab ? (
               <>
                 <RateTable title="Thai Lottery" rates={thaiRates} />
-                <RateTable title="Kalyan Lottery" rates={kalyanRates} />
+                <RateTable title="Kalyan Lottery" rates={kalyanRates} variant="payouts" />
 
                 <div className="grid grid-cols-2 gap-3">
                   {[
