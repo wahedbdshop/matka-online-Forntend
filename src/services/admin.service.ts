@@ -221,6 +221,13 @@ export const AdminService = {
     return res.data;
   },
 
+  deleteUserNotification: async (userId: string, notificationId: string) => {
+    const res = await api.delete<ApiResponse<any>>(
+      `/admin/users/${userId}/notifications/${notificationId}`,
+    );
+    return res.data;
+  },
+
   getUserLoginHistory: async (userId: string, page = 1, limit = 20) => {
     const res = await api.get<ApiResponse<any>>(
       `/admin/users/${userId}/login-history?page=${page}&limit=${limit}`,

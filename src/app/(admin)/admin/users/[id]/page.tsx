@@ -20,6 +20,7 @@ import {
   Ban,
   CheckCircle,
   X,
+  Trash2,
 } from "lucide-react";
 import { ResetUserPasswordAction } from "@/components/admin/reset-user-password-action";
 import { AdminService } from "@/services/admin.service";
@@ -66,6 +67,15 @@ export default function UserDetailPage({
   const notifTotal = notifData?.data?.total ?? 0;
   const notifPages = Math.ceil(notifTotal / 20);
 
+  const { mutate: deleteNotification, isPending: deletingNotif } = useMutation({
+    mutationFn: (notificationId: string) =>
+      AdminService.deleteUserNotification(id, notificationId),
+    onSuccess: () => {
+      toast.success("Notification deleted");
+      queryClient.invalidateQueries({ queryKey: ["admin-user-notifs", id, notifPage] });
+    },
+    onError: (e: any) => toast.error(e?.response?.data?.message || "Failed to delete"),
+  });
 
   // ── Mutations ──
   const { mutate: banUser, isPending: banning } = useMutation({
@@ -708,9 +718,19 @@ export default function UserDetailPage({
                       <p className="text-xs font-medium text-white">
                         {notif.title}
                       </p>
-                      {!notif.isRead && (
-                        <span className="shrink-0 h-1.5 w-1.5 rounded-full bg-blue-400 mt-1" />
-                      )}
+                      <div className="flex items-center gap-2 shrink-0">
+                        {!notif.isRead && (
+                          <span className="h-1.5 w-1.5 rounded-full bg-blue-400 mt-1" />
+                        )}
+                        <button
+                          onClick={() => deleteNotification(notif.id)}
+                          disabled={deletingNotif}
+                          className="text-slate-500 hover:text-red-400 transition-colors disabled:opacity-40"
+                          title="Delete notification"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
                     </div>
                     <p className="text-[11px] text-slate-400">
                       {notif.message}
