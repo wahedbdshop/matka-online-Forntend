@@ -32,6 +32,18 @@ function BkashLogo() {
   );
 }
 
+function NagadLogo() {
+  return (
+    <Image
+      src="/nagad.jpg?v=3"
+      alt="Nagad"
+      width={110}
+      height={34}
+      className="h-[34px] w-auto object-contain"
+    />
+  );
+}
+
 function MastercardLogo() {
   return (
     <svg viewBox="0 0 54 34" className="h-8 w-auto" aria-label="Mastercard">
@@ -175,7 +187,6 @@ function UsdtLogo() {
 }
 
 const STATIC_METHODS = [
-  { id: "bkash",      logo: <BkashLogo /> },
   { id: "visa",       logo: <VisaLogo /> },
   { id: "mastercard", logo: <MastercardLogo /> },
   { id: "paypal",     logo: <PaypalLogo /> },
@@ -208,7 +219,7 @@ function isStaticMethodMatch(value: string) {
   const key = normalizeMethodKey(value);
 
   if (!key) return false;
-  if (key.includes("bkash") || key.includes("nagad")) return true;
+  if (key.includes("bkash") || key.includes("nagad") || key.includes("নগদ") || key.includes("বিকাশ")) return true;
 
   return STATIC_METHODS.some((method) => normalizeMethodKey(method.id) === key);
 }
@@ -218,7 +229,7 @@ function isStaticMethodDuplicate(method: any) {
   const logoKey = normalizeMethodKey(method?.logo);
 
   if (isStaticMethodMatch(nameKey)) return true;
-  if (logoKey.includes("bkash") || logoKey.includes("nagad")) return true;
+  if (logoKey.includes("bkash") || logoKey.includes("nagad") || logoKey.includes("নগদ") || logoKey.includes("বিকাশ")) return true;
 
   return false;
 }
@@ -305,6 +316,21 @@ export function PaymentMethodsRow({ methods }: { methods: any[] }) {
       </p>
 
       <div className="grid grid-cols-3 gap-2">
+        {/* bKash & Nagad — always shown, hardcoded */}
+        {[
+          { id: "bkash", logo: <BkashLogo /> },
+          { id: "nagad", logo: <NagadLogo /> },
+        ].map((m) => (
+          <button
+            key={m.id}
+            type="button"
+            onClick={handleClick}
+            className="flex items-center justify-center rounded-md border border-slate-200 bg-white px-3 py-2.5 min-h-13 shadow-sm shadow-white/10 cursor-pointer select-none transition-all duration-150 active:scale-95 active:brightness-90 hover:border-slate-300 hover:shadow-md hover:shadow-black/20"
+          >
+            {m.logo}
+          </button>
+        ))}
+
         {/* API methods — clickable */}
         {apiMethods.map((m: any) => (
           <button
@@ -319,12 +345,14 @@ export function PaymentMethodsRow({ methods }: { methods: any[] }) {
 
         {/* Static international methods */}
         {STATIC_METHODS.map((m) => (
-          <div
+          <button
             key={m.id}
-            className="flex items-center justify-center rounded-md border border-slate-200 bg-white px-3 py-2.5 min-h-13 shadow-sm shadow-white/10"
+            type="button"
+            onClick={handleClick}
+            className="flex items-center justify-center rounded-md border border-slate-200 bg-white px-3 py-2.5 min-h-13 shadow-sm shadow-white/10 cursor-pointer select-none transition-all duration-150 active:scale-95 active:brightness-90 hover:border-slate-300 hover:shadow-md hover:shadow-black/20"
           >
             {m.logo}
-          </div>
+          </button>
         ))}
       </div>
     </div>

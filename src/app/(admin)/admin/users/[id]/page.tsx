@@ -21,6 +21,8 @@ import {
   CheckCircle,
   X,
   Trash2,
+  Pencil,
+  Save,
 } from "lucide-react";
 import { ResetUserPasswordAction } from "@/components/admin/reset-user-password-action";
 import { AdminService } from "@/services/admin.service";
@@ -37,6 +39,10 @@ export default function UserDetailPage({
   const queryClient = useQueryClient();
   const adminUser = useAuthStore((state) => state.user);
   const adminToken = useAuthStore((state) => state.token);
+
+  // edit user info
+  const [editOpen, setEditOpen] = useState(false);
+  const [editForm, setEditForm] = useState({ name: "", username: "", phone: "", country: "" });
 
   // balance modal
   const [balanceOpen, setBalanceOpen] = useState(false);
@@ -78,6 +84,16 @@ export default function UserDetailPage({
   });
 
   // ── Mutations ──
+  const { mutate: updateUser, isPending: updating } = useMutation({
+    mutationFn: () => AdminService.updateUser(id, editForm),
+    onSuccess: () => {
+      toast.success("User updated successfully");
+      setEditOpen(false);
+      queryClient.invalidateQueries({ queryKey: ["admin-user-detail", id] });
+    },
+    onError: (e: any) => toast.error(e?.response?.data?.message || "Failed to update"),
+  });
+
   const { mutate: banUser, isPending: banning } = useMutation({
     mutationFn: () => AdminService.banUser(id),
     onSuccess: () => {
@@ -478,12 +494,60 @@ export default function UserDetailPage({
           Information of {user.name}
         </h2>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {/* Editable fields */}
+          {(
+            [
+              { key: "name",    label: "Name",    value: user.name },
+              { key: "username",label: "Username",value: user.username },
+              { key: "phone",   label: "Phone",   value: user.phone ?? "" },
+              { key: "country", label: "Country", value: user.country ?? "" },
+            ] as { key: keyof typeof editForm; label: string; value: string }[]
+          ).map((item) => {
+            const isEditing = editOpen && item.key in editForm;
+            return (
+              <div
+                key={item.label}
+                className="rounded-lg border border-slate-700 bg-slate-900 p-3"
+              >
+                <p className="text-[10px] uppercase tracking-wide text-slate-500">
+                  {item.label}
+                </p>
+                {editOpen ? (
+                  <input
+                    value={editForm[item.key]}
+                    onChange={(e) =>
+                      setEditForm((prev) => ({ ...prev, [item.key]: e.target.value }))
+                    }
+                    className="mt-1 w-full rounded-md border border-blue-500/40 bg-slate-800 px-2 py-1 text-sm font-medium text-white outline-none focus:border-blue-500"
+                  />
+                ) : (
+                  <div className="mt-1 flex items-center justify-between gap-2">
+                    <p className="text-sm font-medium text-white">
+                      {item.value || "-"}
+                    </p>
+                    <button
+                      onClick={() => {
+                        setEditForm({
+                          name: user.name ?? "",
+                          username: user.username ?? "",
+                          phone: user.phone ?? "",
+                          country: user.country ?? "",
+                        });
+                        setEditOpen(true);
+                      }}
+                      className="text-slate-500 hover:text-blue-400 transition-colors"
+                    >
+                      <Pencil className="h-3 w-3" />
+                    </button>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+
+          {/* Readonly fields */}
           {[
-            { label: "Name", value: user.name },
-            { label: "Username", value: `@${user.username}` },
             { label: "Email", value: user.email },
-            { label: "Phone", value: user.phone ?? "-" },
-            { label: "Country", value: user.country ?? "-" },
             { label: "Referral Code", value: user.referralCode },
             {
               label: "Email Verified",
@@ -499,14 +563,32 @@ export default function UserDetailPage({
               <p className="text-[10px] uppercase tracking-wide text-slate-500">
                 {item.label}
               </p>
-              <p
-                className={`mt-1 text-sm font-medium ${item.color ?? "text-white"}`}
-              >
+              <p className={`mt-1 text-sm font-medium ${item.color ?? "text-white"}`}>
                 {item.value}
               </p>
             </div>
           ))}
         </div>
+
+        {/* Save / Cancel row — shown when editing */}
+        {editOpen && (
+          <div className="flex items-center justify-end gap-2 pt-1">
+            <button
+              onClick={() => setEditOpen(false)}
+              className="flex items-center gap-1.5 rounded-lg border border-slate-600 bg-slate-800 px-4 py-1.5 text-xs text-slate-300 hover:bg-slate-700"
+            >
+              <X className="h-3 w-3" /> Cancel
+            </button>
+            <button
+              onClick={() => updateUser()}
+              disabled={updating}
+              className="flex items-center gap-1.5 rounded-lg bg-blue-600 px-4 py-1.5 text-xs font-semibold text-white hover:bg-blue-700 disabled:opacity-50"
+            >
+              <Save className="h-3 w-3" />
+              {updating ? "Saving..." : "Save Changes"}
+            </button>
+          </div>
+        )}
       </div>
 
       {/* ── KYC Status ── */}

@@ -8,10 +8,8 @@ export const HomeService = {
     return res.data;
   },
 
-  getRecentWinners: async (limit = 20) => {
-    const res = await publicApi.get<ApiResponse<any>>(
-      `/home/winners?limit=${limit}`,
-    );
+  getRecentWinners: async () => {
+    const res = await publicApi.get<ApiResponse<any>>("/home/winners");
     return res.data;
   },
 };

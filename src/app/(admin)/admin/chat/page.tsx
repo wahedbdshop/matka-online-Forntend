@@ -12,17 +12,36 @@ import {
   Headphones,
   MessageCircle,
   CheckCircle2,
+  ArrowLeft,
+  Search,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { useSocket } from "@/hooks/use-socket";
 import { cn } from "@/lib/utils";
 import { api } from "@/lib/axios";
 import { ChatService } from "@/services/chat.service";
+
+function StatusDot({ status }: { status: string }) {
+  if (status === "AGENT_HANDLING")
+    return <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />;
+  if (status === "WAITING_AGENT")
+    return <span className="h-2 w-2 rounded-full bg-yellow-400 animate-pulse" />;
+  return <span className="h-2 w-2 rounded-full bg-slate-500" />;
+}
+
+function formatTime(dateStr: string) {
+  if (!dateStr) return "";
+  const d = new Date(dateStr);
+  return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+}
+
+function formatListTime(dateStr: string) {
+  if (!dateStr) return "";
+  const d = new Date(dateStr);
+  const now = new Date();
+  const isToday = d.toDateString() === now.toDateString();
+  if (isToday) return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  return d.toLocaleDateString([], { day: "2-digit", month: "short" });
+}
 
 export default function AdminChatPage() {
   const [selectedSession, setSelectedSession] = useState<any>(null);
@@ -30,10 +49,12 @@ export default function AdminChatPage() {
   const [replyText, setReplyText] = useState("");
   const [activeTab, setActiveTab] = useState<"live" | "closed">("live");
   const [closedSessions, setClosedSessions] = useState<any[]>([]);
+  const [search, setSearch] = useState("");
+  const [showChat, setShowChat] = useState(false); // mobile: show chat panel
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
   const { joinSession } = useSocket();
 
-  // Waiting sessions
   const { data: sessionsData, refetch } = useQuery({
     queryKey: ["waiting-sessions"],
     queryFn: async () => {
@@ -45,10 +66,9 @@ export default function AdminChatPage() {
 
   const waitingSessions = sessionsData?.data || [];
   const liveSessions = selectedSession
-    ? [
-        selectedSession,
-        ...waitingSessions.filter((s: any) => s.id !== selectedSession.id),
-      ].filter((s: any) => s.status !== "CLOSED")
+    ? [selectedSession, ...waitingSessions.filter((s: any) => s.id !== selectedSession.id)].filter(
+        (s: any) => s.status !== "CLOSED",
+      )
     : waitingSessions;
 
   const syncClosedSession = (session: any) => {
@@ -59,7 +79,6 @@ export default function AdminChatPage() {
     });
   };
 
-  // Take session
   const { mutate: takeSession } = useMutation({
     mutationFn: async (sessionId: string) => {
       const res = await api.patch(`/chat/agent/session/${sessionId}/take`);
@@ -86,12 +105,9 @@ export default function AdminChatPage() {
       setActiveTab("closed");
       refetch();
     },
-    onError: () => {
-      toast.error("Failed to close session");
-    },
+    onError: () => toast.error("Failed to close session"),
   });
 
-  // Load session messages
   const loadSession = async (sessionId: string) => {
     const res = await api.get(`/chat/agent/session/${sessionId}`);
     const session = res.data.data;
@@ -100,348 +116,371 @@ export default function AdminChatPage() {
     setActiveTab(session.status === "CLOSED" ? "closed" : "live");
     syncClosedSession(session);
     joinSession(sessionId);
+    setShowChat(true);
   };
 
-  // Socket listener
-  // selectedSession 3 messages refresh
   useEffect(() => {
     if (!selectedSession) return;
-
     const interval = setInterval(async () => {
       try {
         const res = await api.get(`/chat/agent/session/${selectedSession.id}`);
         const session = res.data.data;
         setMessages(session.messages || []);
-
-        // session status ও update করো
         setSelectedSession(session);
         syncClosedSession(session);
-      } catch {
-        // silent fail
-      }
-    }, 3000); //
-
+      } catch { /* silent */ }
+    }, 3000);
     return () => clearInterval(interval);
   }, [selectedSession?.id]);
 
-  // Auto scroll
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // Send reply
   const handleReply = async () => {
     if (!replyText.trim() || !selectedSession) return;
     try {
-      await api.post(`/chat/agent/session/${selectedSession.id}/reply`, {
-        message: replyText,
-      });
+      await api.post(`/chat/agent/session/${selectedSession.id}/reply`, { message: replyText });
       setReplyText("");
+      inputRef.current?.focus();
     } catch {
       toast.error("Failed to send reply");
     }
   };
 
-  const sessionsToRender = activeTab === "live" ? liveSessions : closedSessions;
+  const sessionsToRender = (activeTab === "live" ? liveSessions : closedSessions).filter(
+    (s: any) => {
+      if (!search) return true;
+      const q = search.toLowerCase();
+      return (
+        s.user?.name?.toLowerCase().includes(q) ||
+        s.user?.username?.toLowerCase().includes(q) ||
+        s.user?.phone?.includes(q)
+      );
+    },
+  );
+
+  const lastMsg = (session: any) => {
+    const msgs = session.messages ?? [];
+    return msgs[msgs.length - 1];
+  };
 
   return (
-    <div className="flex h-[calc(100vh-4rem)] gap-4">
-      {/* Sessions List */}
-      <div className="w-80 flex-shrink-0">
-        <Card className="h-full overflow-hidden border-slate-700 bg-slate-800/50">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-white text-sm flex items-center gap-2">
-              <Headphones className="h-4 w-4 text-purple-400" />
-              Admin Chat
-              <Badge
-                className={cn("ml-auto", {
-                  "bg-red-500/20 text-red-400": activeTab === "live",
-                  "bg-slate-500/20 text-slate-300": activeTab === "closed",
-                })}
-              >
-                {sessionsToRender.length}
-              </Badge>
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-2">
-            <div className="mb-3 grid grid-cols-2 gap-2">
-              <button
-                type="button"
-                onClick={() => setActiveTab("live")}
-                className={cn(
-                  "rounded-xl border px-3 py-2 text-xs font-semibold transition-colors",
-                  activeTab === "live"
-                    ? "border-purple-500/40 bg-purple-500/15 text-purple-300"
-                    : "border-slate-700 bg-slate-900/50 text-slate-400 hover:text-white",
-                )}
-              >
-                Live Chat
-              </button>
-              <button
-                type="button"
-                onClick={() => setActiveTab("closed")}
-                className={cn(
-                  "rounded-xl border px-3 py-2 text-xs font-semibold transition-colors",
-                  activeTab === "closed"
-                    ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-300"
-                    : "border-slate-700 bg-slate-900/50 text-slate-400 hover:text-white",
-                )}
-              >
-                Closed
-              </button>
+    <div className="flex h-[calc(100vh-4rem)] overflow-hidden rounded-xl border border-slate-700/60 bg-[#0b0f1e]">
+
+      {/* ── Left: Session list ── */}
+      <div
+        className={cn(
+          "flex w-full flex-col border-r border-slate-700/60 bg-[#111827] md:w-80 md:flex-shrink-0",
+          showChat ? "hidden md:flex" : "flex",
+        )}
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between border-b border-slate-700/60 px-4 py-3">
+          <div className="flex items-center gap-2">
+            <Headphones className="h-5 w-5 text-purple-400" />
+            <span className="font-bold text-white">Live Chat</span>
+          </div>
+          <MessageCircle className="h-5 w-5 text-slate-400" />
+        </div>
+
+        {/* Search */}
+        <div className="px-3 py-2">
+          <div className="flex items-center gap-2 rounded-xl bg-slate-800/80 px-3 py-2">
+            <Search className="h-3.5 w-3.5 text-slate-500" />
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search..."
+              className="flex-1 bg-transparent text-xs text-white placeholder:text-slate-500 outline-none"
+            />
+          </div>
+        </div>
+
+        {/* Tabs */}
+        <div className="grid grid-cols-2 gap-1 px-3 pb-2">
+          <button
+            type="button"
+            onClick={() => setActiveTab("live")}
+            className={cn(
+              "rounded-lg py-1.5 text-xs font-semibold transition-colors",
+              activeTab === "live"
+                ? "bg-purple-600/20 text-purple-300"
+                : "text-slate-400 hover:text-slate-200",
+            )}
+          >
+            Live ({liveSessions.length})
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab("closed")}
+            className={cn(
+              "rounded-lg py-1.5 text-xs font-semibold transition-colors",
+              activeTab === "closed"
+                ? "bg-emerald-600/15 text-emerald-300"
+                : "text-slate-400 hover:text-slate-200",
+            )}
+          >
+            Closed ({closedSessions.length})
+          </button>
+        </div>
+
+        {/* Session list */}
+        <div className="flex-1 overflow-y-auto">
+          {sessionsToRender.length === 0 ? (
+            <div className="flex flex-col items-center justify-center gap-2 py-16 text-slate-500">
+              <MessageCircle className="h-8 w-8 opacity-30" />
+              <p className="text-xs">No sessions</p>
             </div>
-            <ScrollArea className="h-[calc(100%-2rem)]">
-              {sessionsToRender.length === 0 ? (
-                <p className="text-slate-400 text-sm text-center py-8">
-                  {activeTab === "live"
-                    ? "No live sessions"
-                    : "No closed sessions"}
-                </p>
-              ) : (
-                <div className="space-y-2">
-                  {sessionsToRender.map((session: any) => (
-                    <div
-                      key={session.id}
-                      className={cn(
-                        "cursor-pointer rounded-xl border p-3 transition-all",
-                        selectedSession?.id === session.id
-                          ? "border-purple-500 bg-purple-500/10 shadow-[0_10px_24px_rgba(168,85,247,0.12)]"
-                          : "border-slate-600 bg-slate-700/50 hover:border-slate-500 hover:bg-slate-700/70",
-                      )}
-                      onClick={() => loadSession(session.id)}
-                    >
-                      <div className="flex items-center justify-between mb-1">
-                        <p className="text-white text-sm font-medium">
-                          {session.user?.name}
-                        </p>
-                        <Badge
-                          className={cn("text-[10px]", {
-                            "bg-yellow-500/20 text-yellow-400":
-                              session.status === "WAITING_AGENT",
-                            "bg-green-500/20 text-green-400":
-                              session.status === "AGENT_HANDLING",
-                            "bg-slate-500/20 text-slate-300":
-                              session.status === "CLOSED",
-                          })}
-                        >
-                          {session.status === "WAITING_AGENT"
-                            ? "Waiting"
-                            : session.status === "CLOSED"
-                              ? "Closed"
-                              : "Live"}
-                        </Badge>
-                      </div>
-                      <p className="text-slate-400 text-xs">
-                        @{session.user?.username}
-                      </p>
-                      {session.messages?.[0] && (
-                        <p className="text-slate-500 text-xs mt-1 truncate">
-                          {session.messages[0].message}
-                        </p>
-                      )}
-                      {activeTab === "live" &&
-                        session.status === "WAITING_AGENT" && (
-                        <Button
-                          size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            takeSession(session.id);
-                          }}
-                          className="w-full mt-2 h-7 text-xs bg-purple-600 hover:bg-purple-700"
-                        >
-                          Take Session
-                        </Button>
-                        )}
+          ) : (
+            sessionsToRender.map((session: any) => {
+              const last = lastMsg(session);
+              const isActive = selectedSession?.id === session.id;
+              return (
+                <button
+                  key={session.id}
+                  type="button"
+                  onClick={() => loadSession(session.id)}
+                  className={cn(
+                    "flex w-full items-center gap-3 border-b border-slate-800/60 px-4 py-3 text-left transition-colors",
+                    isActive ? "bg-slate-700/60" : "hover:bg-slate-800/50",
+                  )}
+                >
+                  <div className="relative flex-shrink-0">
+                    <div className="flex h-11 w-11 items-center justify-center rounded-full bg-purple-600/20 text-sm font-bold text-purple-300">
+                      {session.user?.name?.charAt(0)?.toUpperCase() ?? "U"}
                     </div>
-                  ))}
-                </div>
-              )}
-            </ScrollArea>
-          </CardContent>
-        </Card>
+                    <span className="absolute -bottom-0.5 -right-0.5">
+                      <StatusDot status={session.status} />
+                    </span>
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center justify-between">
+                      <p className="truncate text-sm font-semibold text-white">
+                        {session.user?.name ?? "Unknown"}
+                      </p>
+                      {last?.createdAt && (
+                        <span className="ml-2 flex-shrink-0 text-[10px] text-slate-500">
+                          {formatListTime(last.createdAt)}
+                        </span>
+                      )}
+                    </div>
+                    <p className="truncate text-xs text-slate-400">
+                      @{session.user?.username}
+                    </p>
+                    {last && (
+                      <p className="truncate text-[11px] text-slate-500">
+                        {last.role === "AGENT" ? "You: " : ""}
+                        {last.message}
+                      </p>
+                    )}
+                  </div>
+                  {session.status === "WAITING_AGENT" && (
+                    <span className="flex-shrink-0 rounded-full bg-yellow-500/20 px-2 py-0.5 text-[10px] font-bold text-yellow-400">
+                      NEW
+                    </span>
+                  )}
+                </button>
+              );
+            })
+          )}
+        </div>
       </div>
 
-      {/* Chat Window */}
-      <div className="flex-1 flex flex-col">
+      {/* ── Right: Chat window ── */}
+      <div
+        className={cn(
+          "flex flex-1 flex-col",
+          showChat ? "flex" : "hidden md:flex",
+        )}
+      >
         {!selectedSession ? (
-          <Card className="flex-1 bg-slate-800/50 border-slate-700 flex items-center justify-center">
-            <div className="text-center">
-              <Headphones className="h-12 w-12 text-slate-600 mx-auto mb-3" />
-              <p className="text-slate-400">Select a session to start</p>
+          <div className="flex flex-1 flex-col items-center justify-center gap-3 text-slate-500">
+            <div className="flex h-20 w-20 items-center justify-center rounded-full bg-slate-800/60">
+              <Headphones className="h-9 w-9 opacity-40" />
             </div>
-          </Card>
+            <p className="text-sm">Select a conversation</p>
+          </div>
         ) : (
           <>
-            {/* Header */}
-            <Card className="rounded-b-none border-slate-700 bg-slate-800/50">
-              <CardContent className="p-3">
-                <div className="flex items-center gap-3">
-                  <Avatar className="h-8 w-8">
-                    <AvatarFallback className="bg-purple-600/20 text-purple-400 text-xs">
-                      {selectedSession.user?.name?.charAt(0)?.toUpperCase()}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <p className="text-white text-sm font-medium">
-                      {selectedSession.user?.name}
-                    </p>
-                    <p className="text-slate-400 text-xs">
-                      @{selectedSession.user?.username} •{" "}
-                      {selectedSession.user?.phone}
-                    </p>
-                  </div>
-                  <Badge
-                    className={cn("ml-auto text-xs", {
-                      "bg-yellow-500/20 text-yellow-400":
-                        selectedSession.status === "WAITING_AGENT",
-                      "bg-green-500/20 text-green-400":
-                        selectedSession.status === "AGENT_HANDLING",
-                      "bg-slate-500/20 text-slate-300":
-                        selectedSession.status === "CLOSED",
-                    })}
-                  >
-                    {selectedSession.status}
-                  </Badge>
-                  {selectedSession.status !== "CLOSED" && (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      disabled={isClosing}
-                      onClick={() => closeSession(selectedSession.id)}
-                      className="border-slate-600 bg-slate-900/60 text-slate-200 hover:bg-slate-800"
-                    >
-                      <CheckCircle2 className="mr-2 h-4 w-4" />
-                      Close Session
-                    </Button>
-                  )}
+            {/* Chat header */}
+            <div className="flex items-center gap-3 border-b border-slate-700/60 bg-[#111827] px-4 py-3">
+              {/* Back button — mobile only */}
+              <button
+                type="button"
+                className="mr-1 flex-shrink-0 text-slate-400 md:hidden"
+                onClick={() => { setShowChat(false); }}
+              >
+                <ArrowLeft className="h-5 w-5" />
+              </button>
+              <div className="relative flex-shrink-0">
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-purple-600/25 text-sm font-bold text-purple-300">
+                  {selectedSession.user?.name?.charAt(0)?.toUpperCase() ?? "U"}
                 </div>
-              </CardContent>
-            </Card>
+                <span className="absolute -bottom-0.5 -right-0.5">
+                  <StatusDot status={selectedSession.status} />
+                </span>
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-bold text-white">
+                  {selectedSession.user?.name}
+                </p>
+                <p className="truncate text-xs text-slate-400">
+                  @{selectedSession.user?.username}
+                  {selectedSession.user?.phone ? ` · ${selectedSession.user.phone}` : ""}
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                {selectedSession.status !== "CLOSED" && (
+                  <button
+                    type="button"
+                    disabled={isClosing}
+                    onClick={() => closeSession(selectedSession.id)}
+                    className="flex items-center gap-1.5 rounded-lg bg-rose-500/15 px-3 py-1.5 text-xs font-semibold text-rose-400 transition-colors hover:bg-rose-500/25 disabled:opacity-50"
+                  >
+                    <CheckCircle2 className="h-3.5 w-3.5" />
+                    <span className="hidden sm:inline">Close</span>
+                  </button>
+                )}
+                {selectedSession.status === "CLOSED" && (
+                  <span className="rounded-full bg-slate-700/60 px-2.5 py-1 text-[10px] font-semibold text-slate-400">
+                    CLOSED
+                  </span>
+                )}
+              </div>
+            </div>
 
             {/* Messages */}
-            <div className="flex-1 border-x border-slate-700 bg-slate-900/50">
-              <ScrollArea className="h-full px-4 py-4">
-                <div className="space-y-3">
-                  {messages.map((msg: any, i: number) => {
-                    const isUser = msg.role === "USER";
-                    const isAgent = msg.role === "AGENT";
-                    const timeLabel = msg.createdAt
-                      ? new Date(msg.createdAt).toLocaleTimeString([], {
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })
-                      : "";
+            <div
+              className="flex-1 overflow-y-auto px-4 py-3"
+              style={{
+                backgroundImage:
+                  "radial-gradient(circle at 20% 50%, rgba(168,85,247,0.03) 0%, transparent 50%), radial-gradient(circle at 80% 20%, rgba(59,130,246,0.03) 0%, transparent 50%)",
+              }}
+            >
+              <div className="space-y-1.5">
+                {messages.map((msg: any, i: number) => {
+                  const isUser = msg.role === "USER";
+                  const isAgent = msg.role === "AGENT";
+                  const isAI = msg.role === "AI";
+                  const time = formatTime(msg.createdAt);
 
-                    return (
+                  // Date separator
+                  const prevMsg = messages[i - 1];
+                  const showDate =
+                    !prevMsg ||
+                    new Date(msg.createdAt).toDateString() !==
+                      new Date(prevMsg.createdAt).toDateString();
+
+                  return (
+                    <div key={i}>
+                      {showDate && msg.createdAt && (
+                        <div className="my-3 flex items-center justify-center">
+                          <span className="rounded-full bg-slate-800/80 px-3 py-1 text-[10px] text-slate-400">
+                            {new Date(msg.createdAt).toLocaleDateString([], {
+                              weekday: "short",
+                              day: "2-digit",
+                              month: "short",
+                            })}
+                          </span>
+                        </div>
+                      )}
                       <div
-                        key={i}
-                        className={cn("flex gap-2", {
-                          "justify-start": isUser || msg.role === "AI",
+                        className={cn("flex items-end gap-2", {
+                          "justify-start": isUser || isAI,
                           "justify-end": isAgent,
                         })}
                       >
-                        {(isUser || msg.role === "AI") && (
-                          <Avatar className="mt-1 h-7 w-7 flex-shrink-0">
-                            <AvatarFallback
-                              className={cn("text-[10px]", {
-                                "bg-purple-600/20 text-purple-300": isUser,
-                                "bg-slate-700 text-blue-400":
-                                  msg.role === "AI",
-                              })}
-                            >
-                              {isUser ? (
-                                <User className="h-3.5 w-3.5" />
-                              ) : (
-                                <Bot className="h-3.5 w-3.5" />
-                              )}
-                            </AvatarFallback>
-                          </Avatar>
+                        {/* Avatar left */}
+                        {(isUser || isAI) && (
+                          <div className="mb-0.5 flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-slate-700">
+                            {isUser ? (
+                              <User className="h-3.5 w-3.5 text-purple-300" />
+                            ) : (
+                              <Bot className="h-3.5 w-3.5 text-blue-300" />
+                            )}
+                          </div>
                         )}
 
+                        {/* Bubble */}
                         <div
-                          className={cn("max-w-[78%] space-y-1", {
-                            "items-start": isUser || msg.role === "AI",
-                            "items-end text-right": isAgent,
+                          className={cn("max-w-[72%] sm:max-w-[60%]", {
+                            "items-start": isUser || isAI,
+                            "items-end": isAgent,
                           })}
                         >
                           <div
                             className={cn(
-                              "rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed shadow-sm",
+                              "relative rounded-2xl px-3.5 py-2 text-sm leading-relaxed shadow-md",
                               {
-                                "rounded-tl-sm border border-purple-500/20 bg-slate-800 text-slate-100":
-                                  isUser,
-                                "rounded-tl-sm border border-blue-500/20 bg-blue-500/10 text-blue-50":
-                                  msg.role === "AI",
-                                "rounded-tr-sm border border-green-500/25 bg-green-600/20 text-white":
-                                  isAgent,
+                                "rounded-bl-sm bg-[#1e2a3a] text-slate-100": isUser,
+                                "rounded-bl-sm bg-[#1a2540] text-blue-100": isAI,
+                                "rounded-br-sm bg-[#1a3a2a] text-emerald-50": isAgent,
                               },
                             )}
                           >
                             {msg.message}
+                            <span
+                              className={cn("ml-2 inline-block align-bottom text-[10px]", {
+                                "text-slate-500": isUser || isAI,
+                                "text-emerald-600/70": isAgent,
+                              })}
+                            >
+                              {time}
+                            </span>
                           </div>
-                          {timeLabel && (
-                            <p className="px-1 text-[10px] text-slate-500">
-                              {timeLabel}
-                            </p>
-                          )}
                         </div>
 
+                        {/* Avatar right */}
                         {isAgent && (
-                          <Avatar className="mt-1 h-7 w-7 flex-shrink-0">
-                            <AvatarFallback className="bg-green-600/20 text-[10px] text-green-300">
-                              <Headphones className="h-3.5 w-3.5" />
-                            </AvatarFallback>
-                          </Avatar>
+                          <div className="mb-0.5 flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-emerald-700/30">
+                            <Headphones className="h-3.5 w-3.5 text-emerald-300" />
+                          </div>
                         )}
                       </div>
-                    );
-                  })}
-                  <div ref={messagesEndRef} />
-                </div>
-              </ScrollArea>
+                    </div>
+                  );
+                })}
+                <div ref={messagesEndRef} />
+              </div>
             </div>
 
-            {/* Reply Input */}
-            <div className="rounded-b-lg border border-slate-700 bg-slate-800/50 p-3">
+            {/* Input */}
+            <div className="border-t border-slate-700/60 bg-[#111827] px-4 py-3">
               {selectedSession.status === "AGENT_HANDLING" ? (
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2 rounded-xl border border-slate-700 bg-slate-900/60 p-2">
-                    <MessageCircle className="ml-1 h-4 w-4 text-slate-500" />
-                    <Input
+                <div className="flex items-center gap-2">
+                  <div className="flex flex-1 items-center gap-2 rounded-full bg-slate-800 px-4 py-2">
+                    <input
+                      ref={inputRef}
                       value={replyText}
                       onChange={(e) => setReplyText(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") handleReply();
-                      }}
-                      placeholder="Type your reply..."
-                      className="flex-1 border-0 bg-transparent text-white shadow-none focus-visible:ring-0"
+                      onKeyDown={(e) => { if (e.key === "Enter") handleReply(); }}
+                      placeholder="Type a message..."
+                      className="flex-1 bg-transparent text-sm text-white placeholder:text-slate-500 outline-none"
                     />
-                    <Button
-                      onClick={handleReply}
-                      size="icon"
-                      className="h-10 w-10 rounded-xl bg-purple-600 hover:bg-purple-700"
-                    >
-                      <Send className="h-4 w-4" />
-                    </Button>
                   </div>
-                  <p className="px-1 text-[11px] text-slate-500">
-                    User messages appear on the left. Your replies appear on the
-                    right.
-                  </p>
+                  <button
+                    type="button"
+                    onClick={handleReply}
+                    disabled={!replyText.trim()}
+                    className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-purple-600 text-white transition-colors hover:bg-purple-700 disabled:opacity-40"
+                  >
+                    <Send className="h-4 w-4" />
+                  </button>
                 </div>
-              ) : selectedSession.status === "CLOSED" ? (
-                <div className="rounded-xl border border-slate-700 bg-slate-900/60 px-4 py-3 text-sm text-slate-400">
-                  This session is closed. Open a live session to continue
-                  chatting.
-                </div>
-              ) : (
-                <Button
+              ) : selectedSession.status === "WAITING_AGENT" ? (
+                <button
+                  type="button"
                   onClick={() => takeSession(selectedSession.id)}
-                  className="w-full bg-purple-600 hover:bg-purple-700"
+                  className="w-full rounded-full bg-purple-600 py-2.5 text-sm font-bold text-white transition-colors hover:bg-purple-700"
                 >
-                  <Headphones className="mr-2 h-4 w-4" />
+                  <Headphones className="mr-2 inline h-4 w-4" />
                   Take This Session
-                </Button>
+                </button>
+              ) : (
+                <div className="rounded-full bg-slate-800/60 px-4 py-2.5 text-center text-xs text-slate-500">
+                  This session is closed
+                </div>
               )}
             </div>
           </>

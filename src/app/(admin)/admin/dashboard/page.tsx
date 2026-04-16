@@ -862,7 +862,7 @@ export default function AdminDashboardPage() {
         <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-500 mb-3">
           Overview
         </p>
-        <div className="grid grid-cols-2 xl:grid-cols-3 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-3">
           {isLoading ? (
             Array.from({ length: 6 }).map((_, i) => <SkeletonCard key={i} />)
           ) : (
@@ -906,10 +906,18 @@ export default function AdminDashboardPage() {
                 color="red"
                 href="/admin/withdrawals"
               />
+              <StatCard
+                icon={TrendingUp}
+                label="Admin Profit"
+                value={`Rs ${fmt(Math.abs(adminProfit))}`}
+                sub={adminProfit >= 0 ? "Deposit − Withdrawal" : "Net Loss"}
+                color="yellow"
+              />
             </>
           )}
         </div>
       </section>
+
       {/* ── Revenue Summary ── */}
       <section>
         <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-500 mb-3">
@@ -920,67 +928,40 @@ export default function AdminDashboardPage() {
             Array.from({ length: 3 }).map((_, i) => <SkeletonCard key={i} />)
           ) : (
             <>
-              {/* Total Deposit */}
               <div className="relative overflow-hidden rounded-2xl border border-emerald-500/20 bg-slate-800/50 p-4">
                 <div className="absolute top-0 left-0 right-0 h-px bg-linear-to-r from-transparent via-emerald-500/60 to-transparent" />
                 <div className="flex h-9 w-9 items-center justify-center rounded-xl border bg-emerald-500/10 border-emerald-500/30 text-emerald-400 mb-3">
                   <ArrowDownToLine className="h-4 w-4" />
                 </div>
-                <p className="text-2xl font-bold text-emerald-400 font-mono">
-                  Rs {fmt(totalDeposit)}
-                </p>
+                <p className="text-2xl font-bold text-emerald-400 font-mono">Rs {fmt(totalDeposit)}</p>
                 <p className="text-xs text-slate-400 mt-0.5">Total Deposits</p>
-                <p className="text-[10px] text-slate-600 mt-0.5">
-                  All-time approved
-                </p>
+                <p className="text-[10px] text-slate-600 mt-0.5">All-time approved</p>
               </div>
-
-              {/* Total Withdrawal */}
               <div className="relative overflow-hidden rounded-2xl border border-red-500/20 bg-slate-800/50 p-4">
                 <div className="absolute top-0 left-0 right-0 h-px bg-linear-to-r from-transparent via-red-500/60 to-transparent" />
                 <div className="flex h-9 w-9 items-center justify-center rounded-xl border bg-red-500/10 border-red-500/30 text-red-400 mb-3">
                   <ArrowUpFromLine className="h-4 w-4" />
                 </div>
-                <p className="text-2xl font-bold text-red-400 font-mono">
-                  Rs {fmt(totalWithdrawal)}
-                </p>
-                <p className="text-xs text-slate-400 mt-0.5">
-                  Total Withdrawals
-                </p>
-                <p className="text-[10px] text-slate-600 mt-0.5">
-                  All-time approved
-                </p>
+                <p className="text-2xl font-bold text-red-400 font-mono">Rs {fmt(totalWithdrawal)}</p>
+                <p className="text-xs text-slate-400 mt-0.5">Total Withdrawals</p>
+                <p className="text-[10px] text-slate-600 mt-0.5">All-time approved</p>
               </div>
-
-              {/* Admin Profit */}
               <div className="relative overflow-hidden rounded-2xl border border-yellow-500/20 bg-slate-800/50 p-4">
                 <div className="absolute top-0 left-0 right-0 h-px bg-linear-to-r from-transparent via-yellow-500/60 to-transparent" />
                 <div className="flex h-9 w-9 items-center justify-center rounded-xl border bg-yellow-500/10 border-yellow-500/30 text-yellow-400 mb-3">
                   <TrendingUp className="h-4 w-4" />
                 </div>
-                <p
-                  className={cn(
-                    "text-2xl font-bold font-mono",
-                    adminProfit >= 0
-                      ? "text-yellow-400"
-                      : "text-red-400",
-                  )}
-                >
+                <p className={cn("text-2xl font-bold font-mono", adminProfit >= 0 ? "text-yellow-400" : "text-red-400")}>
                   Rs {fmt(Math.abs(adminProfit))}
                 </p>
-                <p className="text-xs text-slate-400 mt-0.5">
-                  Admin {adminProfit >= 0 ? "Profit" : "Loss"}
-                </p>
-                <p className="text-[10px] text-slate-600 mt-0.5">
-                  Deposit − Withdrawal
-                </p>
+                <p className="text-xs text-slate-400 mt-0.5">Admin {adminProfit >= 0 ? "Profit" : "Loss"}</p>
+                <p className="text-[10px] text-slate-600 mt-0.5">Deposit − Withdrawal</p>
               </div>
             </>
           )}
         </div>
       </section>
 
-      {/* ── Deposits ── */}
       {/* ── Deposits ── */}
       <section>
         <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-500 mb-3">
@@ -991,32 +972,9 @@ export default function AdminDashboardPage() {
             Array.from({ length: 3 }).map((_, i) => <SkeletonCard key={i} />)
           ) : (
             <>
-              <StatCard
-                icon={ArrowDownToLine}
-                label="Today's Deposits"
-                value={`Rs ${fmt(depositsTodayTotal)}`}
-                sub={`${fmt(depositsTodayCount)} transactions`}
-                color="green"
-              />
-              <StatCard
-                icon={CheckCircle}
-                label="Approved Today"
-                value={fmt(depositsTodayCount)}
-                sub="Deposit requests"
-                color="green"
-              />
-              <StatCard
-                icon={Smartphone}
-                label="SMS Auto Deposit"
-                value={fmt(smsStats?.today ?? 0)}
-                sub={
-                  smsStats?.isEnabled
-                    ? `${fmt(smsStats?.matched ?? 0)} matched`
-                    : "Currently disabled"
-                }
-                color={smsStats?.isEnabled ? "cyan" : "red"}
-                href="/admin/sms-auto-deposit"
-              />
+              <StatCard icon={ArrowDownToLine} label="Today's Deposits" value={`Rs ${fmt(depositsTodayTotal)}`} sub={`${fmt(depositsTodayCount)} transactions`} color="green" />
+              <StatCard icon={CheckCircle} label="Approved Today" value={fmt(depositsTodayCount)} sub="Deposit requests" color="green" />
+              <StatCard icon={Smartphone} label="SMS Auto Deposit" value={fmt(smsStats?.today ?? 0)} sub={smsStats?.isEnabled ? `${fmt(smsStats?.matched ?? 0)} matched` : "Currently disabled"} color={smsStats?.isEnabled ? "cyan" : "red"} href="/admin/sms-auto-deposit" />
             </>
           )}
         </div>
@@ -1027,25 +985,13 @@ export default function AdminDashboardPage() {
         <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-500 mb-3">
           Withdrawals
         </p>
-        <div className="grid grid-cols-2 lg:grid-cols-2 gap-3">
+        <div className="grid grid-cols-2 gap-3">
           {isLoading ? (
             Array.from({ length: 2 }).map((_, i) => <SkeletonCard key={i} />)
           ) : (
             <>
-              <StatCard
-                icon={ArrowUpFromLine}
-                label="Today's Withdrawals"
-                value={`Rs ${fmt(withdrawalsTodayTotal)}`}
-                sub={`${fmt(withdrawalsTodayCount)} transactions`}
-                color="purple"
-              />
-              <StatCard
-                icon={Wallet}
-                label="Processed Today"
-                value={fmt(withdrawalsTodayCount)}
-                sub="Withdrawal requests"
-                color="purple"
-              />
+              <StatCard icon={ArrowUpFromLine} label="Today's Withdrawals" value={`Rs ${fmt(withdrawalsTodayTotal)}`} sub={`${fmt(withdrawalsTodayCount)} transactions`} color="purple" />
+              <StatCard icon={Wallet} label="Processed Today" value={fmt(withdrawalsTodayCount)} sub="Withdrawal requests" color="purple" />
             </>
           )}
         </div>
@@ -1058,24 +1004,11 @@ export default function AdminDashboardPage() {
         </p>
         <div className="grid grid-cols-2 gap-3">
           {isLoading ? (
-            Array.from({ length: 3 }).map((_, i) => <SkeletonCard key={i} />)
+            Array.from({ length: 2 }).map((_, i) => <SkeletonCard key={i} />)
           ) : (
             <>
-              <StatCard
-                icon={TrendingUp}
-                label="Total Bets Today"
-                value={fmt(betsTodayCount)}
-                sub="All games combined"
-                color="cyan"
-              />
-              <StatCard
-                icon={Gamepad2}
-                label="Thai Lottery"
-                value={fmt(thaiBetsTodayCount)}
-                sub="Bets placed today"
-                color="blue"
-                href="/admin/thai-lottery"
-              />
+              <StatCard icon={TrendingUp} label="Total Bets Today" value={fmt(betsTodayCount)} sub="All games combined" color="cyan" />
+              <StatCard icon={Gamepad2} label="Thai Lottery" value={fmt(thaiBetsTodayCount)} sub="Bets placed today" color="blue" href="/admin/thai-lottery" />
             </>
           )}
         </div>

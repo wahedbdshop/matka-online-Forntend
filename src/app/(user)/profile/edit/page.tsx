@@ -148,6 +148,24 @@ export default function EditProfilePage() {
               </p>
             </div>
 
+            {/* Username — readonly */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-slate-400">
+                Username
+              </label>
+              <div className="relative">
+                <User className="absolute left-3 top-2.5 h-4 w-4 text-slate-500" />
+                <input
+                  value={profile?.username ?? ""}
+                  readOnly
+                  className="w-full rounded-lg border border-slate-700 bg-slate-900/50 px-3 py-2 pl-10 text-sm text-slate-500 cursor-not-allowed"
+                />
+              </div>
+              <p className="text-[10px] text-slate-600">
+                Username cannot be changed
+              </p>
+            </div>
+
             {/* Country — readonly */}
             <div className="space-y-1.5">
               <label className="text-xs font-medium text-slate-400">

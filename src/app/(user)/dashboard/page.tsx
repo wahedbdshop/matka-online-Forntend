@@ -24,6 +24,35 @@ function matchesGameType(
   return target === "kalyan" ? source === "KALYAN" : source === "THAI";
 }
 
+function getWinAmount(w: Record<string, unknown>) {
+  return Number(w.actualWin ?? w.winningAmount ?? w.winAmount ?? w.payoutAmount ?? 0);
+}
+
+function sortByAmountDesc(winners: Record<string, unknown>[]) {
+  return [...winners].sort((a, b) => getWinAmount(b) - getWinAmount(a));
+}
+
+// Thai: only show winners from the latest draw (roundId / drawId)
+function filterLatestDraw(winners: Record<string, unknown>[]) {
+  if (!winners.length) return winners;
+
+  const getDrawKey = (w: Record<string, unknown>) =>
+    String(w.roundId ?? w.drawId ?? w.drawNumber ?? "").trim();
+
+  const withKey = winners.filter((w) => getDrawKey(w));
+  if (!withKey.length) return winners;
+
+  // Find the latest draw by createdAt
+  const sorted = [...withKey].sort((a, b) => {
+    const aTime = new Date(String(a.createdAt ?? 0)).getTime();
+    const bTime = new Date(String(b.createdAt ?? 0)).getTime();
+    return bTime - aTime;
+  });
+
+  const latestKey = getDrawKey(sorted[0]);
+  return winners.filter((w) => getDrawKey(w) === latestKey);
+}
+
 export default function DashboardPage() {
   const { data: homeData } = useQuery({
     queryKey: ["home-data"],
@@ -47,12 +76,18 @@ export default function DashboardPage() {
   const popup = home?.popup ?? null;
   const paymentMethods = home?.paymentMethods ?? [];
   const thaiRatesCount = thaiRatesData?.data?.length ?? 0;
-  const thaiWinners = (thaiWinnersData?.data ?? []).filter(
+  const allThaiWinners = (thaiWinnersData?.data ?? []).filter(
     (winner: Record<string, unknown>) => matchesGameType(winner, "thai"),
   );
+  // Thai: only last draw winners, sorted by amount desc
+  const thaiWinners = sortByAmountDesc(filterLatestDraw(allThaiWinners));
+
   const recentWinners = kalyanWinnersData?.data ?? [];
-  const kalyanWinners = recentWinners.filter((winner: Record<string, unknown>) =>
-    matchesGameType(winner, "kalyan"),
+  // Kalyan: all winners sorted by amount desc
+  const kalyanWinners = sortByAmountDesc(
+    recentWinners.filter((winner: Record<string, unknown>) =>
+      matchesGameType(winner, "kalyan"),
+    ),
   );
 
   return (

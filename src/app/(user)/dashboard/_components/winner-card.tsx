@@ -1,14 +1,13 @@
 ﻿/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { Trophy } from "lucide-react";
 import { PLAY_TYPE_LABEL, type PlayType } from "@/types/kalyan";
 
 type WinnerCardTheme = "thai" | "kalyan";
 
-const MIN_SCROLL_ITEMS = 12;
 
 function formatWinnerAmount(value: unknown, theme: WinnerCardTheme) {
   const amount = Number(value ?? 0);
@@ -95,12 +94,21 @@ export function WinnerCard({
 }) {
   const scrollRef = useRef<HTMLDivElement>(null);
 
+  // Keep last non-empty winners — never show empty while waiting for new draw
+  const [cachedBets, setCachedBets] = useState<any[]>(bets ?? []);
+  useEffect(() => {
+    if (bets?.length) setCachedBets(bets);
+  }, [bets]);
+
   useEffect(() => {
     const el = scrollRef.current;
-    if (!el || !bets?.length) {
+    if (!el || !cachedBets?.length) {
       if (el) el.scrollTop = 0;
       return;
     }
+
+    // Only scroll if content overflows the container
+    if (el.scrollHeight <= el.clientHeight) return;
 
     let animFrame: number;
     let pos = 0;
@@ -108,19 +116,15 @@ export function WinnerCard({
 
     const scroll = () => {
       pos += speed;
-      if (pos >= el.scrollHeight / 2) pos = 0;
+      if (pos >= el.scrollHeight - el.clientHeight) pos = 0;
       el.scrollTop = pos;
       animFrame = requestAnimationFrame(scroll);
     };
 
     animFrame = requestAnimationFrame(scroll);
     return () => cancelAnimationFrame(animFrame);
-  }, [bets]);
+  }, [cachedBets]);
 
-  const repeatCount = bets.length
-    ? Math.max(2, Math.ceil(MIN_SCROLL_ITEMS / bets.length))
-    : 0;
-  const visibleBets = Array.from({ length: repeatCount }, () => bets).flat();
   const styles =
     theme === "kalyan"
       ? {
@@ -180,23 +184,23 @@ export function WinnerCard({
         >
           <span
             className={`h-1.5 w-1.5 rounded-full ${
-              bets?.length ? "animate-pulse bg-emerald-500" : "bg-slate-400"
+              bets?.length ? "animate-pulse bg-emerald-500" : "animate-pulse bg-yellow-400"
             }`}
           />
           <span className={`text-[9px] font-bold ${styles.liveText}`}>
-            {bets?.length ? "Live" : "Waiting"}
+            {bets?.length ? "Live" : "Next Draw"}
           </span>
         </span>
       </div>
 
-      {bets?.length ? (
+      {cachedBets?.length ? (
         <div
           ref={scrollRef}
-          className="h-[250px] overflow-hidden bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.04),transparent_48%)]"
+          className="h-[224px] overflow-hidden bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.04),transparent_48%)]"
           style={{ scrollBehavior: "auto" }}
         >
           <div className={`divide-y ${styles.divider}`}>
-            {visibleBets.map((b: any, i: number) => {
+            {cachedBets.map((b: any, i: number) => {
               const amount =
                 b.actualWin ?? b.winningAmount ?? b.winAmount ?? b.payoutAmount ?? 0;
               const username = getUserLabel(b);

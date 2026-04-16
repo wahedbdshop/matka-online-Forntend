@@ -112,6 +112,14 @@ export const AdminService = {
     return res.data;
   },
 
+  updateUser: async (
+    id: string,
+    payload: { name?: string; username?: string; phone?: string; country?: string },
+  ) => {
+    const res = await api.patch<ApiResponse<any>>(`/admin/users/${id}`, payload);
+    return res.data;
+  },
+
   banUser: async (id: string, reason?: string) => {
     const res = await api.patch<ApiResponse<any>>(`/admin/users/${id}/ban`, {
       reason,
