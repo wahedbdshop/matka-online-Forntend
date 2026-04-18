@@ -13,6 +13,10 @@ const geist = Geist({ subsets: ["latin"] });
 export const metadata: Metadata = {
   title: "Matka Online 24",
   description: "Online Lottery Platform",
+  icons: {
+    icon: "/logo.png",
+    apple: "/logo.png",
+  },
 };
 
 export default async function RootLayout({

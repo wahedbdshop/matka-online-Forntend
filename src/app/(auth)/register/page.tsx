@@ -46,32 +46,18 @@ import {
 } from "@/components/ui/select";
 import { useRegister } from "@/hooks/use-auth";
 import { hasClientAuthCookie } from "@/lib/auth-cookie";
+import { COUNTRIES } from "@/lib/countries";
 
-// ── Country list ──────────────────────────────────────────────────────────────
-const COUNTRIES = [
-  { name: "Bangladesh", dialCode: "+880" },
-  { name: "India", dialCode: "+91" },
-  { name: "Pakistan", dialCode: "+92" },
-  { name: "United States", dialCode: "+1" },
-  { name: "United Kingdom", dialCode: "+44" },
-  { name: "Saudi Arabia", dialCode: "+966" },
-  { name: "UAE", dialCode: "+971" },
-  { name: "Malaysia", dialCode: "+60" },
-  { name: "Singapore", dialCode: "+65" },
-  { name: "Australia", dialCode: "+61" },
-  { name: "Canada", dialCode: "+1" },
-  { name: "Qatar", dialCode: "+974" },
-  { name: "Kuwait", dialCode: "+965" },
-  { name: "Bahrain", dialCode: "+973" },
-  { name: "Oman", dialCode: "+968" },
-] as const;
 
 // ── Zod Schema ────────────────────────────────────────────────────────────────
 const registerSchema = z
   .object({
     name: z.string().min(1, "Name is required"),
     username: z.string().min(3, "Username must be at least 3 characters"),
-    email: z.string().email("Invalid email address"),
+    email: z
+      .string()
+      .email("Invalid email address")
+      .refine((val) => !val.includes("+"), "Email address cannot contain a plus (+) sign"),
     country: z.string().min(1, "Please select a country"),
     phone: z.string().min(7, "Invalid phone number"),
     password: z.string().min(6, "Password must be at least 6 characters"),
@@ -81,6 +67,17 @@ const registerSchema = z
   .refine((data) => data.password === data.confirmPassword, {
     message: "Passwords do not match",
     path: ["confirmPassword"],
+  })
+  .superRefine((data, ctx) => {
+    const country = COUNTRIES.find((c) => c.name === data.country);
+    const max = country?.maxPhoneDigits;
+    if (max && data.phone.replace(/\D/g, "").length > max) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: `Phone number cannot exceed ${max} digits for ${data.country}`,
+        path: ["phone"],
+      });
+    }
   });
 
 type RegisterForm = z.infer<typeof registerSchema>;
@@ -124,12 +121,22 @@ export default function RegisterPage() {
   const onSubmit = (data: RegisterForm) => {
     const { confirmPassword, referralCode, ...rest } = data;
     void confirmPassword;
-    register({
-      ...rest,
-      ...(referralCode?.trim()
-        ? { referralCode: referralCode.trim().toLowerCase() }
-        : {}),
-    });
+    register(
+      {
+        ...rest,
+        ...(referralCode?.trim()
+          ? { referralCode: referralCode.trim().toLowerCase() }
+          : {}),
+      },
+      {
+        onError: (error: any) => {
+          const message: string = error.response?.data?.message ?? "";
+          if (message.includes("+") || /plus/i.test(message)) {
+            form.setError("email", { message });
+          }
+        },
+      },
+    );
   };
 
   return (
@@ -267,7 +274,11 @@ export default function RegisterPage() {
                         />
                       </SelectTrigger>
                     </FormControl>
-                    <SelectContent className="bg-slate-800 border-slate-600 text-white">
+                    <SelectContent
+                      position="popper"
+                      sideOffset={4}
+                      className="bg-slate-800 border-slate-600 text-white w-[--radix-select-trigger-width]"
+                    >
                       {/* Search inside dropdown */}
                       <div className="px-2 py-1.5 sticky top-0 bg-slate-800 border-b border-slate-600">
                         <Input
@@ -305,7 +316,10 @@ export default function RegisterPage() {
             <FormField
               control={form.control}
               name="phone"
-              render={({ field }) => (
+              render={({ field }) => {
+                const selectedCountry = form.watch("country");
+                const maxDigits = COUNTRIES.find((c) => c.name === selectedCountry)?.maxPhoneDigits;
+                return (
                 <FormItem className="space-y-1">
                   <FormLabel className="text-slate-300 text-xs">
                     Phone Number
@@ -316,13 +330,15 @@ export default function RegisterPage() {
                       <Input
                         {...field}
                         placeholder="01XXXXXXXXX"
+                        maxLength={maxDigits}
                         className="h-8 pl-8 text-xs bg-slate-700/50 border-slate-600 text-white placeholder:text-slate-500"
                       />
                     </div>
                   </FormControl>
                   <FormMessage className="text-xs" />
                 </FormItem>
-              )}
+                );
+              }}
             />
 
             {/* Password + Confirm Password */}
