@@ -75,11 +75,30 @@ export default function MarketSelectionPage() {
   const fetchAll = useCallback(async () => {
     setLoading(true);
     setError(null);
+
+    let marketsRes;
+    let lastError: unknown;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        marketsRes = await KalyanUserService.getActiveMarkets({
+          limit: MARKET_LIST_LIMIT,
+          includeInactive: true,
+        });
+        lastError = undefined;
+        break;
+      } catch (err) {
+        lastError = err;
+        if (attempt < 2) await new Promise((r) => setTimeout(r, 1500 * (attempt + 1)));
+      }
+    }
+
+    if (lastError !== undefined || !marketsRes) {
+      setError("Failed to load markets. Please try again.");
+      setLoading(false);
+      return;
+    }
+
     try {
-      const marketsRes = await KalyanUserService.getActiveMarkets({
-        limit: MARKET_LIST_LIMIT,
-        includeInactive: true,
-      });
       const markets: Market[] = sortMarketsByOldest(
         Array.isArray(marketsRes.data)
         ? marketsRes.data

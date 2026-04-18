@@ -23,6 +23,7 @@ export const api = axios.create({
 export const publicApi = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_URL?.replace(/\/+$/, ""),
   withCredentials: true,
+  timeout: 15000,
   headers: {
     "Content-Type": "application/json",
   },
