@@ -3,6 +3,7 @@ import { TopHeader } from "@/components/user/top-header";
 import { BottomNav } from "@/components/user/bottom-nav";
 import { BackToAdminBar } from "@/components/admin/BackToAdminBar";
 import { ChatReplyPopup } from "@/components/user/chat-reply-popup";
+import { NotificationPopup } from "@/components/user/notification-popup";
 
 export default async function UserLayout({
   children,
@@ -24,6 +25,7 @@ export default async function UserLayout({
       <BottomNav />
       <BackToAdminBar />
       <ChatReplyPopup />
+      <NotificationPopup />
     </div>
   );
 }
