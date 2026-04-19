@@ -34,6 +34,7 @@ interface WithdrawMethod {
   name: string;
   type: string;
   logo: string | null;
+  sortOrder?: number;
   minWithdraw: number;
   maxWithdraw: number;
   chargeType: string;
@@ -124,13 +125,15 @@ function getWithdrawalStatusMessage(withdrawal: any) {
 
 // ─── Smart Quick Amounts ──────────────────────────────────────
 function generateQuickAmounts(min: number, max: number): number[] {
-  // Use preset ladder, filter to range
+  // Use a predictable ladder and always respect the admin-configured range.
   const PRESETS = [
-    500, 1000, 2000, 5000, 10000, 20000, 25000, 30000, 50000, 75000, 100000,
-    150000, 200000,
+    500, 1000, 2000, 5000, 10000, 15000, 20000, 25000, 30000, 50000, 75000,
+    100000, 150000, 200000,
   ];
   const filtered = PRESETS.filter((a) => a >= min && a <= max);
-  if (filtered.length >= 4) return filtered.slice(0, 6);
+  if (filtered.length > 0) {
+    return Array.from(new Set([min, ...filtered, max])).sort((a, b) => a - b);
+  }
 
   // Fallback: generate 6 evenly spaced, rounded nicely
   const result: number[] = [];
@@ -142,7 +145,10 @@ function generateQuickAmounts(min: number, max: number): number[] {
     const clamped = Math.min(Math.max(rounded, min), max);
     if (!result.includes(clamped)) result.push(clamped);
   }
-  return result.slice(0, 6);
+  result.push(min, max);
+  return Array.from(new Set(result))
+    .sort((a, b) => a - b)
+    .slice(0, 6);
 }
 
 // ─── Charge Display ───────────────────────────────────────────
@@ -168,6 +174,27 @@ function WithdrawOffBanner({ message }: { message: string }) {
       </div>
       <div className="flex items-center gap-2 text-slate-500 text-xs">
         <TimerOff className="h-3.5 w-3.5" /> Please check back later
+      </div>
+    </div>
+  );
+}
+
+function PendingWithdrawalBanner() {
+  return (
+    <div className="rounded-2xl border border-amber-500/30 bg-gradient-to-br from-amber-500/10 to-slate-900/70 p-4">
+      <div className="flex items-start gap-3">
+        <div className="mt-0.5 flex h-10 w-10 items-center justify-center rounded-xl border border-amber-500/30 bg-amber-500/10">
+          <Clock className="h-5 w-5 text-amber-300" />
+        </div>
+        <div className="space-y-1">
+          <p className="text-sm font-semibold text-amber-200">
+            A withdrawal is already pending
+          </p>
+          <p className="text-xs leading-relaxed text-amber-100/80">
+            Your last withdrawal request is still under review. Please wait for
+            it to be approved or rejected before placing a new one.
+          </p>
+        </div>
       </div>
     </div>
   );
@@ -269,10 +296,28 @@ export default function WithdrawPage() {
   });
   const methods: WithdrawMethod[] = (methodsData?.data ?? []).map((m: any) => ({
     ...m,
-    minWithdraw: Number(m.minWithdraw),
-    maxWithdraw: Number(m.maxWithdraw),
+    sortOrder: Number(m.sortOrder ?? m.sort_order ?? 0),
+    minWithdraw: Number(m.minWithdraw ?? m.min_withdraw ?? 500),
+    maxWithdraw: Number(m.maxWithdraw ?? m.max_withdraw ?? 25000),
     chargeValue: Number(m.chargeValue ?? 0),
   }));
+  const sortedMethods = useMemo(() => {
+    return [...methods].sort((a, b) => {
+      const aIsLocalBank =
+        a.type === "BANK" || a.name.toLowerCase().includes("local bank");
+      const bIsLocalBank =
+        b.type === "BANK" || b.name.toLowerCase().includes("local bank");
+
+      if (aIsLocalBank !== bIsLocalBank) {
+        return aIsLocalBank ? 1 : -1;
+      }
+
+      const orderDiff = (a.sortOrder ?? 0) - (b.sortOrder ?? 0);
+      if (orderDiff !== 0) return orderDiff;
+
+      return a.name.localeCompare(b.name);
+    });
+  }, [methods]);
 
   // User profile — for registration phone as default
   const { data: profileData } = useQuery({
@@ -294,6 +339,9 @@ export default function WithdrawPage() {
     queryFn: () => WithdrawalService.getMyWithdrawals(1, 20),
   });
   const withdrawals = historyData?.data?.withdrawals ?? [];
+  const hasPendingWithdrawal = withdrawals.some(
+    (withdrawal: any) => withdrawal?.status === "PENDING",
+  );
 
   // Pending deposit check
   const { data: depositData } = useQuery({
@@ -683,7 +731,7 @@ export default function WithdrawPage() {
                     </p>
                   ) : (
                     <div className="grid grid-cols-2 gap-3">
-                      {methods.map((m) => {
+                      {sortedMethods.map((m) => {
                         const key = m.name?.toLowerCase();
                         const style = METHOD_COLOR[key] ?? {
                           color: "text-slate-300",
@@ -1331,16 +1379,20 @@ export default function WithdrawPage() {
                       </div>
                     )}
 
+                    {hasPendingWithdrawal && <PendingWithdrawalBanner />}
+
                     <button
                       onClick={handleSubmit}
-                      disabled={isPending}
-                      className="w-full py-3 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-sm font-semibold disabled:opacity-50 transition-all hover:scale-[1.01] active:scale-[0.99] flex items-center justify-center gap-2"
+                      disabled={isPending || hasPendingWithdrawal}
+                      className="w-full py-3 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-sm font-semibold disabled:cursor-not-allowed disabled:bg-slate-700 disabled:text-slate-400 disabled:opacity-100 transition-all hover:scale-[1.01] active:scale-[0.99] flex items-center justify-center gap-2"
                     >
                       {isPending ? (
                         <>
                           <Loader2 className="h-4 w-4 animate-spin" />{" "}
                           Submitting...
                         </>
+                      ) : hasPendingWithdrawal ? (
+                        "Pending withdrawal in review"
                       ) : (
                         "Submit Withdrawal ✓"
                       )}

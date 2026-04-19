@@ -211,7 +211,14 @@ export default function KalyanViewResultsPage() {
       }),
   });
 
-  const markets: any[] = marketsData?.data?.markets ?? marketsData?.data ?? [];
+  const markets: any[] = Array.from(
+    new Map(
+      (marketsData?.data?.markets ?? marketsData?.data ?? []).map((m: any) => [
+        (m.name ?? m.marketName ?? m.title ?? "").trim().toLowerCase(),
+        m,
+      ])
+    ).values()
+  );
   const rawResults = useMemo<any[]>(
     () => data?.data?.results ?? data?.data ?? [],
     [data],

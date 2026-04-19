@@ -2,7 +2,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
@@ -14,11 +14,21 @@ import {
   CheckCircle2,
   ArrowLeft,
   Search,
+  ImageIcon,
+  Mic,
+  Loader2,
+  Square,
 } from "lucide-react";
 import { useSocket } from "@/hooks/use-socket";
+import { useVoiceRecorder } from "@/hooks/use-voice-recorder";
 import { cn } from "@/lib/utils";
 import { api } from "@/lib/axios";
 import { ChatService } from "@/services/chat.service";
+import {
+  AudioBubble,
+  ImageBubble,
+  ImagePreviewModal,
+} from "@/components/chat/media-bubbles";
 
 function StatusDot({ status }: { status: string }) {
   if (status === "AGENT_HANDLING")
@@ -43,6 +53,13 @@ function formatListTime(dateStr: string) {
   return d.toLocaleDateString([], { day: "2-digit", month: "short" });
 }
 
+function lastMsgPreview(msg: any): string {
+  if (!msg) return "";
+  if (msg.imageUrl) return "📷 Image";
+  if (msg.voiceUrl) return "🎤 Voice";
+  return msg.message ?? "";
+}
+
 export default function AdminChatPage() {
   const [selectedSession, setSelectedSession] = useState<any>(null);
   const [messages, setMessages] = useState<any[]>([]);
@@ -50,10 +67,14 @@ export default function AdminChatPage() {
   const [activeTab, setActiveTab] = useState<"live" | "closed">("live");
   const [closedSessions, setClosedSessions] = useState<any[]>([]);
   const [search, setSearch] = useState("");
-  const [showChat, setShowChat] = useState(false); // mobile: show chat panel
+  const [showChat, setShowChat] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [isSendingMedia, setIsSendingMedia] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const imageInputRef = useRef<HTMLInputElement>(null);
   const { joinSession } = useSocket();
+  const { isRecording, startRecording, stopRecording } = useVoiceRecorder();
 
   const { data: sessionsData, refetch } = useQuery({
     queryKey: ["waiting-sessions"],
@@ -148,6 +169,42 @@ export default function AdminChatPage() {
     }
   };
 
+  const sendMedia = async (file: File | Blob, filename?: string) => {
+    if (!selectedSession) return;
+    setIsSendingMedia(true);
+    try {
+      const fd = new FormData();
+      fd.append("file", file, filename);
+      await ChatService.sendAgentMedia(selectedSession.id, fd);
+    } catch {
+      toast.error("Failed to send media");
+    } finally {
+      setIsSendingMedia(false);
+    }
+  };
+
+  const handleImageFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    await sendMedia(file, file.name);
+    e.target.value = "";
+  };
+
+  const handleMicPointerDown = useCallback(
+    async (e: React.PointerEvent<HTMLButtonElement>) => {
+      e.currentTarget.setPointerCapture(e.pointerId);
+      const ok = await startRecording();
+      if (!ok) toast.error("Microphone access denied");
+    },
+    [startRecording],
+  );
+
+  const handleMicPointerUp = useCallback(async () => {
+    const blob = await stopRecording();
+    if (!blob) return;
+    await sendMedia(blob, "voice.webm");
+  }, [stopRecording, selectedSession]);
+
   const sessionsToRender = (activeTab === "live" ? liveSessions : closedSessions).filter(
     (s: any) => {
       if (!search) return true;
@@ -165,17 +222,32 @@ export default function AdminChatPage() {
     return msgs[msgs.length - 1];
   };
 
+  const isBusy = isSendingMedia || isRecording;
+
   return (
     <div className="flex h-[calc(100vh-4rem)] overflow-hidden rounded-xl border border-slate-700/60 bg-[#0b0f1e]">
+
+      {/* Hidden inputs */}
+      <input
+        ref={imageInputRef}
+        type="file"
+        accept="image/jpeg,image/png,image/gif,image/webp"
+        className="hidden"
+        onChange={handleImageFileChange}
+      />
+
+      {/* Image preview modal */}
+      {previewUrl && (
+        <ImagePreviewModal url={previewUrl} onClose={() => setPreviewUrl(null)} />
+      )}
 
       {/* ── Left: Session list ── */}
       <div
         className={cn(
-          "flex w-full flex-col border-r border-slate-700/60 bg-[#111827] md:w-80 md:flex-shrink-0",
+          "flex w-full flex-col border-r border-slate-700/60 bg-[#111827] md:w-80 md:shrink-0",
           showChat ? "hidden md:flex" : "flex",
         )}
       >
-        {/* Header */}
         <div className="flex items-center justify-between border-b border-slate-700/60 px-4 py-3">
           <div className="flex items-center gap-2">
             <Headphones className="h-5 w-5 text-purple-400" />
@@ -184,7 +256,6 @@ export default function AdminChatPage() {
           <MessageCircle className="h-5 w-5 text-slate-400" />
         </div>
 
-        {/* Search */}
         <div className="px-3 py-2">
           <div className="flex items-center gap-2 rounded-xl bg-slate-800/80 px-3 py-2">
             <Search className="h-3.5 w-3.5 text-slate-500" />
@@ -197,7 +268,6 @@ export default function AdminChatPage() {
           </div>
         </div>
 
-        {/* Tabs */}
         <div className="grid grid-cols-2 gap-1 px-3 pb-2">
           <button
             type="button"
@@ -225,7 +295,6 @@ export default function AdminChatPage() {
           </button>
         </div>
 
-        {/* Session list */}
         <div className="flex-1 overflow-y-auto">
           {sessionsToRender.length === 0 ? (
             <div className="flex flex-col items-center justify-center gap-2 py-16 text-slate-500">
@@ -246,7 +315,7 @@ export default function AdminChatPage() {
                     isActive ? "bg-slate-700/60" : "hover:bg-slate-800/50",
                   )}
                 >
-                  <div className="relative flex-shrink-0">
+                  <div className="relative shrink-0">
                     <div className="flex h-11 w-11 items-center justify-center rounded-full bg-purple-600/20 text-sm font-bold text-purple-300">
                       {session.user?.name?.charAt(0)?.toUpperCase() ?? "U"}
                     </div>
@@ -260,7 +329,7 @@ export default function AdminChatPage() {
                         {session.user?.name ?? "Unknown"}
                       </p>
                       {last?.createdAt && (
-                        <span className="ml-2 flex-shrink-0 text-[10px] text-slate-500">
+                        <span className="ml-2 shrink-0 text-[10px] text-slate-500">
                           {formatListTime(last.createdAt)}
                         </span>
                       )}
@@ -271,12 +340,12 @@ export default function AdminChatPage() {
                     {last && (
                       <p className="truncate text-[11px] text-slate-500">
                         {last.role === "AGENT" ? "You: " : ""}
-                        {last.message}
+                        {lastMsgPreview(last)}
                       </p>
                     )}
                   </div>
                   {session.status === "WAITING_AGENT" && (
-                    <span className="flex-shrink-0 rounded-full bg-yellow-500/20 px-2 py-0.5 text-[10px] font-bold text-yellow-400">
+                    <span className="shrink-0 rounded-full bg-yellow-500/20 px-2 py-0.5 text-[10px] font-bold text-yellow-400">
                       NEW
                     </span>
                   )}
@@ -305,15 +374,14 @@ export default function AdminChatPage() {
           <>
             {/* Chat header */}
             <div className="flex items-center gap-3 border-b border-slate-700/60 bg-[#111827] px-4 py-3">
-              {/* Back button — mobile only */}
               <button
                 type="button"
-                className="mr-1 flex-shrink-0 text-slate-400 md:hidden"
+                className="mr-1 shrink-0 text-slate-400 md:hidden"
                 onClick={() => { setShowChat(false); }}
               >
                 <ArrowLeft className="h-5 w-5" />
               </button>
-              <div className="relative flex-shrink-0">
+              <div className="relative shrink-0">
                 <div className="flex h-10 w-10 items-center justify-center rounded-full bg-purple-600/25 text-sm font-bold text-purple-300">
                   {selectedSession.user?.name?.charAt(0)?.toUpperCase() ?? "U"}
                 </div>
@@ -365,7 +433,6 @@ export default function AdminChatPage() {
                   const isAI = msg.role === "AI";
                   const time = formatTime(msg.createdAt);
 
-                  // Date separator
                   const prevMsg = messages[i - 1];
                   const showDate =
                     !prevMsg ||
@@ -391,9 +458,8 @@ export default function AdminChatPage() {
                           "justify-end": isAgent,
                         })}
                       >
-                        {/* Avatar left */}
                         {(isUser || isAI) && (
-                          <div className="mb-0.5 flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-slate-700">
+                          <div className="mb-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-slate-700">
                             {isUser ? (
                               <User className="h-3.5 w-3.5 text-purple-300" />
                             ) : (
@@ -402,7 +468,6 @@ export default function AdminChatPage() {
                           </div>
                         )}
 
-                        {/* Bubble */}
                         <div
                           className={cn("max-w-[72%] sm:max-w-[60%]", {
                             "items-start": isUser || isAI,
@@ -411,7 +476,7 @@ export default function AdminChatPage() {
                         >
                           <div
                             className={cn(
-                              "relative rounded-2xl px-3.5 py-2 text-sm leading-relaxed shadow-md",
+                              "relative rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed shadow-md",
                               {
                                 "rounded-bl-sm bg-[#1e2a3a] text-slate-100": isUser,
                                 "rounded-bl-sm bg-[#1a2540] text-blue-100": isAI,
@@ -419,21 +484,31 @@ export default function AdminChatPage() {
                               },
                             )}
                           >
-                            {msg.message}
-                            <span
-                              className={cn("ml-2 inline-block align-bottom text-[10px]", {
-                                "text-slate-500": isUser || isAI,
-                                "text-emerald-600/70": isAgent,
-                              })}
-                            >
-                              {time}
-                            </span>
+                            {msg.imageUrl ? (
+                              <ImageBubble url={msg.imageUrl} onPreview={setPreviewUrl} />
+                            ) : msg.voiceUrl ? (
+                              <AudioBubble url={msg.voiceUrl} />
+                            ) : (
+                              <>
+                                {msg.message}
+                                <span
+                                  className={cn("ml-2 inline-block align-bottom text-[10px]", {
+                                    "text-slate-500": isUser || isAI,
+                                    "text-emerald-600/70": isAgent,
+                                  })}
+                                >
+                                  {time}
+                                </span>
+                              </>
+                            )}
+                            {(msg.imageUrl || msg.voiceUrl) && (
+                              <p className="mt-1 text-[10px] text-white/40">{time}</p>
+                            )}
                           </div>
                         </div>
 
-                        {/* Avatar right */}
                         {isAgent && (
-                          <div className="mb-0.5 flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-emerald-700/30">
+                          <div className="mb-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-emerald-700/30">
                             <Headphones className="h-3.5 w-3.5 text-emerald-300" />
                           </div>
                         )}
@@ -448,26 +523,74 @@ export default function AdminChatPage() {
             {/* Input */}
             <div className="border-t border-slate-700/60 bg-[#111827] px-4 py-3">
               {selectedSession.status === "AGENT_HANDLING" ? (
-                <div className="flex items-center gap-2">
-                  <div className="flex flex-1 items-center gap-2 rounded-full bg-slate-800 px-4 py-2">
-                    <input
-                      ref={inputRef}
-                      value={replyText}
-                      onChange={(e) => setReplyText(e.target.value)}
-                      onKeyDown={(e) => { if (e.key === "Enter") handleReply(); }}
-                      placeholder="Type a message..."
-                      className="flex-1 bg-transparent text-sm text-white placeholder:text-slate-500 outline-none"
-                    />
+                <>
+                  {/* Recording indicator */}
+                  {isRecording && (
+                    <div className="mb-2 flex items-center gap-2 rounded-full bg-red-500/15 px-3 py-1.5">
+                      <span className="h-2 w-2 animate-pulse rounded-full bg-red-500" />
+                      <span className="flex-1 text-xs font-medium text-red-400">
+                        Recording… release to send
+                      </span>
+                      <Square className="h-3 w-3 text-red-400" />
+                    </div>
+                  )}
+                  <div className="flex items-center gap-2">
+                    <div className="flex flex-1 items-center gap-2 rounded-full bg-slate-800 px-4 py-2">
+                      <input
+                        ref={inputRef}
+                        value={replyText}
+                        onChange={(e) => setReplyText(e.target.value)}
+                        onKeyDown={(e) => { if (e.key === "Enter") handleReply(); }}
+                        placeholder={isRecording ? "Recording…" : "Type a message..."}
+                        disabled={isBusy}
+                        className="flex-1 bg-transparent text-sm text-white placeholder:text-slate-500 outline-none disabled:opacity-50"
+                      />
+                    </div>
+
+                    {/* Image button */}
+                    <button
+                      type="button"
+                      onClick={() => imageInputRef.current?.click()}
+                      disabled={isBusy}
+                      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-slate-700 text-slate-300 transition-colors hover:bg-slate-600 hover:text-white disabled:opacity-40"
+                      aria-label="Send image"
+                    >
+                      {isSendingMedia ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <ImageIcon className="h-4 w-4" />
+                      )}
+                    </button>
+
+                    {/* Mic button */}
+                    <button
+                      type="button"
+                      onPointerDown={handleMicPointerDown}
+                      onPointerUp={handleMicPointerUp}
+                      onPointerCancel={handleMicPointerUp}
+                      disabled={isSendingMedia}
+                      className={cn(
+                        "flex h-10 w-10 shrink-0 items-center justify-center rounded-full transition-colors disabled:opacity-40",
+                        isRecording
+                          ? "bg-red-500 text-white shadow-[0_0_12px_rgba(239,68,68,0.6)]"
+                          : "bg-slate-700 text-slate-300 hover:bg-slate-600 hover:text-white",
+                      )}
+                      aria-label="Record voice"
+                    >
+                      <Mic className="h-4 w-4" />
+                    </button>
+
+                    {/* Send button */}
+                    <button
+                      type="button"
+                      onClick={handleReply}
+                      disabled={!replyText.trim() || isBusy}
+                      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-purple-600 text-white transition-colors hover:bg-purple-700 disabled:opacity-40"
+                    >
+                      <Send className="h-4 w-4" />
+                    </button>
                   </div>
-                  <button
-                    type="button"
-                    onClick={handleReply}
-                    disabled={!replyText.trim()}
-                    className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-purple-600 text-white transition-colors hover:bg-purple-700 disabled:opacity-40"
-                  >
-                    <Send className="h-4 w-4" />
-                  </button>
-                </div>
+                </>
               ) : selectedSession.status === "WAITING_AGENT" ? (
                 <button
                   type="button"

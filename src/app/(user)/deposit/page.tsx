@@ -52,7 +52,10 @@ interface GlobalAgent {
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const TIMER_SECONDS = 600;
-const ALL_QUICK_AMOUNTS = [500, 1000, 2000, 5000, 10000, 20000, 30000];
+const ALL_QUICK_AMOUNTS = [
+  500, 1000, 2000, 5000, 10000, 15000, 20000, 25000, 30000, 50000, 75000,
+  100000, 150000, 200000,
+];
 const METHOD_ROTATION_STORAGE_KEY = "deposit-method-rotation-v1";
 
 const METHOD_STYLE: Record<
@@ -221,6 +224,32 @@ function getNextMethodVariant(
   );
 
   return nextMethod;
+}
+
+function generateQuickAmounts(min: number, max: number): number[] {
+  const filtered = ALL_QUICK_AMOUNTS.filter((amount) => {
+    return amount >= min && amount <= max;
+  });
+
+  if (filtered.length > 0) {
+    return Array.from(new Set([min, ...filtered, max])).sort((a, b) => a - b);
+  }
+
+  const result: number[] = [];
+  const steps = 5;
+
+  for (let i = 0; i <= steps; i++) {
+    const raw = min + ((max - min) / steps) * i;
+    const magnitude = Math.pow(10, Math.floor(Math.log10(raw)));
+    const rounded = Math.round(raw / magnitude) * magnitude;
+    const clamped = Math.min(Math.max(rounded, min), max);
+
+    if (!result.includes(clamped)) result.push(clamped);
+  }
+
+  result.push(min, max);
+
+  return Array.from(new Set(result)).sort((a, b) => a - b);
 }
 
 // ─── Countdown Hook ───────────────────────────────────────────────────────────
@@ -496,9 +525,7 @@ export default function DepositPage() {
   const maxAmount = selectedMethod?.maxDeposit ?? 30000;
   const numAmount = parseInt(amount) || 0;
   const totalCredit = numAmount + bonus;
-  const quickAmounts = ALL_QUICK_AMOUNTS.filter(
-    (a) => a >= minAmount && a <= maxAmount,
-  );
+  const quickAmounts = generateQuickAmounts(minAmount, maxAmount);
 
   const stepList: Step[] = ["method", "amount", "instruction"];
   const stepLabels: Record<Step, string> = {
@@ -1223,6 +1250,15 @@ export default function DepositPage() {
                       />
                     </div>
                     {hasPendingDeposit && (
+                      <div className="flex items-center gap-2 rounded-xl border border-yellow-500/30 bg-yellow-500/10 px-3 py-2.5">
+                        <Clock className="h-3.5 w-3.5 shrink-0 text-yellow-400" />
+                        <p className="text-xs font-medium text-yellow-400">
+                          You already have a pending deposit request. Please
+                          wait for approval before submitting a new deposit.
+                        </p>
+                      </div>
+                    )}
+                    {false && hasPendingDeposit && (
                       <div className="flex items-center gap-2 rounded-xl border border-yellow-500/30 bg-yellow-500/10 px-3 py-2.5">
                         <Clock className="h-3.5 w-3.5 text-yellow-400 shrink-0" />
                         <p className="text-yellow-400 text-xs font-medium">

@@ -25,6 +25,29 @@ export interface SmsWebhookLog {
   createdAt: string;
 }
 
+export interface AdminUserTransaction {
+  sl: number;
+  transactionId: string;
+  userId: string;
+  username: string;
+  name?: string | null;
+  tranType: string;
+  amount: number | string;
+  oldBalance: number | string;
+  newBalance: number | string;
+  balanceChangeType: "Credit" | "Debit" | string;
+  createdAt: string;
+}
+
+export interface AdminUserTransactionsResponse {
+  data: AdminUserTransaction[];
+  meta?: {
+    page: number;
+    totalPages: number;
+    total: number;
+  };
+}
+
 export const AdminService = {
   // ─── Dashboard ─────────────────────────────────────────────────────────────
   getDashboardStats: async () => {
@@ -104,6 +127,21 @@ export const AdminService = {
     if (params?.phoneVerified !== undefined)
       query.set("phoneVerified", String(params.phoneVerified));
     const res = await api.get<ApiResponse<any>>(`/admin/users?${query}`);
+    return res.data;
+  },
+
+  getUserTransactions: async (params?: {
+    page?: number;
+    limit?: number;
+    search?: string;
+  }) => {
+    const query = new URLSearchParams();
+    if (params?.page) query.set("page", String(params.page));
+    if (params?.limit) query.set("limit", String(params.limit));
+    if (params?.search) query.set("search", params.search);
+    const res = await api.get<ApiResponse<AdminUserTransactionsResponse>>(
+      `/admin/user-transactions?${query}`,
+    );
     return res.data;
   },
 

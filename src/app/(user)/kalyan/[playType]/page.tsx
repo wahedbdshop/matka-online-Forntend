@@ -1,7 +1,9 @@
 "use client";
 
+import { isAxiosError } from "axios";
 import { useCallback, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
+import { toast } from "sonner";
 import { KalyanUserService } from "@/services/kalyanUser.service";
 import { Market, MarketTiming } from "@/types/kalyan";
 import {
@@ -51,6 +53,37 @@ function formatGameTitle(value?: string | null) {
   return normalized.replace(/\b\w/g, (char) => char.toUpperCase());
 }
 
+function formatLoadError(error: unknown) {
+  if (isAxiosError(error)) {
+    const status = error.response?.status;
+    const apiMessage =
+      typeof error.response?.data?.message === "string"
+        ? error.response.data.message
+        : null;
+
+    const detail = apiMessage || error.message || "Request failed";
+
+    return {
+      detail,
+      uiMessage: status
+        ? `Failed to load markets (${status}). Please try again.`
+        : "Failed to load markets. Please check your connection and try again.",
+    };
+  }
+
+  if (error instanceof Error) {
+    return {
+      detail: error.message,
+      uiMessage: "Failed to load markets. Please try again.",
+    };
+  }
+
+  return {
+    detail: "Unknown market loading error",
+    uiMessage: "Failed to load markets. Please try again.",
+  };
+}
+
 // ─── Skeleton card ────────────────────────────────────────────────────────────
 function SkeletonCard() {
   return (
@@ -93,7 +126,16 @@ export default function MarketSelectionPage() {
     }
 
     if (lastError !== undefined || !marketsRes) {
-      setError("Failed to load markets. Please try again.");
+      const formattedError = formatLoadError(lastError);
+      console.error("[Kalyan] Failed to load public markets", {
+        playTypeSlug,
+        detail: formattedError.detail,
+        error: lastError,
+      });
+      toast.error("Kalyan market load failed", {
+        description: formattedError.detail,
+      });
+      setError(formattedError.uiMessage);
       setLoading(false);
       return;
     }
@@ -166,12 +208,21 @@ export default function MarketSelectionPage() {
       });
 
       setSessions(flat);
-    } catch {
-      setError("Failed to load markets. Please try again.");
+    } catch (error) {
+      const formattedError = formatLoadError(error);
+      console.error("[Kalyan] Failed to prepare market sessions", {
+        playTypeSlug,
+        detail: formattedError.detail,
+        error,
+      });
+      toast.error("Kalyan market processing failed", {
+        description: formattedError.detail,
+      });
+      setError(formattedError.uiMessage);
     } finally {
       setLoading(false);
     }
-  }, [playTypeEnum]);
+  }, [playTypeEnum, playTypeSlug]);
 
   useEffect(() => {
     fetchAll();

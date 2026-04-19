@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import {
@@ -21,6 +22,8 @@ import {
   MapPin,
   Wifi,
   ShieldAlert,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import { useAdminAuth } from "@/hooks/use-admin-auth";
 import { AdminService } from "@/services/admin.service";
@@ -257,6 +260,7 @@ function StatCard({
   icon: Icon,
   color,
   href,
+  showValues,
 }: {
   label: string;
   value: string | number;
@@ -264,7 +268,9 @@ function StatCard({
   icon: any;
   color: string;
   href?: string;
+  showValues: boolean;
 }) {
+  const masked = "••••••";
   const inner = (
     <div
       className={cn(
@@ -322,7 +328,9 @@ function StatCard({
       </div>
 
       <div className="mt-3">
-        <p className="text-2xl font-bold text-white font-mono">{value}</p>
+        <p className="text-2xl font-bold text-white font-mono">
+          {showValues ? value : masked}
+        </p>
         <p className="text-xs text-slate-400 mt-0.5">{label}</p>
         {sub && <p className="text-[10px] text-slate-600 mt-0.5">{sub}</p>}
       </div>
@@ -345,6 +353,7 @@ function SkeletonCard() {
 
 export default function AdminDashboardPage() {
   const { canRunAdminQuery, isAuthReady } = useAdminAuth();
+  const [showValues, setShowValues] = useState(true);
   const { data, isLoading: isDashboardLoading, refetch, isFetching } = useQuery({
     queryKey: ["admin-dashboard"],
     queryFn: () => AdminService.getDashboardStats(),
@@ -361,6 +370,7 @@ export default function AdminDashboardPage() {
     refetchIntervalInBackground: true,
     refetchOnWindowFocus: true,
   });
+
   const { data: sessionsData, isLoading: sessionsLoading, refetch: refetchSessions } = useQuery({
     queryKey: ["admin-active-sessions"],
     queryFn: () => AdminService.getActiveSessions(),
@@ -375,250 +385,6 @@ export default function AdminDashboardPage() {
   const d = data?.data;
   const smsStats = smsStatsData?.data;
   const sessions = normalizeSessionList(sessionsData);
-  const totalDeposit =
-    pickMetric(
-      d,
-      "revenue.totalDeposit",
-      "revenue.depositTotal",
-      "revenue.totalDeposits",
-      "revenue.depositsTotal",
-      "revenue.approvedDepositTotal",
-      "revenue.totalApprovedDeposit",
-      "revenue.totalApprovedDeposits",
-      "revenue.allTimeApprovedDeposit",
-      "revenue.allTimeApprovedDeposits",
-      "revenue.total_deposit",
-      "summary.totalDeposit",
-      "summary.depositTotal",
-      "summary.totalDeposits",
-      "summary.depositsTotal",
-      "summary.approvedDepositTotal",
-      "summary.totalApprovedDeposit",
-      "summary.totalApprovedDeposits",
-      "summary.allTimeApprovedDeposit",
-      "summary.allTimeApprovedDeposits",
-      "summary.total_deposit",
-      "totalDeposit",
-      "depositTotal",
-      "totalDeposits",
-      "depositsTotal",
-      "approvedDepositTotal",
-      "totalApprovedDeposit",
-      "totalApprovedDeposits",
-      "allTimeApprovedDeposit",
-      "allTimeApprovedDeposits",
-      "total_deposit",
-    ) ||
-    pickSectionMetric(
-      d,
-      ["deposits", "deposit", "revenue", "summary"],
-      [
-        "totalApprovedAmount",
-        "approvedTotalAmount",
-        "approvedTotal",
-        "totalApproved",
-        "totalApprovedDeposits",
-        "approvedDepositsTotal",
-        "allTimeApprovedAmount",
-        "allTimeAmount",
-        "total_approved_amount",
-        "approvedAmount",
-        "approved_amount",
-        "totalAmount",
-        "amountTotal",
-        "sumAmount",
-        "depositTotal",
-        "totalDeposit",
-        "totalDeposits",
-        "total_amount",
-      ],
-      [
-        "totalApprovedAmount",
-        "approvedTotalAmount",
-        "approvedTotal",
-        "totalApproved",
-        "totalApprovedDeposits",
-        "approvedDepositsTotal",
-        "allTimeApprovedAmount",
-        "allTimeAmount",
-        "total_approved_amount",
-        "approvedAmount",
-        "approved_amount",
-        "depositAmount",
-        "deposit_amount",
-        "depositTotal",
-        "totalDeposit",
-        "totalDeposits",
-      ],
-    ) ||
-    pickMetricFromArray(d?.metrics, [
-      "totalDeposit",
-      "totalDeposits",
-      "approvedDeposit",
-      "approvedDeposits",
-    ]) ||
-    pickMetricFromArray(d?.summary, [
-      "totalDeposit",
-      "totalDeposits",
-      "approvedDeposit",
-      "approvedDeposits",
-    ]) ||
-    0;
-  const totalWithdrawal =
-    pickMetric(
-      d,
-      "revenue.totalWithdrawal",
-      "revenue.withdrawalTotal",
-      "revenue.totalWithdrawals",
-      "revenue.withdrawalsTotal",
-      "revenue.approvedWithdrawalTotal",
-      "revenue.totalApprovedWithdrawal",
-      "revenue.totalApprovedWithdrawals",
-      "revenue.allTimeApprovedWithdrawal",
-      "revenue.allTimeApprovedWithdrawals",
-      "revenue.total_withdrawal",
-      "summary.totalWithdrawal",
-      "summary.withdrawalTotal",
-      "summary.totalWithdrawals",
-      "summary.withdrawalsTotal",
-      "summary.approvedWithdrawalTotal",
-      "summary.totalApprovedWithdrawal",
-      "summary.totalApprovedWithdrawals",
-      "summary.allTimeApprovedWithdrawal",
-      "summary.allTimeApprovedWithdrawals",
-      "summary.total_withdrawal",
-      "totalWithdrawal",
-      "withdrawalTotal",
-      "totalWithdrawals",
-      "withdrawalsTotal",
-      "approvedWithdrawalTotal",
-      "totalApprovedWithdrawal",
-      "totalApprovedWithdrawals",
-      "allTimeApprovedWithdrawal",
-      "allTimeApprovedWithdrawals",
-      "total_withdrawal",
-    ) ||
-    pickSectionMetric(
-      d,
-      ["withdrawals", "withdrawal", "revenue", "summary"],
-      [
-        "totalApprovedAmount",
-        "approvedTotalAmount",
-        "approvedTotal",
-        "totalApproved",
-        "totalApprovedWithdrawals",
-        "approvedWithdrawalsTotal",
-        "allTimeApprovedAmount",
-        "allTimeAmount",
-        "total_approved_amount",
-        "approvedAmount",
-        "approved_amount",
-        "totalAmount",
-        "amountTotal",
-        "sumAmount",
-        "withdrawalTotal",
-        "totalWithdrawal",
-        "totalWithdrawals",
-        "total_amount",
-      ],
-      [
-        "totalApprovedAmount",
-        "approvedTotalAmount",
-        "approvedTotal",
-        "totalApproved",
-        "totalApprovedWithdrawals",
-        "approvedWithdrawalsTotal",
-        "allTimeApprovedAmount",
-        "allTimeAmount",
-        "total_approved_amount",
-        "approvedAmount",
-        "approved_amount",
-        "withdrawalAmount",
-        "withdrawal_amount",
-        "withdrawalTotal",
-        "totalWithdrawal",
-        "totalWithdrawals",
-      ],
-    ) ||
-    pickMetricFromArray(d?.metrics, [
-      "totalWithdrawal",
-      "totalWithdrawals",
-      "approvedWithdrawal",
-      "approvedWithdrawals",
-    ]) ||
-    pickMetricFromArray(d?.summary, [
-      "totalWithdrawal",
-      "totalWithdrawals",
-      "approvedWithdrawal",
-      "approvedWithdrawals",
-    ]) ||
-    0;
-  const adminProfitRaw =
-    pickMetric(
-      d,
-      "revenue.adminProfit",
-      "revenue.admin_profit",
-      "revenue.profit",
-      "revenue.totalProfit",
-      "revenue.profitTotal",
-      "revenue.netRevenue",
-      "revenue.net_revenue",
-      "revenue.depositMinusWithdrawal",
-      "revenue.deposit_minus_withdrawal",
-      "summary.adminProfit",
-      "summary.admin_profit",
-      "summary.profit",
-      "summary.totalProfit",
-      "summary.profitTotal",
-      "summary.netRevenue",
-      "summary.net_revenue",
-      "summary.depositMinusWithdrawal",
-      "summary.deposit_minus_withdrawal",
-      "adminProfit",
-      "admin_profit",
-      "profit",
-      "totalProfit",
-      "profitTotal",
-      "netRevenue",
-      "net_revenue",
-      "depositMinusWithdrawal",
-      "deposit_minus_withdrawal",
-      "revenue.netProfit",
-      "revenue.net_profit",
-      "summary.netProfit",
-      "summary.net_profit",
-    ) ||
-    findMetricDeep(d, [
-      "adminProfit",
-      "admin_profit",
-      "profit",
-      "totalProfit",
-      "profitTotal",
-      "netProfit",
-      "net_profit",
-      "netRevenue",
-      "net_revenue",
-      "depositMinusWithdrawal",
-      "deposit_minus_withdrawal",
-    ]) ||
-    pickMetricFromArray(d?.metrics, [
-      "adminProfit",
-      "profit",
-      "netProfit",
-      "netRevenue",
-    ]) ||
-    pickMetricFromArray(d?.summary, [
-      "adminProfit",
-      "profit",
-      "netProfit",
-      "netRevenue",
-    ]);
-  const adminProfit =
-    adminProfitRaw !== undefined &&
-    adminProfitRaw !== null &&
-    adminProfitRaw !== ""
-      ? Number(adminProfitRaw)
-      : Number(totalDeposit ?? 0) - Number(totalWithdrawal ?? 0);
   const totalUsers = pickFirstValue(
     pickMetric(
       d,
@@ -845,16 +611,30 @@ export default function AdminDashboardPage() {
             })}
           </p>
         </div>
-        <button
-          onClick={() => refetch()}
-          disabled={isFetching}
-          className="flex items-center gap-2 rounded-xl border border-slate-700 bg-slate-800 px-3 py-2 text-xs text-slate-400 hover:text-white hover:border-slate-600 transition-all disabled:opacity-50"
-        >
-          <RefreshCw
-            className={cn("h-3.5 w-3.5", isFetching && "animate-spin")}
-          />
-          Refresh
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowValues((v) => !v)}
+            title={showValues ? "Hide values" : "Show values"}
+            className={cn(
+              "flex h-9 w-9 items-center justify-center rounded-xl border transition-all",
+              showValues
+                ? "border-purple-500/40 bg-purple-500/10 text-purple-400 hover:bg-purple-500/20"
+                : "border-slate-700 bg-slate-800 text-slate-400 hover:text-white hover:border-slate-600"
+            )}
+          >
+            {showValues ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+          </button>
+          <button
+            onClick={() => refetch()}
+            disabled={isFetching}
+            className="flex items-center gap-2 rounded-xl border border-slate-700 bg-slate-800 px-3 py-2 text-xs text-slate-400 hover:text-white hover:border-slate-600 transition-all disabled:opacity-50"
+          >
+            <RefreshCw
+              className={cn("h-3.5 w-3.5", isFetching && "animate-spin")}
+            />
+            Refresh
+          </button>
+        </div>
       </div>
 
       {/* ── Overview ── */}
@@ -862,9 +642,9 @@ export default function AdminDashboardPage() {
         <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-500 mb-3">
           Overview
         </p>
-        <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-5 gap-3">
           {isLoading ? (
-            Array.from({ length: 6 }).map((_, i) => <SkeletonCard key={i} />)
+            Array.from({ length: 5 }).map((_, i) => <SkeletonCard key={i} />)
           ) : (
             <>
               <StatCard
@@ -874,6 +654,7 @@ export default function AdminDashboardPage() {
                 sub="All registered accounts"
                 color="blue"
                 href="/admin/users"
+                showValues={showValues}
               />
               <StatCard
                 icon={UserCheck}
@@ -882,6 +663,7 @@ export default function AdminDashboardPage() {
                 sub="Logged in last 15 days"
                 color="green"
                 href="/admin/users/active"
+                showValues={showValues}
               />
               <StatCard
                 icon={Activity}
@@ -889,6 +671,7 @@ export default function AdminDashboardPage() {
                 value={fmt(newUsersToday)}
                 sub="Registered today"
                 color="cyan"
+                showValues={showValues}
               />
               <StatCard
                 icon={Clock}
@@ -897,6 +680,7 @@ export default function AdminDashboardPage() {
                 sub="Awaiting review"
                 color="yellow"
                 href="/admin/deposits"
+                showValues={showValues}
               />
               <StatCard
                 icon={Clock}
@@ -905,58 +689,8 @@ export default function AdminDashboardPage() {
                 sub="Awaiting approval"
                 color="red"
                 href="/admin/withdrawals"
+                showValues={showValues}
               />
-              <StatCard
-                icon={TrendingUp}
-                label="Admin Profit"
-                value={`Rs ${fmt(Math.abs(adminProfit))}`}
-                sub={adminProfit >= 0 ? "Deposit − Withdrawal" : "Net Loss"}
-                color="yellow"
-              />
-            </>
-          )}
-        </div>
-      </section>
-
-      {/* ── Revenue Summary ── */}
-      <section>
-        <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-500 mb-3">
-          Revenue Summary
-        </p>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          {isLoading ? (
-            Array.from({ length: 3 }).map((_, i) => <SkeletonCard key={i} />)
-          ) : (
-            <>
-              <div className="relative overflow-hidden rounded-2xl border border-emerald-500/20 bg-slate-800/50 p-4">
-                <div className="absolute top-0 left-0 right-0 h-px bg-linear-to-r from-transparent via-emerald-500/60 to-transparent" />
-                <div className="flex h-9 w-9 items-center justify-center rounded-xl border bg-emerald-500/10 border-emerald-500/30 text-emerald-400 mb-3">
-                  <ArrowDownToLine className="h-4 w-4" />
-                </div>
-                <p className="text-2xl font-bold text-emerald-400 font-mono">Rs {fmt(totalDeposit)}</p>
-                <p className="text-xs text-slate-400 mt-0.5">Total Deposits</p>
-                <p className="text-[10px] text-slate-600 mt-0.5">All-time approved</p>
-              </div>
-              <div className="relative overflow-hidden rounded-2xl border border-red-500/20 bg-slate-800/50 p-4">
-                <div className="absolute top-0 left-0 right-0 h-px bg-linear-to-r from-transparent via-red-500/60 to-transparent" />
-                <div className="flex h-9 w-9 items-center justify-center rounded-xl border bg-red-500/10 border-red-500/30 text-red-400 mb-3">
-                  <ArrowUpFromLine className="h-4 w-4" />
-                </div>
-                <p className="text-2xl font-bold text-red-400 font-mono">Rs {fmt(totalWithdrawal)}</p>
-                <p className="text-xs text-slate-400 mt-0.5">Total Withdrawals</p>
-                <p className="text-[10px] text-slate-600 mt-0.5">All-time approved</p>
-              </div>
-              <div className="relative overflow-hidden rounded-2xl border border-yellow-500/20 bg-slate-800/50 p-4">
-                <div className="absolute top-0 left-0 right-0 h-px bg-linear-to-r from-transparent via-yellow-500/60 to-transparent" />
-                <div className="flex h-9 w-9 items-center justify-center rounded-xl border bg-yellow-500/10 border-yellow-500/30 text-yellow-400 mb-3">
-                  <TrendingUp className="h-4 w-4" />
-                </div>
-                <p className={cn("text-2xl font-bold font-mono", adminProfit >= 0 ? "text-yellow-400" : "text-red-400")}>
-                  Rs {fmt(Math.abs(adminProfit))}
-                </p>
-                <p className="text-xs text-slate-400 mt-0.5">Admin {adminProfit >= 0 ? "Profit" : "Loss"}</p>
-                <p className="text-[10px] text-slate-600 mt-0.5">Deposit − Withdrawal</p>
-              </div>
             </>
           )}
         </div>
@@ -972,9 +706,9 @@ export default function AdminDashboardPage() {
             Array.from({ length: 3 }).map((_, i) => <SkeletonCard key={i} />)
           ) : (
             <>
-              <StatCard icon={ArrowDownToLine} label="Today's Deposits" value={`Rs ${fmt(depositsTodayTotal)}`} sub={`${fmt(depositsTodayCount)} transactions`} color="green" />
-              <StatCard icon={CheckCircle} label="Approved Today" value={fmt(depositsTodayCount)} sub="Deposit requests" color="green" />
-              <StatCard icon={Smartphone} label="SMS Auto Deposit" value={fmt(smsStats?.today ?? 0)} sub={smsStats?.isEnabled ? `${fmt(smsStats?.matched ?? 0)} matched` : "Currently disabled"} color={smsStats?.isEnabled ? "cyan" : "red"} href="/admin/sms-auto-deposit" />
+              <StatCard icon={ArrowDownToLine} label="Today's Deposits" value={`Rs ${fmt(depositsTodayTotal)}`} sub={`${fmt(depositsTodayCount)} transactions`} color="green" showValues={showValues} />
+              <StatCard icon={CheckCircle} label="Approved Today" value={fmt(depositsTodayCount)} sub="Deposit requests" color="green" showValues={showValues} />
+              <StatCard icon={Smartphone} label="SMS Auto Deposit" value={fmt(smsStats?.today ?? 0)} sub={smsStats?.isEnabled ? `${fmt(smsStats?.matched ?? 0)} matched` : "Currently disabled"} color={smsStats?.isEnabled ? "cyan" : "red"} href="/admin/sms-auto-deposit" showValues={showValues} />
             </>
           )}
         </div>
@@ -990,8 +724,8 @@ export default function AdminDashboardPage() {
             Array.from({ length: 2 }).map((_, i) => <SkeletonCard key={i} />)
           ) : (
             <>
-              <StatCard icon={ArrowUpFromLine} label="Today's Withdrawals" value={`Rs ${fmt(withdrawalsTodayTotal)}`} sub={`${fmt(withdrawalsTodayCount)} transactions`} color="purple" />
-              <StatCard icon={Wallet} label="Processed Today" value={fmt(withdrawalsTodayCount)} sub="Withdrawal requests" color="purple" />
+              <StatCard icon={ArrowUpFromLine} label="Today's Withdrawals" value={`Rs ${fmt(withdrawalsTodayTotal)}`} sub={`${fmt(withdrawalsTodayCount)} transactions`} color="purple" showValues={showValues} />
+              <StatCard icon={Wallet} label="Processed Today" value={fmt(withdrawalsTodayCount)} sub="Withdrawal requests" color="purple" showValues={showValues} />
             </>
           )}
         </div>
@@ -1007,8 +741,8 @@ export default function AdminDashboardPage() {
             Array.from({ length: 2 }).map((_, i) => <SkeletonCard key={i} />)
           ) : (
             <>
-              <StatCard icon={TrendingUp} label="Total Bets Today" value={fmt(betsTodayCount)} sub="All games combined" color="cyan" />
-              <StatCard icon={Gamepad2} label="Thai Lottery" value={fmt(thaiBetsTodayCount)} sub="Bets placed today" color="blue" href="/admin/thai-lottery" />
+              <StatCard icon={TrendingUp} label="Total Bets Today" value={fmt(betsTodayCount)} sub="All games combined" color="cyan" showValues={showValues} />
+              <StatCard icon={Gamepad2} label="Thai Lottery" value={fmt(thaiBetsTodayCount)} sub="Bets placed today" color="blue" href="/admin/thai-lottery" showValues={showValues} />
             </>
           )}
         </div>

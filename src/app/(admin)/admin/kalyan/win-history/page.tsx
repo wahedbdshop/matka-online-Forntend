@@ -119,7 +119,14 @@ function KalyanWinHistoryPageContent() {
     refetchOnMount: "always",
   });
 
-  const markets: any[] = marketsData?.data?.markets ?? marketsData?.data ?? [];
+  const markets: any[] = Array.from(
+    new Map(
+      (marketsData?.data?.markets ?? marketsData?.data ?? []).map((m: any) => [
+        (m.name ?? m.marketName ?? m.title ?? "").trim().toLowerCase(),
+        m,
+      ])
+    ).values()
+  );
   const rawEntries: any[] = Array.isArray(data?.data?.entries)
     ? data.data.entries
     : Array.isArray(data?.data)

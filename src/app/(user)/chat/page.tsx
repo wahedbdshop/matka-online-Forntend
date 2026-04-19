@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -14,6 +14,10 @@ import {
   Loader2,
   Wifi,
   WifiOff,
+  ImageIcon,
+  Mic,
+  Square,
+  MicOff,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -29,40 +33,46 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { ChatService } from "@/services/chat.service";
 import { useAuthStore } from "@/store/auth.store";
 import { useSocket } from "@/hooks/use-socket";
+import { useVoiceRecorder } from "@/hooks/use-voice-recorder";
 import { cn } from "@/lib/utils";
+import {
+  AudioBubble,
+  ImageBubble,
+  ImagePreviewModal,
+} from "@/components/chat/media-bubbles";
+import { CHAT_SESSION_KEY } from "@/components/user/chat-reply-popup";
 
 interface Message {
   id?: string;
   role: "USER" | "AI" | "AGENT";
-  message: string;
+  message: string | null;
+  imageUrl?: string | null;
+  voiceUrl?: string | null;
   createdAt?: string;
   isLoading?: boolean;
 }
 
 const hasRecentDuplicate = (
   list: Message[],
-  incoming: Pick<Message, "role" | "message">,
+  incoming: Pick<Message, "role" | "message" | "imageUrl" | "voiceUrl">,
 ) =>
   list.some((msg) => {
     if (msg.isLoading) return false;
-    if (msg.role !== incoming.role || msg.message !== incoming.message) {
-      return false;
-    }
+    if (incoming.imageUrl || incoming.voiceUrl) return false;
+    if (msg.role !== incoming.role || msg.message !== incoming.message) return false;
     if (!msg.createdAt) return true;
     return Date.now() - new Date(msg.createdAt).getTime() < 10000;
   });
 
-const isUnavailableAiMessage = (message?: string) =>
+const isUnavailableAiMessage = (message?: string | null) =>
   !!message &&
   /temporarily unavailable|request a live agent|try again later/i.test(message);
 
-const getDisplayMessage = (message?: string) => {
+const getDisplayMessage = (message?: string | null) => {
   if (!message) return "";
-
   if (isUnavailableAiMessage(message)) {
     return "AI support is temporarily unavailable right now. Please try again later or request a live agent for help.";
   }
-
   return message;
 };
 
@@ -76,8 +86,12 @@ export default function ChatPage() {
   const [showAgentDialog, setShowAgentDialog] = useState(false);
   const [agentIdentifier, setAgentIdentifier] = useState("");
   const [sessionStatus, setSessionStatus] = useState("AI_HANDLING");
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [showMicDeniedDialog, setShowMicDeniedDialog] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const imageInputRef = useRef<HTMLInputElement>(null);
   const { isConnected, joinSession, onNewMessage, onAgentJoined } = useSocket();
+  const { isRecording, micPermission, startRecording, stopRecording } = useVoiceRecorder();
 
   // Start session
   const { mutate: startSession, isPending: isStarting } = useMutation({
@@ -86,38 +100,35 @@ export default function ChatPage() {
       const session = data.data;
       setSessionId(session.id);
       setSessionStatus(session.status);
+      localStorage.setItem(CHAT_SESSION_KEY, session.id);
 
-      // existing messages load
       if (session.messages?.length > 0) {
         setMessages(session.messages);
       } else {
-        // welcome message
         setMessages([
           {
             role: "AI",
-            message:
-              "Hello! I'm your AI assistant. How can I help you today? 😊",
+            message: "Hello! I'm your AI assistant. How can I help you today? 😊",
             createdAt: new Date().toISOString(),
           },
         ]);
       }
-
       joinSession(session.id);
     },
-    onError: () => {
-      toast.error("Failed to start chat session");
-    },
+    onError: () => toast.error("Failed to start chat session"),
+  });
+
+  // Send media
+  const { mutate: sendMedia, isPending: isSendingMedia } = useMutation({
+    mutationFn: ({ sid, fd }: { sid: string; fd: FormData }) =>
+      ChatService.sendMedia(sid, fd),
+    onError: () => toast.error("Failed to send media"),
   });
 
   // Request agent
   const { mutate: requestAgent, isPending: isRequestingAgent } = useMutation({
-    mutationFn: ({
-      sessionId,
-      identifier,
-    }: {
-      sessionId: string;
-      identifier: string;
-    }) => ChatService.requestAgent(sessionId, identifier),
+    mutationFn: ({ sessionId, identifier }: { sessionId: string; identifier: string }) =>
+      ChatService.requestAgent(sessionId, identifier),
     onSuccess: () => {
       setShowAgentDialog(false);
       setSessionStatus("WAITING_AGENT");
@@ -148,7 +159,6 @@ export default function ChatPage() {
   useEffect(() => {
     const session = sessionData?.data;
     if (!session) return;
-
     setSessionStatus(session.status);
 
     if (session.messages?.length > 0) {
@@ -166,9 +176,7 @@ export default function ChatPage() {
         const hasLoading = prev.some((msg) => msg.isLoading);
         const sameLength = dedupedMessages.length === prev.length;
 
-        if (!hasLoading && sameLength && lastLocalMessage?.message) {
-          return prev;
-        }
+        if (!hasLoading && sameLength && lastLocalMessage?.message) return prev;
 
         setIsSending(false);
         return dedupedMessages;
@@ -176,36 +184,28 @@ export default function ChatPage() {
     }
   }, [sessionData]);
 
-  // Auto scroll
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // Start session on mount
   useEffect(() => {
     startSession();
-    // `mutate` identity can vary between renders; run once on mount.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Join session once socket is actually connected
   useEffect(() => {
     if (!sessionId || !isConnected) return;
     joinSession(sessionId);
   }, [sessionId, isConnected, joinSession]);
 
-  // Socket listeners
   useEffect(() => {
     if (!sessionId) return;
 
     const unsubMessage = onNewMessage((data: Message) => {
       setIsSending(false);
       setMessages((prev) => {
-        // loading message remove করুন
         const filtered = prev.filter((m) => !m.isLoading);
-        if (hasRecentDuplicate(filtered, data)) {
-          return filtered;
-        }
+        if (hasRecentDuplicate(filtered, data)) return filtered;
         return [...filtered, { ...data, createdAt: new Date().toISOString() }];
       });
     });
@@ -214,11 +214,7 @@ export default function ChatPage() {
       setSessionStatus("AGENT_HANDLING");
       setMessages((prev) => [
         ...prev,
-        {
-          role: "AGENT",
-          message: data.message,
-          createdAt: new Date().toISOString(),
-        },
+        { role: "AGENT", message: data.message, createdAt: new Date().toISOString() },
       ]);
       toast.success("An agent has joined the chat!");
     });
@@ -231,39 +227,27 @@ export default function ChatPage() {
 
   const handleSend = async () => {
     if (!inputMessage.trim() || !sessionId || isSending) return;
-
     const messageText = inputMessage.trim();
-
     const userMessage: Message = {
       role: "USER",
       message: messageText,
       createdAt: new Date().toISOString(),
     };
 
-    // optimistic update
     setMessages((prev) => [...prev, userMessage]);
 
     if (sessionStatus === "AI_HANDLING") {
-      // AI loading indicator
       setMessages((prev) => [
         ...prev,
-        {
-          role: "AI",
-          message: "",
-          isLoading: true,
-          createdAt: new Date().toISOString(),
-        },
+        { role: "AI", message: "", isLoading: true, createdAt: new Date().toISOString() },
       ]);
     }
 
     setIsSending(true);
-
     try {
       await ChatService.sendMessage(sessionId, messageText);
       setInputMessage("");
-      setTimeout(() => {
-        void refetchSession();
-      }, 600);
+      setTimeout(() => { void refetchSession(); }, 600);
     } catch (error: any) {
       setIsSending(false);
       setMessages((prev) =>
@@ -280,6 +264,36 @@ export default function ChatPage() {
     }
   };
 
+  const handleImageFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !sessionId) return;
+    const fd = new FormData();
+    fd.append("file", file);
+    sendMedia({ sid: sessionId, fd });
+    e.target.value = "";
+  };
+
+  const handleMicPointerDown = useCallback(
+    async (e: React.PointerEvent<HTMLButtonElement>) => {
+      if (micPermission === "denied") {
+        setShowMicDeniedDialog(true);
+        return;
+      }
+      e.currentTarget.setPointerCapture(e.pointerId);
+      const ok = await startRecording();
+      if (!ok) setShowMicDeniedDialog(true);
+    },
+    [startRecording, micPermission],
+  );
+
+  const handleMicPointerUp = useCallback(async () => {
+    const blob = await stopRecording();
+    if (!blob || !sessionId) return;
+    const fd = new FormData();
+    fd.append("file", blob, "voice.webm");
+    sendMedia({ sid: sessionId, fd });
+  }, [stopRecording, sessionId, sendMedia]);
+
   const handleRequestAgent = () => {
     if (!agentIdentifier.trim()) {
       toast.error("Please enter your email or username");
@@ -291,15 +305,9 @@ export default function ChatPage() {
   const getRoleBadge = (role: string) => {
     switch (role) {
       case "AI":
-        return (
-          <Badge className="text-[10px] bg-blue-500/20 text-blue-400">AI</Badge>
-        );
+        return <Badge className="text-[10px] bg-blue-500/20 text-blue-400">AI</Badge>;
       case "AGENT":
-        return (
-          <Badge className="text-[10px] bg-green-500/20 text-green-400">
-            Agent
-          </Badge>
-        );
+        return <Badge className="text-[10px] bg-green-500/20 text-green-400">Agent</Badge>;
       default:
         return null;
     }
@@ -310,15 +318,9 @@ export default function ChatPage() {
       case "AI_HANDLING":
         return { label: "AI Support", color: "bg-blue-500/20 text-blue-400" };
       case "WAITING_AGENT":
-        return {
-          label: "Waiting for Agent",
-          color: "bg-yellow-500/20 text-yellow-400",
-        };
+        return { label: "Waiting for Agent", color: "bg-yellow-500/20 text-yellow-400" };
       case "AGENT_HANDLING":
-        return {
-          label: "Live Agent",
-          color: "bg-green-500/20 text-green-400",
-        };
+        return { label: "Live Agent", color: "bg-green-500/20 text-green-400" };
       case "CLOSED":
         return { label: "Closed", color: "bg-slate-500/20 text-slate-400" };
       default:
@@ -336,8 +338,24 @@ export default function ChatPage() {
     router.push("/");
   };
 
+  const isBusy = isSending || isSendingMedia || isRecording;
+
   return (
     <div className="flex flex-col h-[calc(100vh-8rem)]">
+      {/* Hidden image input */}
+      <input
+        ref={imageInputRef}
+        type="file"
+        accept="image/jpeg,image/png,image/gif,image/webp"
+        className="hidden"
+        onChange={handleImageFileChange}
+      />
+
+      {/* Image preview modal */}
+      {previewUrl && (
+        <ImagePreviewModal url={previewUrl} onClose={() => setPreviewUrl(null)} />
+      )}
+
       <div className="mb-1.5">
         <Button
           variant="ghost"
@@ -381,9 +399,7 @@ export default function ChatPage() {
               </div>
               <div>
                 <p className="text-white text-sm font-medium">
-                  {sessionStatus === "AGENT_HANDLING"
-                    ? "Live Agent"
-                    : "AI Assistant"}
+                  {sessionStatus === "AGENT_HANDLING" ? "Live Agent" : "AI Assistant"}
                 </p>
                 <div className="flex items-center gap-1.5">
                   <Badge className={cn("text-[10px]", statusInfo.color)}>
@@ -433,7 +449,7 @@ export default function ChatPage() {
           </div>
         ) : (
           <>
-              {messages.map((msg, index) => (
+            {messages.map((msg, index) => (
               <div
                 key={index}
                 className={cn("flex gap-2", {
@@ -441,9 +457,8 @@ export default function ChatPage() {
                   "justify-start": msg.role !== "USER",
                 })}
               >
-                {/* Avatar for AI/Agent */}
                 {msg.role !== "USER" && (
-                  <Avatar className="h-7 w-7 flex-shrink-0 mt-1">
+                  <Avatar className="h-7 w-7 shrink-0 mt-1">
                     <AvatarFallback
                       className={cn("text-xs", {
                         "bg-blue-600/20": msg.role === "AI",
@@ -464,24 +479,19 @@ export default function ChatPage() {
                     "items-end": msg.role === "USER",
                   })}
                 >
-                  {/* Role badge */}
                   {msg.role !== "USER" && (
                     <div className="flex items-center gap-1 px-1">
                       {getRoleBadge(msg.role)}
                     </div>
                   )}
 
-                  {/* Message bubble */}
                   <div
                     className={cn("rounded-2xl px-4 py-2.5", {
-                      "bg-purple-600 text-white rounded-tr-sm":
-                        msg.role === "USER",
+                      "bg-purple-600 text-white rounded-tr-sm": msg.role === "USER",
                       "bg-slate-700 text-slate-100 rounded-tl-sm":
-                        msg.role === "AI" &&
-                        !isUnavailableAiMessage(msg.message),
+                        msg.role === "AI" && !isUnavailableAiMessage(msg.message),
                       "rounded-tl-sm border border-amber-500/30 bg-amber-500/10 text-amber-100":
-                        msg.role === "AI" &&
-                        isUnavailableAiMessage(msg.message),
+                        msg.role === "AI" && isUnavailableAiMessage(msg.message),
                       "bg-green-600/20 text-white border border-green-500/30 rounded-tl-sm":
                         msg.role === "AGENT",
                     })}
@@ -492,14 +502,17 @@ export default function ChatPage() {
                         <div className="w-2 h-2 rounded-full bg-slate-400 animate-bounce [animation-delay:-0.15s]" />
                         <div className="w-2 h-2 rounded-full bg-slate-400 animate-bounce" />
                       </div>
+                    ) : msg.imageUrl ? (
+                      <ImageBubble url={msg.imageUrl} onPreview={setPreviewUrl} />
+                    ) : msg.voiceUrl ? (
+                      <AudioBubble url={msg.voiceUrl} />
                     ) : (
                       <div className="space-y-2">
-                        {msg.role === "AI" &&
-                          isUnavailableAiMessage(msg.message) && (
-                            <div className="inline-flex items-center rounded-full border border-amber-400/25 bg-amber-400/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-amber-300">
-                              AI Unavailable
-                            </div>
-                          )}
+                        {msg.role === "AI" && isUnavailableAiMessage(msg.message) && (
+                          <div className="inline-flex items-center rounded-full border border-amber-400/25 bg-amber-400/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-amber-300">
+                            AI Unavailable
+                          </div>
+                        )}
                         <p className="text-sm leading-relaxed whitespace-pre-wrap">
                           {getDisplayMessage(msg.message)}
                         </p>
@@ -521,7 +534,6 @@ export default function ChatPage() {
                     )}
                   </div>
 
-                  {/* Timestamp */}
                   {msg.createdAt && !msg.isLoading && (
                     <p
                       className={cn("text-[10px] text-slate-500 px-1", {
@@ -536,9 +548,8 @@ export default function ChatPage() {
                   )}
                 </div>
 
-                {/* Avatar for User */}
                 {msg.role === "USER" && (
-                  <Avatar className="h-7 w-7 flex-shrink-0 mt-1">
+                  <Avatar className="h-7 w-7 shrink-0 mt-1">
                     <AvatarFallback className="bg-purple-600/20 text-xs text-purple-400">
                       {user?.name?.charAt(0)?.toUpperCase()}
                     </AvatarFallback>
@@ -547,7 +558,6 @@ export default function ChatPage() {
               </div>
             ))}
 
-            {/* Waiting for agent */}
             {sessionStatus === "WAITING_AGENT" && (
               <div className="flex justify-center">
                 <Badge className="bg-yellow-500/20 text-yellow-400 animate-pulse">
@@ -557,12 +567,9 @@ export default function ChatPage() {
               </div>
             )}
 
-            {/* Session closed */}
             {sessionStatus === "CLOSED" && (
               <div className="flex justify-center">
-                <Badge className="bg-slate-500/20 text-slate-400">
-                  Session ended
-                </Badge>
+                <Badge className="bg-slate-500/20 text-slate-400">Session ended</Badge>
               </div>
             )}
 
@@ -573,6 +580,17 @@ export default function ChatPage() {
 
       {/* Input */}
       <div className="bg-slate-800/50 border-t border-slate-700 p-3">
+        {/* Recording indicator */}
+        {isRecording && (
+          <div className="mb-2 flex items-center gap-2 rounded-full bg-red-500/15 px-3 py-1.5">
+            <span className="h-2 w-2 animate-pulse rounded-full bg-red-500" />
+            <span className="flex-1 text-xs font-medium text-red-400">
+              Recording… release to send
+            </span>
+            <Square className="h-3 w-3 text-red-400" />
+          </div>
+        )}
+
         {sessionStatus === "CLOSED" ? (
           <Button
             onClick={() => startSession()}
@@ -589,20 +607,63 @@ export default function ChatPage() {
               placeholder={
                 sessionStatus === "WAITING_AGENT"
                   ? "Waiting for agent..."
+                  : isRecording
+                  ? "Recording…"
                   : "Type a message..."
               }
-              disabled={isSending || sessionStatus === "WAITING_AGENT"}
+              disabled={isBusy || sessionStatus === "WAITING_AGENT"}
               className="flex-1 bg-slate-700/50 border-slate-600 text-white placeholder:text-slate-500"
             />
+
+            {/* Image button */}
+            <button
+              type="button"
+              onClick={() => imageInputRef.current?.click()}
+              disabled={isBusy || sessionStatus === "WAITING_AGENT" || !sessionId}
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-slate-700 text-slate-300 transition-colors hover:bg-slate-600 hover:text-white disabled:opacity-40"
+              aria-label="Send image"
+            >
+              {isSendingMedia ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <ImageIcon className="h-4 w-4" />
+              )}
+            </button>
+
+            {/* Mic button — press & hold */}
+            <button
+              type="button"
+              onPointerDown={handleMicPointerDown}
+              onPointerUp={handleMicPointerUp}
+              onPointerCancel={handleMicPointerUp}
+              disabled={sessionStatus === "WAITING_AGENT" || !sessionId || isSendingMedia || micPermission === "unsupported"}
+              className={cn(
+                "flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition-colors disabled:opacity-40",
+                isRecording
+                  ? "bg-red-500 text-white shadow-[0_0_12px_rgba(239,68,68,0.6)]"
+                  : micPermission === "denied"
+                  ? "bg-slate-700 text-red-400 hover:bg-red-500/20"
+                  : "bg-slate-700 text-slate-300 hover:bg-slate-600 hover:text-white",
+              )}
+              aria-label="Record voice message"
+            >
+              {micPermission === "denied" ? (
+                <MicOff className="h-4 w-4" />
+              ) : (
+                <Mic className="h-4 w-4" />
+              )}
+            </button>
+
+            {/* Send button */}
             <Button
               onClick={handleSend}
               disabled={
                 !inputMessage.trim() ||
-                isSending ||
+                isBusy ||
                 sessionStatus === "WAITING_AGENT"
               }
               size="icon"
-              className="bg-purple-600 hover:bg-purple-700 flex-shrink-0"
+              className="bg-purple-600 hover:bg-purple-700 shrink-0"
             >
               {isSending ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
@@ -613,8 +674,7 @@ export default function ChatPage() {
           </div>
         )}
 
-        {/* Quick replies */}
-        {sessionStatus === "AI_HANDLING" && (
+        {sessionStatus === "AI_HANDLING" && !isRecording && (
           <div className="mt-2 flex flex-wrap gap-2">
             {[
               "How to deposit?",
@@ -635,6 +695,37 @@ export default function ChatPage() {
         )}
       </div>
 
+      {/* Microphone Permission Denied Dialog */}
+      <Dialog open={showMicDeniedDialog} onOpenChange={setShowMicDeniedDialog}>
+        <DialogContent className="bg-slate-800 border-slate-700 text-white max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="text-white flex items-center gap-2">
+              <MicOff className="h-5 w-5 text-red-400" />
+              Microphone Access Blocked
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-slate-300 text-sm">
+              Voice messages need microphone access. Please allow it in your browser settings.
+            </p>
+            <div className="rounded-lg bg-slate-700/50 p-3 space-y-2 text-xs text-slate-400">
+              <p className="font-semibold text-slate-300">How to allow microphone:</p>
+              <ol className="list-decimal list-inside space-y-1">
+                <li>Click the <span className="text-white font-medium">🔒 lock icon</span> in the browser address bar</li>
+                <li>Find <span className="text-white font-medium">Microphone</span> and set it to <span className="text-green-400 font-medium">Allow</span></li>
+                <li>Reload the page and try again</li>
+              </ol>
+            </div>
+            <Button
+              onClick={() => setShowMicDeniedDialog(false)}
+              className="w-full bg-purple-600 hover:bg-purple-700"
+            >
+              Got it
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {/* Agent Request Dialog */}
       <Dialog open={showAgentDialog} onOpenChange={setShowAgentDialog}>
         <DialogContent className="bg-slate-800 border-slate-700 text-white">
@@ -649,9 +740,7 @@ export default function ChatPage() {
               Please provide your email or username so the agent can identify you.
             </p>
             <div className="space-y-2">
-              <label className="text-slate-300 text-sm">
-                Email or Username
-              </label>
+              <label className="text-slate-300 text-sm">Email or Username</label>
               <Input
                 value={agentIdentifier}
                 onChange={(e) => setAgentIdentifier(e.target.value)}

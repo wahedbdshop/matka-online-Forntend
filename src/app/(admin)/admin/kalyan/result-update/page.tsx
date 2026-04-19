@@ -100,7 +100,14 @@ export default function KalyanResultUpdatePage() {
       }),
   });
 
-  const markets: any[] = marketsData?.data?.markets ?? marketsData?.data ?? [];
+  const markets: any[] = Array.from(
+    new Map(
+      (marketsData?.data?.markets ?? marketsData?.data ?? []).map((m: any) => [
+        (m.name ?? m.marketName ?? m.title ?? "").trim().toLowerCase(),
+        m,
+      ])
+    ).values()
+  );
   const results: any[] = data?.data?.results ?? data?.data ?? [];
   const total: number = data?.data?.total ?? results.length;
   const totalPages = Math.ceil(total / LIMIT);

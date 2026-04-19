@@ -23,6 +23,49 @@ const DEFAULT_KALYAN_RATES = [
 ];
 
 const KALYAN_RATES_CACHE_KEY = "public-kalyan-rates-cache-v1";
+const PUBLIC_REQUEST_CONFIG = {
+  withCredentials: false,
+};
+
+const getErrorStatus = (error: unknown) =>
+  typeof error === "object" &&
+  error !== null &&
+  "response" in error &&
+  typeof error.response === "object" &&
+  error.response !== null &&
+  "status" in error.response
+    ? error.response.status
+    : null;
+
+const getPublicReadClients = () =>
+  useAuthStore.getState().token ? [api, publicApi] : [publicApi];
+
+const optionalAuthPublicGet = async <T>(path: string) => {
+  const clients = getPublicReadClients();
+  let lastError: unknown;
+
+  for (const client of clients) {
+    try {
+      return await client.get<T>(
+        path,
+        client === publicApi ? PUBLIC_REQUEST_CONFIG : undefined,
+      );
+    } catch (error) {
+      lastError = error;
+      const status = getErrorStatus(error);
+      const canTryFallbackClient =
+        client === api &&
+        clients.length > 1 &&
+        (status === 401 || status === 403 || status === 404);
+
+      if (!canTryFallbackClient) {
+        throw error;
+      }
+    }
+  }
+
+  throw lastError;
+};
 
 const normalizeRateItem = (item: any) => ({
   ...item,
@@ -327,36 +370,75 @@ const normalizePublishedResults = (items: any[] = []) => {
 export const KalyanUserService = {
   // ─── Markets ──────────────────────────────────────────────────────────────
   getActiveMarkets: async (params?: { limit?: number; includeInactive?: boolean }) => {
-    const requestMarkets = async (withLimit: boolean) => {
+    const requestMarkets = async (options: {
+      withLimit: boolean;
+      includeInactive: boolean;
+    }) => {
       const queryParams: Record<string, string> = {};
-      if (withLimit) queryParams.limit = String(params?.limit ?? MARKET_LIST_LIMIT);
-      if (params?.includeInactive) queryParams.status = "all";
+      if (options.withLimit) {
+        queryParams.limit = String(params?.limit ?? MARKET_LIST_LIMIT);
+      }
+      if (options.includeInactive) {
+        queryParams.status = "all";
+      }
       const q = new URLSearchParams(queryParams).toString();
 
       const path = q ? `${BASE}/markets/public?${q}` : `${BASE}/markets/public`;
-      return publicApi.get<ApiResponse<any>>(path);
+      return optionalAuthPublicGet<ApiResponse<any>>(path);
     };
 
-    let res: Awaited<ReturnType<typeof requestMarkets>>;
+    const attempts = [
+      {
+        withLimit: true,
+        includeInactive: Boolean(params?.includeInactive),
+      },
+      {
+        withLimit: false,
+        includeInactive: Boolean(params?.includeInactive),
+      },
+      {
+        withLimit: true,
+        includeInactive: false,
+      },
+      {
+        withLimit: false,
+        includeInactive: false,
+      },
+    ].filter(
+      (attempt, index, allAttempts) =>
+        allAttempts.findIndex(
+          (candidate) =>
+            candidate.withLimit === attempt.withLimit &&
+            candidate.includeInactive === attempt.includeInactive,
+        ) === index,
+    );
 
-    try {
-      res = await requestMarkets(true);
-    } catch (error) {
-      const status =
-        typeof error === "object" &&
-        error !== null &&
-        "response" in error &&
-        typeof error.response === "object" &&
-        error.response !== null &&
-        "status" in error.response
-          ? error.response.status
-          : null;
+    let res: Awaited<ReturnType<typeof requestMarkets>> | null = null;
+    let lastError: unknown;
 
-      if (status !== 400 && status !== 404 && status !== 422) {
-        throw error;
+    for (const attempt of attempts) {
+      try {
+        res = await requestMarkets(attempt);
+        break;
+      } catch (error) {
+        lastError = error;
+        const status = getErrorStatus(error);
+
+        const canRetryWithoutLimit =
+          attempt.withLimit &&
+          (status === 400 || status === 404 || status === 422);
+        const canRetryWithoutInactive =
+          attempt.includeInactive &&
+          (status === 401 || status === 403 || status === 404 || status === 422);
+
+        if (!canRetryWithoutLimit && !canRetryWithoutInactive) {
+          throw error;
+        }
       }
+    }
 
-      res = await requestMarkets(false);
+    if (!res) {
+      throw lastError;
     }
 
     const markets = Array.isArray(res.data?.data)
@@ -386,7 +468,7 @@ export const KalyanUserService = {
   },
 
   getMarketTiming: async (marketId: string) => {
-    const res = await publicApi.get<ApiResponse<any>>(
+    const res = await optionalAuthPublicGet<ApiResponse<any>>(
       `${BASE}/markets/${marketId}/timing/public`,
     );
     return res.data;
@@ -405,7 +487,7 @@ export const KalyanUserService = {
       ...(params?.marketId ? { marketId: params.marketId } : {}),
       ...(params?.date ? { date: params.date } : {}),
     });
-    const res = await publicApi.get<ApiResponse<any>>(
+    const res = await optionalAuthPublicGet<ApiResponse<any>>(
       `${BASE}/public-results?${q}`,
     );
     const results = Array.isArray(res.data?.data)
@@ -435,7 +517,7 @@ export const KalyanUserService = {
   },
 
   getPublishedResultById: async (id: string) => {
-    const res = await publicApi.get<ApiResponse<any>>(
+    const res = await optionalAuthPublicGet<ApiResponse<any>>(
       `${BASE}/public-results/${id}`,
     );
     return res.data;

@@ -2,6 +2,7 @@ import { cookies } from "next/headers";
 import { TopHeader } from "@/components/user/top-header";
 import { BottomNav } from "@/components/user/bottom-nav";
 import { BackToAdminBar } from "@/components/admin/BackToAdminBar";
+import { ChatReplyPopup } from "@/components/user/chat-reply-popup";
 
 export default async function UserLayout({
   children,
@@ -22,6 +23,7 @@ export default async function UserLayout({
       </main>
       <BottomNav />
       <BackToAdminBar />
+      <ChatReplyPopup />
     </div>
   );
 }

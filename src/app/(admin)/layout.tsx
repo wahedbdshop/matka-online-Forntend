@@ -42,6 +42,7 @@ import {
   Trash2,
   Smartphone,
   UserCircle,
+  ReceiptText,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -70,6 +71,7 @@ interface NavItem {
   exact?: boolean;
   children?: NavChild[];
   section?: string; // section divider label above this item
+  color?: "purple" | "blue"; // accent color override
 }
 
 // ─── Nav Data ─────────────────────────────────────────────────
@@ -170,8 +172,18 @@ const navItems: NavItem[] = [
   },
 
   {
+    href: "/admin/user-transactions",
+    icon: ReceiptText,
+    label: "User Transactions",
+    section: "Transfers",
+    color: "blue",
+    exact: true,
+  },
+
+  {
     icon: ArrowLeftRight,
     label: "Transfers",
+    color: "blue",
     children: [
       { href: "/admin/transfers", icon: ListChecks, label: "All Transfers" },
       {
@@ -490,6 +502,13 @@ function NavItemRow({
   pathname: string;
   onClose?: () => void;
 }) {
+  const color = item.color ?? "purple";
+
+  const activeParentBg   = color === "blue" ? "bg-blue-600/20 border-blue-500/30"   : "bg-purple-600/20 border-purple-500/30";
+  const activeParentText = color === "blue" ? "text-blue-400"                        : "text-purple-400";
+  const activeChildBg    = color === "blue" ? "bg-blue-600/15 text-blue-400"         : "bg-purple-600/15 text-purple-400";
+  const borderL          = color === "blue" ? "border-blue-500/30"                   : "border-slate-700";
+
   const isParentActive = item.href
     ? item.exact
       ? pathname === item.href
@@ -513,10 +532,8 @@ function NavItemRow({
         {/* Header row */}
         <div
           className={cn(
-            "flex rounded-lg transition-colors",
-            isParentActive
-              ? "bg-purple-600/20 border border-purple-500/30"
-              : "border border-transparent",
+            "flex rounded-lg border transition-colors",
+            isParentActive ? `${activeParentBg}` : "border-transparent",
           )}
         >
           {/* Label: link if href, button otherwise */}
@@ -525,9 +542,7 @@ function NavItemRow({
               href={item.href}
               className={cn(
                 "flex flex-1 items-center gap-3 px-3 py-2.5 text-sm rounded-l-lg transition-colors",
-                isParentActive
-                  ? "text-purple-400"
-                  : "text-slate-400 hover:text-white",
+                isParentActive ? activeParentText : "text-slate-400 hover:text-white",
               )}
             >
               <item.icon className="h-4 w-4 shrink-0" />
@@ -538,9 +553,7 @@ function NavItemRow({
               onClick={() => setOpen((p) => !p)}
               className={cn(
                 "flex flex-1 items-center gap-3 px-3 py-2.5 text-sm rounded-l-lg transition-colors",
-                isParentActive
-                  ? "text-purple-400"
-                  : "text-slate-400 hover:text-white",
+                isParentActive ? activeParentText : "text-slate-400 hover:text-white",
               )}
             >
               <item.icon className="h-4 w-4 shrink-0" />
@@ -553,9 +566,7 @@ function NavItemRow({
             onClick={() => setOpen((p) => !p)}
             className={cn(
               "flex items-center px-2.5 rounded-r-lg border-l border-slate-700/40 transition-colors",
-              isParentActive
-                ? "text-purple-400"
-                : "text-slate-500 hover:text-white",
+              isParentActive ? activeParentText : "text-slate-500 hover:text-white",
             )}
           >
             <ChevronDown
@@ -569,7 +580,7 @@ function NavItemRow({
 
         {/* Children */}
         {open && (
-          <div className="ml-3 mt-1 space-y-0.5 border-l border-slate-700 pl-3">
+          <div className={cn("ml-3 mt-1 space-y-0.5 border-l pl-3", borderL)}>
             {item.children.map((child, idx) => {
               if (child.isDynamic) {
                 return (
@@ -597,7 +608,7 @@ function NavItemRow({
                   className={cn(
                     "flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-xs transition-colors",
                     isChildActive
-                      ? "bg-purple-600/15 text-purple-400"
+                      ? activeChildBg
                       : "text-slate-500 hover:bg-slate-800 hover:text-slate-300",
                   )}
                 >
@@ -620,7 +631,7 @@ function NavItemRow({
       className={cn(
         "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors",
         isParentActive
-          ? "bg-purple-600/20 text-purple-400 border border-purple-500/30"
+          ? `${activeParentBg} border ${activeParentText}`
           : "text-slate-400 hover:bg-slate-800 hover:text-white",
       )}
     >
@@ -671,9 +682,22 @@ function Sidebar({ onClose }: { onClose?: () => void }) {
         {navItems.map((item, idx) => (
           <div key={item.href ?? idx}>
             {item.section && (
-              <p className="mt-3 mb-1 px-2 text-[9px] font-bold uppercase tracking-widest text-slate-500">
-                {item.section}
-              </p>
+              <div className="mt-3 mb-1 flex items-center gap-2 px-2">
+                <div className={cn(
+                  "h-px flex-1",
+                  item.color === "blue" ? "bg-blue-500/20" : "bg-slate-700/60",
+                )} />
+                <p className={cn(
+                  "text-[9px] font-bold uppercase tracking-widest shrink-0",
+                  item.color === "blue" ? "text-blue-500/70" : "text-slate-500",
+                )}>
+                  {item.section}
+                </p>
+                <div className={cn(
+                  "h-px flex-1",
+                  item.color === "blue" ? "bg-blue-500/20" : "bg-slate-700/60",
+                )} />
+              </div>
             )}
             <NavItemRow
               item={item}

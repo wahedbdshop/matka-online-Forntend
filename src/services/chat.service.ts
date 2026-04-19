@@ -35,4 +35,22 @@ export const ChatService = {
     );
     return res.data;
   },
+
+  sendMedia: async (sessionId: string, formData: FormData) => {
+    const res = await api.post<ApiResponse<any>>(
+      `/chat/session/${sessionId}/media`,
+      formData,
+      { headers: { "Content-Type": "multipart/form-data" } },
+    );
+    return res.data;
+  },
+
+  sendAgentMedia: async (sessionId: string, formData: FormData) => {
+    const res = await api.post<ApiResponse<any>>(
+      `/chat/agent/session/${sessionId}/media`,
+      formData,
+      { headers: { "Content-Type": "multipart/form-data" } },
+    );
+    return res.data;
+  },
 };

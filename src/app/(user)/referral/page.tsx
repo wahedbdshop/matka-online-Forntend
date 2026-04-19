@@ -36,7 +36,13 @@ export default function ReferralPage() {
   const totalReferrals = referralsData?.data?.totalReferrals || 0;
   const earnings = earningsData?.data?.earnings || [];
   const totalEarned = earningsData?.data?.totalEarned || 0;
-  const config = configData?.data || [];
+  const rawConfig = configData?.data;
+  const config: any[] = Array.isArray(rawConfig)
+    ? rawConfig
+    : (rawConfig?.configs ?? []);
+  const monthlyLoginBonus = !Array.isArray(rawConfig)
+    ? rawConfig?.monthlyLoginBonus
+    : null;
 
   const referralCode = (user?.referralCode || "").toLowerCase();
   const referralLink = `${process.env.NEXT_PUBLIC_APP_URL || "https://matkaonline24.com"}/register?ref=${referralCode}`;
@@ -115,7 +121,7 @@ export default function ReferralPage() {
           <CardContent className="p-4 text-center">
             <TrendingUp className="h-6 w-6 text-green-400 mx-auto mb-1" />
             <p className="text-white font-bold text-2xl">
-              ₹{Number(totalEarned).toLocaleString()}
+              ৳{Number(totalEarned).toLocaleString()}
             </p>
             <p className="text-slate-400 text-xs">Total Earned</p>
           </CardContent>
@@ -132,33 +138,46 @@ export default function ReferralPage() {
           </CardHeader>
           <CardContent className="p-0">
             <div className="divide-y divide-slate-700">
-              {config.map((level: any) => (
-                <div
-                  key={level.level}
-                  className="flex items-center justify-between px-4 py-3"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="w-7 h-7 rounded-full bg-purple-500/20 flex items-center justify-center">
-                      <span className="text-purple-400 text-xs font-bold">
-                        L{level.level}
-                      </span>
-                    </div>
-                    <span className="text-white text-sm">
-                      Level {level.level}
-                    </span>
-                  </div>
-                  <Badge
-                    className={cn(
-                      "text-xs",
-                      level.isActive
-                        ? "bg-green-500/20 text-green-400"
-                        : "bg-slate-500/20 text-slate-400",
-                    )}
+              {config.map((level: any) => {
+                const displayLevel = level.level + 1;
+                const commissionPct =
+                  level.depositCommissionPct ?? level.commissionPct ?? 0;
+                const signupBonus = level.signupBonus ?? level.bonusAmount ?? 0;
+                return (
+                  <div
+                    key={level.level}
+                    className="flex items-center justify-between px-4 py-3"
                   >
-                    {level.commissionPct}%
-                  </Badge>
-                </div>
-              ))}
+                    <div className="flex items-center gap-3">
+                      <div className="w-7 h-7 rounded-full bg-purple-500/20 flex items-center justify-center">
+                        <span className="text-purple-400 text-xs font-bold">
+                          L{displayLevel}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-white text-sm">
+                          Level {displayLevel}
+                        </span>
+                        {signupBonus > 0 && (
+                          <p className="text-slate-400 text-xs">
+                            Signup Bonus: ৳{signupBonus}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                    <Badge
+                      className={cn(
+                        "text-xs",
+                        level.isActive
+                          ? "bg-green-500/20 text-green-400"
+                          : "bg-slate-500/20 text-slate-400",
+                      )}
+                    >
+                      {commissionPct}%
+                    </Badge>
+                  </div>
+                );
+              })}
             </div>
           </CardContent>
         </Card>
@@ -318,6 +337,24 @@ export default function ReferralPage() {
         </TabsContent>
       </Tabs>
 
+      {/* Monthly Login Bonus */}
+      {monthlyLoginBonus?.isActive && Number(monthlyLoginBonus?.amount) > 0 && (
+        <Card className="bg-gradient-to-r from-amber-600/20 to-amber-800/20 border-amber-500/30">
+          <CardContent className="p-4 flex items-center justify-between">
+            <div>
+              <p className="text-amber-400 text-xs font-medium">Monthly Login Bonus</p>
+              <p className="text-white font-bold text-xl">
+                ৳{Number(monthlyLoginBonus.amount).toLocaleString()}
+              </p>
+              <p className="text-slate-400 text-xs">
+                ৩০ দিন active থাকলে প্রতি মাসে পাবেন
+              </p>
+            </div>
+            <Gift className="h-8 w-8 text-amber-400" />
+          </CardContent>
+        </Card>
+      )}
+
       {/* How it works */}
       <Card className="bg-slate-800/50 border-slate-700">
         <CardHeader className="pb-2">
@@ -333,12 +370,12 @@ export default function ReferralPage() {
             {
               step: "2",
               title: "Friend registers",
-              desc: "They sign up using your code",
+              desc: "They sign up using your code — you get instant signup bonus",
             },
             {
               step: "3",
               title: "Earn commission",
-              desc: "Get commission when they deposit",
+              desc: "Get % commission every time they deposit",
             },
           ].map((item) => (
             <div key={item.step} className="flex items-start gap-3">
