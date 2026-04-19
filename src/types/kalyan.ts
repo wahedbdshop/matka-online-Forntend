@@ -160,6 +160,7 @@ export interface ResultFilterParams {
 export interface EntryFilterParams {
   search?: string;
   marketId?: string;
+  sessionType?: string;
   playType?: string;
   status?: string;
   date?: string;

@@ -40,7 +40,7 @@ import {
   ImageBubble,
   ImagePreviewModal,
 } from "@/components/chat/media-bubbles";
-import { CHAT_SESSION_KEY } from "@/components/user/chat-reply-popup";
+import { CHAT_SESSION_KEY, CHAT_AGENT_COUNT_KEY } from "@/components/user/chat-reply-popup";
 
 interface Message {
   id?: string;
@@ -160,6 +160,10 @@ export default function ChatPage() {
     const session = sessionData?.data;
     if (!session) return;
     setSessionStatus(session.status);
+
+    // Track how many agent messages user has seen — popup uses this as baseline
+    const agentCount = (session.messages ?? []).filter((m: Message) => m.role === "AGENT").length;
+    localStorage.setItem(CHAT_AGENT_COUNT_KEY, String(agentCount));
 
     if (session.messages?.length > 0) {
       setMessages((prev) => {

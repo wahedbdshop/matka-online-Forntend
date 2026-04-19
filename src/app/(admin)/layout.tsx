@@ -4,7 +4,8 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { api } from "@/lib/axios";
 import {
   LayoutDashboard,
   Users,
@@ -497,10 +498,12 @@ function NavItemRow({
   item,
   pathname,
   onClose,
+  badge,
 }: {
   item: NavItem;
   pathname: string;
   onClose?: () => void;
+  badge?: number;
 }) {
   const color = item.color ?? "purple";
 
@@ -636,7 +639,12 @@ function NavItemRow({
       )}
     >
       <item.icon className="h-4 w-4 shrink-0" />
-      <span>{item.label}</span>
+      <span className="flex-1">{item.label}</span>
+      {!!badge && badge > 0 && (
+        <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1.5 text-[10px] font-bold text-white animate-pulse">
+          {badge > 99 ? "99+" : badge}
+        </span>
+      )}
     </Link>
   );
 }
@@ -646,6 +654,18 @@ function Sidebar({ onClose }: { onClose?: () => void }) {
   const pathname = usePathname();
   const router = useRouter();
   const { user, clearAuth } = useAuthStore();
+
+  const { data: waitingData } = useQuery({
+    queryKey: ["waiting-sessions"],
+    queryFn: async () => {
+      const res = await api.get("/chat/agent/waiting");
+      return res.data;
+    },
+    refetchInterval: 10000,
+  });
+  const chatBadge: number = (waitingData?.data ?? []).filter(
+    (s: any) => s.status === "WAITING_AGENT",
+  ).length;
 
   const { mutate: logout, isPending: isLoggingOut } = useMutation({
     mutationFn: AuthService.logout,
@@ -703,6 +723,7 @@ function Sidebar({ onClose }: { onClose?: () => void }) {
               item={item}
               pathname={pathname}
               onClose={onClose}
+              badge={item.href === "/admin/chat" ? chatBadge : undefined}
             />
           </div>
         ))}

@@ -19,8 +19,9 @@ export const useSocket = () => {
     const socket = io(socketUrl, {
       transports: ["websocket", "polling"],
       reconnection: true,
-      reconnectionAttempts: 5,
+      reconnectionAttempts: Infinity,
       reconnectionDelay: 1000,
+      reconnectionDelayMax: 10000,
       withCredentials: true,
     });
 

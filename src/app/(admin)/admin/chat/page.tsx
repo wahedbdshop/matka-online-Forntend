@@ -2,7 +2,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, Suspense } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
@@ -60,7 +60,7 @@ function lastMsgPreview(msg: any): string {
   return msg.message ?? "";
 }
 
-export default function AdminChatPage() {
+function AdminChatPageInner() {
   const [selectedSession, setSelectedSession] = useState<any>(null);
   const [messages, setMessages] = useState<any[]>([]);
   const [replyText, setReplyText] = useState("");
@@ -117,6 +117,7 @@ export default function AdminChatPage() {
     mutationFn: async (sessionId: string) => ChatService.closeSession(sessionId),
     onSuccess: (_, sessionId) => {
       toast.success("Session closed");
+      localStorage.removeItem("admin_chat_session");
       setSelectedSession((prev: any) => {
         if (!prev || prev.id !== sessionId) return prev;
         const next = { ...prev, status: "CLOSED" };
@@ -138,7 +139,18 @@ export default function AdminChatPage() {
     syncClosedSession(session);
     joinSession(sessionId);
     setShowChat(true);
+    localStorage.setItem("admin_chat_session", sessionId);
   };
+
+  // Auto-restore selected session from localStorage on mount
+  useEffect(() => {
+    const savedId = localStorage.getItem("admin_chat_session");
+    if (savedId) {
+      loadSession(savedId).catch(() => {
+        localStorage.removeItem("admin_chat_session");
+      });
+    }
+  }, []);
 
   useEffect(() => {
     if (!selectedSession) return;
@@ -610,5 +622,13 @@ export default function AdminChatPage() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function AdminChatPage() {
+  return (
+    <Suspense>
+      <AdminChatPageInner />
+    </Suspense>
   );
 }

@@ -482,6 +482,7 @@ export const KalyanAdminService = {
       limit: String(params?.limit || 20),
       ...(params?.search ? { search: params.search } : {}),
       ...(params?.marketId ? { marketId: params.marketId } : {}),
+      ...(params?.sessionType ? { sessionType: params.sessionType } : {}),
       ...(params?.playType ? { playType: params.playType } : {}),
       ...(params?.status ? { status: params.status } : {}),
       ...(params?.date ? { date: params.date } : {}),

@@ -59,11 +59,13 @@ export function getKalyanMarketSessionLabel(
   const normalizedSession = String(sessionType ?? "")
     .trim()
     .toUpperCase();
+  const normalizedBaseName = normalizeKalyanMarketText(baseName).toLowerCase();
+  const normalizedSessionName = normalizeKalyanMarketText(sessionName).toLowerCase();
 
   if (!normalizedSession || normalizedSession === "OPEN" || normalizedSession === "CLOSE") {
     const sessionLabel = normalizedSession === "CLOSE" ? "Close" : "Open";
 
-    if (!baseName || baseName === sessionName) {
+    if (!baseName || normalizedBaseName === normalizedSessionName) {
       return `${sessionName} (${sessionLabel})`;
     }
 

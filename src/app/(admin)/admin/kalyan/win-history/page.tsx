@@ -13,6 +13,9 @@ import {
 } from "@/lib/kalyan-market-display";
 
 const LIMIT = 20;
+const MARKET_LIST_LIMIT = 1000;
+const ALL_MARKETS_FETCH_LIMIT = 200;
+const ALL_MARKETS_BASE_LIMIT = 1000;
 const PLAY_TYPES = Object.keys(PLAY_TYPE_LABEL) as PlayType[];
 
 function isPlayType(value: unknown): value is PlayType {
@@ -32,10 +35,40 @@ function resolveGameName(entry: any) {
 }
 
 function resolveSessionType(entry: any): "OPEN" | "CLOSE" | undefined {
-  const val = entry?.sessionType ?? entry?.session ?? entry?.market?.sessionType;
+  const val =
+    entry?.sessionType ??
+    entry?.session ??
+    entry?.market?.sessionType ??
+    entry?.items?.[0]?.sessionType ??
+    entry?.items?.[0]?.session;
   if (!val) return undefined;
   const up = String(val).toUpperCase();
   if (up === "OPEN" || up === "CLOSE") return up;
+  return undefined;
+}
+
+function sortMarketsByOldest<T extends { createdAt?: string; id?: string }>(items: T[]) {
+  return [...items].sort((left, right) => {
+    const leftTime = left?.createdAt ? new Date(left.createdAt).getTime() : 0;
+    const rightTime = right?.createdAt ? new Date(right.createdAt).getTime() : 0;
+
+    if (leftTime !== rightTime) {
+      return leftTime - rightTime;
+    }
+
+    return String(left?.id ?? "").localeCompare(String(right?.id ?? ""));
+  });
+}
+
+function resolveMarketSessionType(market: any): "OPEN" | "CLOSE" | undefined {
+  const value = market?.sessionType ?? market?.timings?.[0]?.sessionType;
+  if (!value) return undefined;
+
+  const normalizedValue = String(value).toUpperCase();
+  if (normalizedValue === "OPEN" || normalizedValue === "CLOSE") {
+    return normalizedValue;
+  }
+
   return undefined;
 }
 
@@ -71,6 +104,25 @@ function getOutcomeStatus(value: any) {
   ).toUpperCase();
 }
 
+function extractEntryList(payload: any): any[] {
+  if (Array.isArray(payload?.data?.entries)) return payload.data.entries;
+  if (Array.isArray(payload?.data)) return payload.data;
+  return [];
+}
+
+function sortEntriesByNewest(items: any[]) {
+  return [...items].sort((left, right) => {
+    const rightTime = new Date(right?.createdAt ?? 0).getTime();
+    const leftTime = new Date(left?.createdAt ?? 0).getTime();
+
+    if (rightTime !== leftTime) {
+      return rightTime - leftTime;
+    }
+
+    return String(right?.id ?? "").localeCompare(String(left?.id ?? ""));
+  });
+}
+
 function KalyanWinHistoryPageContent() {
   const searchParams = useSearchParams();
   const [searchInput, setSearchInput] = useState("");
@@ -84,7 +136,40 @@ function KalyanWinHistoryPageContent() {
 
   const { data: marketsData } = useQuery({
     queryKey: ["kalyan-markets-all"],
-    queryFn: () => KalyanAdminService.getMarkets({ limit: 100 }),
+    queryFn: () => KalyanAdminService.getMarkets({ limit: MARKET_LIST_LIMIT }),
+  });
+
+  const markets: any[] = sortMarketsByOldest(marketsData?.data?.markets ?? marketsData?.data ?? []);
+  const uniqueMarkets = Array.from(
+    new Map(markets.map((market: any) => [String(market?.id ?? ""), market])).values(),
+  ).filter((market: any) => String(market?.id ?? "").trim().length > 0);
+  const marketOptions = markets.flatMap((market: any) => {
+    const explicitSessionType = resolveMarketSessionType(market);
+
+    if (explicitSessionType) {
+      return [{
+        key: `${market.id}:${explicitSessionType}`,
+        marketId: market.id,
+        sessionType: explicitSessionType,
+        label: getKalyanMarketSessionLabel(market, explicitSessionType),
+      }];
+    }
+
+    const baseName = getKalyanMarketOptionLabel(market);
+    return [
+      {
+        key: `${market.id}:OPEN`,
+        marketId: market.id,
+        sessionType: "OPEN" as const,
+        label: `${baseName} - Open`,
+      },
+      {
+        key: `${market.id}:CLOSE`,
+        marketId: market.id,
+        sessionType: "CLOSE" as const,
+        label: `${baseName} - Close`,
+      },
+    ];
   });
 
   const { data: ratesData } = useQuery({
@@ -110,28 +195,99 @@ function KalyanWinHistoryPageContent() {
       KalyanAdminService.getAdminEntries({
         search: search || undefined,
         marketId: marketFilter || undefined,
+        sessionType: sessionFilter || undefined,
         playType: playTypeFilter || undefined,
         date: dateFilter || undefined,
         page,
         limit: LIMIT,
       }),
+    enabled: !!marketFilter || marketOptions.length === 0,
     staleTime: 0,
     refetchOnMount: "always",
   });
 
-  const markets: any[] = Array.from(
-    new Map(
-      (marketsData?.data?.markets ?? marketsData?.data ?? []).map((m: any) => [
-        (m.name ?? m.marketName ?? m.title ?? "").trim().toLowerCase(),
-        m,
-      ])
-    ).values()
-  );
-  const rawEntries: any[] = Array.isArray(data?.data?.entries)
-    ? data.data.entries
-    : Array.isArray(data?.data)
-      ? data.data
-      : [];
+  const { data: allMarketsData, isLoading: loadingAllMarkets } = useQuery({
+    queryKey: [
+      "kalyan-win-history-all-markets",
+      search,
+      playTypeFilter,
+      dateFilter,
+      uniqueMarkets.map((market: any) => market.id).join("|"),
+    ],
+    enabled: !marketFilter && uniqueMarkets.length > 0,
+    queryFn: async () => {
+      const responses = await Promise.all(
+        uniqueMarkets.map((market: any) =>
+          KalyanAdminService.getAdminEntries({
+            search: search || undefined,
+            marketId: market.id,
+            playType: playTypeFilter || undefined,
+            date: dateFilter || undefined,
+            page: 1,
+            limit: ALL_MARKETS_FETCH_LIMIT,
+          }).catch(() => null),
+        ),
+      );
+
+      const deduped = new Map<string, any>();
+
+      responses.forEach((response) => {
+        extractEntryList(response).forEach((entry) => {
+          const key = String(entry?.id ?? "");
+          if (!key || deduped.has(key)) return;
+          deduped.set(key, entry);
+        });
+      });
+
+      const entries = sortEntriesByNewest([...deduped.values()]);
+      return {
+        entries,
+        total: entries.length,
+      };
+    },
+  });
+
+  const { data: allMarketsBaseData, isLoading: loadingAllMarketsBase } = useQuery({
+    queryKey: [
+      "kalyan-win-history-all-markets-base",
+      search,
+      playTypeFilter,
+      dateFilter,
+    ],
+    enabled: !marketFilter,
+    queryFn: async () => {
+      const response = await KalyanAdminService.getAdminEntries({
+        search: search || undefined,
+        playType: playTypeFilter || undefined,
+        date: dateFilter || undefined,
+        page: 1,
+        limit: ALL_MARKETS_BASE_LIMIT,
+      }).catch(() => null);
+
+      const entries = sortEntriesByNewest(extractEntryList(response));
+      return {
+        entries,
+        total: entries.length,
+      };
+    },
+  });
+
+  const usingAllMarketsDataset = !marketFilter;
+  const entriesLoading = usingAllMarketsDataset
+    ? loadingAllMarkets || loadingAllMarketsBase
+    : isLoading;
+  const mergedAllMarketEntries = usingAllMarketsDataset
+    ? sortEntriesByNewest([
+        ...(allMarketsBaseData?.entries ?? []),
+        ...(allMarketsData?.entries ?? []),
+      ]).filter(
+        (entry, index, allEntries) =>
+          allEntries.findIndex((candidate) => String(candidate?.id ?? "") === String(entry?.id ?? "")) === index,
+      )
+    : [];
+  const rawEntries: any[] = usingAllMarketsDataset
+    ? mergedAllMarketEntries
+    : extractEntryList(data);
   const entries = rawEntries.filter((entry) => {
     const entryStatus = getOutcomeStatus(entry);
     const itemStatuses = Array.isArray(entry?.items)
@@ -140,67 +296,71 @@ function KalyanWinHistoryPageContent() {
 
     return entryStatus === "WON" || itemStatuses.some((status: string) => status === "WON");
   });
-  const total = data?.data?.total ?? entries.length;
+  const total = usingAllMarketsDataset
+    ? mergedAllMarketEntries.length
+    : data?.data?.total ?? entries.length;
   const totalPages = Math.max(1, Math.ceil(total / LIMIT));
 
   const rows = useMemo(
     () =>
-      entries
+      (usingAllMarketsDataset
+        ? entries.slice((page - 1) * LIMIT, page * LIMIT)
+        : entries)
         .filter((entry: any) => {
           if (!sessionFilter) return true;
           const st = resolveSessionType(entry);
           return st === sessionFilter;
         })
         .flatMap((entry: any) => {
-        const sessionType = resolveSessionType(entry);
-        const items = (Array.isArray(entry?.items) ? entry.items : []).filter((item: any) => {
-          const itemStatus = getOutcomeStatus(item);
-          return (
-            itemStatus === "WON" &&
-            !isRemovedStatus(item?.gameStatus) &&
-            !isRemovedStatus(item?.status) &&
-            !isCancelledStatus(item?.gameStatus) &&
-            !isCancelledStatus(item?.status)
-          );
-        });
+          const sessionType = resolveSessionType(entry);
+          const items = (Array.isArray(entry?.items) ? entry.items : []).filter((item: any) => {
+            const itemStatus = getOutcomeStatus(item);
+            return (
+              itemStatus === "WON" &&
+              !isRemovedStatus(item?.gameStatus) &&
+              !isRemovedStatus(item?.status) &&
+              !isCancelledStatus(item?.gameStatus) &&
+              !isCancelledStatus(item?.status)
+            );
+          });
 
-        if (items.length === 0) {
-          const betAmount = Number(entry.totalAmount ?? 0);
-          const playType = resolvePlayType(entry);
-          return [
-            {
-              key: `${entry.id}-empty`,
+          if (items.length === 0) {
+            const betAmount = Number(entry.totalAmount ?? 0);
+            const playType = resolvePlayType(entry);
+            return [
+              {
+                key: `${entry.id}-empty`,
+                entry,
+                userName: entry.user?.name ?? entry.user?.username ?? "-",
+                gameName: resolveGameName(entry),
+                sessionType,
+                category: playType,
+                betNumber: resolveBetNumber(entry),
+                betAmount,
+                winAmount: calculateWinAmount(betAmount, playType, rates),
+                status: entry.betStatus ?? entry.status ?? entry.gameStatus ?? "WON",
+                dateTime: entry.createdAt,
+              },
+            ];
+          }
+
+          return items.map((item: any, index: number) => {
+            const betAmount = Number(item.amount ?? entry.totalAmount ?? 0);
+            const playType = item.playType || entry.playType || "-";
+            return {
+              key: `${entry.id}-${item.id ?? index}`,
               entry,
               userName: entry.user?.name ?? entry.user?.username ?? "-",
-              gameName: resolveGameName(entry),
+              gameName: entry.gameName || resolveGameName(entry),
               sessionType,
               category: playType,
-              betNumber: resolveBetNumber(entry),
+              betNumber: item.selectedNumber || "-",
               betAmount,
               winAmount: calculateWinAmount(betAmount, playType, rates),
-              status: entry.betStatus ?? entry.status ?? entry.gameStatus ?? "WON",
-              dateTime: entry.createdAt,
-            },
-          ];
-        }
-
-        return items.map((item: any, index: number) => {
-          const betAmount = Number(item.amount ?? entry.totalAmount ?? 0);
-          const playType = item.playType || entry.playType || "-";
-          return {
-            key: `${entry.id}-${item.id ?? index}`,
-            entry,
-            userName: entry.user?.name ?? entry.user?.username ?? "-",
-            gameName: entry.gameName || resolveGameName(entry),
-            sessionType,
-            category: playType,
-            betNumber: item.selectedNumber || "-",
-            betAmount,
-            winAmount: calculateWinAmount(betAmount, playType, rates),
-            status: item.betStatus ?? item.status ?? item.gameStatus ?? "WON",
-            dateTime: item.createdAt ?? entry.createdAt,
-          };
-        });
+              status: item.betStatus ?? item.status ?? item.gameStatus ?? "WON",
+              dateTime: item.createdAt ?? entry.createdAt,
+            };
+          });
         })
         .sort((left, right) => {
           const rightTime = right?.dateTime ? new Date(right.dateTime).getTime() : 0;
@@ -212,7 +372,7 @@ function KalyanWinHistoryPageContent() {
 
           return String(right?.gameName ?? "").localeCompare(String(left?.gameName ?? ""));
         }),
-    [entries, rates],
+    [entries, page, rates, sessionFilter, usingAllMarketsDataset],
   );
 
   const formatDate = (value?: string) => {
@@ -270,7 +430,7 @@ function KalyanWinHistoryPageContent() {
         </div>
 
         <select
-          value={marketFilter}
+          value={marketFilter ? `${marketFilter}${sessionFilter ? `:${sessionFilter}` : ""}` : ""}
           onChange={(e) => {
             const [mid, session] = e.target.value.split(":");
             setMarketFilter(mid);
@@ -280,17 +440,14 @@ function KalyanWinHistoryPageContent() {
           className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-1.5 text-xs text-white outline-none"
         >
           <option value="">All Markets</option>
-          {markets.map((market: any) => {
-            const baseName = getKalyanMarketOptionLabel(market);
-            return [
-              <option key={`${market.id}:OPEN`} value={`${market.id}:OPEN`}>
-                {baseName} — Open
-              </option>,
-              <option key={`${market.id}:CLOSE`} value={`${market.id}:CLOSE`}>
-                {baseName} — Close
-              </option>,
-            ];
-          })}
+          {marketOptions.map((option) => (
+            <option
+              key={option.key}
+              value={`${option.marketId}:${option.sessionType}`}
+            >
+              {option.label}
+            </option>
+          ))}
         </select>
 
         <select
@@ -345,7 +502,7 @@ function KalyanWinHistoryPageContent() {
             </tr>
           </thead>
           <tbody>
-            {isLoading ? (
+            {entriesLoading ? (
               Array.from({ length: 8 }).map((_, rowIndex) => (
                 <tr key={rowIndex} className="border-b border-slate-700/50">
                   {Array.from({ length: 9 }).map((_, colIndex) => (

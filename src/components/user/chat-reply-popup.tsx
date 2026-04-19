@@ -4,8 +4,10 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { MessageCircle, X, GripVertical } from "lucide-react";
 import { useSocket } from "@/hooks/use-socket";
+import { ChatService } from "@/services/chat.service";
 
 export const CHAT_SESSION_KEY = "chat_session_id";
+export const CHAT_AGENT_COUNT_KEY = "chat_agent_count";
 
 export function ChatReplyPopup() {
   const router = useRouter();
@@ -18,12 +20,26 @@ export function ChatReplyPopup() {
   const dragOffset = useRef({ x: 0, y: 0 });
   const { joinSession, onNewMessage, isConnected } = useSocket();
 
-  useEffect(() => {
+  const rejoinSession = useCallback(() => {
     if (!isConnected) return;
     const sessionId = localStorage.getItem(CHAT_SESSION_KEY);
     if (sessionId) joinSession(sessionId);
   }, [isConnected, joinSession]);
 
+  useEffect(() => {
+    rejoinSession();
+  }, [rejoinSession]);
+
+  // Re-join when tab becomes visible again (mobile app switch)
+  useEffect(() => {
+    const onVisible = () => {
+      if (document.visibilityState === "visible") rejoinSession();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
+  }, [rejoinSession]);
+
+  // Socket listener
   useEffect(() => {
     const unsub = onNewMessage((data: { role?: string; message?: string }) => {
       if (data.role === "AGENT" && pathname !== "/chat") {
@@ -33,6 +49,44 @@ export function ChatReplyPopup() {
     });
     return unsub;
   }, [onNewMessage, pathname]);
+
+  // HTTP polling fallback — catches messages when socket is unreliable on mobile
+  useEffect(() => {
+    if (pathname === "/chat") return;
+    const sessionId = localStorage.getItem(CHAT_SESSION_KEY);
+    if (!sessionId) return;
+
+    const poll = async () => {
+      try {
+        const res = await ChatService.getSession(sessionId);
+        const msgs: { role: string; message?: string }[] = res.data?.messages ?? [];
+        const agentMsgs = msgs.filter((m) => m.role === "AGENT");
+        const count = agentMsgs.length;
+
+        // Use localStorage baseline so it survives page reloads and app restarts
+        const stored = parseInt(localStorage.getItem(CHAT_AGENT_COUNT_KEY) ?? "-1", 10);
+
+        if (stored === -1) {
+          // First time ever — set baseline silently
+          localStorage.setItem(CHAT_AGENT_COUNT_KEY, String(count));
+          return;
+        }
+
+        if (count > stored) {
+          const newest = agentMsgs[agentMsgs.length - 1];
+          setLastMessage(newest?.message ?? "Admin replied to your message");
+          setShow(true);
+          // Don't update stored count here — update only when user opens chat
+        }
+      } catch {
+        // silent
+      }
+    };
+
+    const interval = setInterval(poll, 5000);
+    poll();
+    return () => clearInterval(interval);
+  }, [pathname]);
 
   const onPointerDown = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
     e.currentTarget.setPointerCapture(e.pointerId);

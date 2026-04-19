@@ -13,6 +13,9 @@ import {
 } from "@/lib/kalyan-market-display";
 
 const LIMIT = 20;
+const MARKET_LIST_LIMIT = 1000;
+const ALL_MARKETS_FETCH_LIMIT = 200;
+const ALL_MARKETS_BASE_LIMIT = 1000;
 const PLAY_TYPES = Object.keys(PLAY_TYPE_LABEL) as PlayType[];
 
 function isPlayType(value: unknown): value is PlayType {
@@ -44,6 +47,31 @@ function resolveSessionType(entry: any): "OPEN" | "CLOSE" | undefined {
     entry?.market?.sessionType ??
     entry?.items?.[0]?.sessionType ??
     entry?.items?.[0]?.session;
+  if (!value) return undefined;
+
+  const normalizedValue = String(value).toUpperCase();
+  if (normalizedValue === "OPEN" || normalizedValue === "CLOSE") {
+    return normalizedValue;
+  }
+
+  return undefined;
+}
+
+function sortMarketsByOldest<T extends { createdAt?: string; id?: string }>(items: T[]) {
+  return [...items].sort((left, right) => {
+    const leftTime = left?.createdAt ? new Date(left.createdAt).getTime() : 0;
+    const rightTime = right?.createdAt ? new Date(right.createdAt).getTime() : 0;
+
+    if (leftTime !== rightTime) {
+      return leftTime - rightTime;
+    }
+
+    return String(left?.id ?? "").localeCompare(String(right?.id ?? ""));
+  });
+}
+
+function resolveMarketSessionType(market: any): "OPEN" | "CLOSE" | undefined {
+  const value = market?.sessionType ?? market?.timings?.[0]?.sessionType;
   if (!value) return undefined;
 
   const normalizedValue = String(value).toUpperCase();
@@ -88,6 +116,25 @@ function getDisplayStatus(entry: any, item?: any) {
   ).toUpperCase();
 }
 
+function extractEntryList(payload: any): any[] {
+  if (Array.isArray(payload?.data?.entries)) return payload.data.entries;
+  if (Array.isArray(payload?.data)) return payload.data;
+  return [];
+}
+
+function sortEntriesByNewest(items: any[]) {
+  return [...items].sort((left, right) => {
+    const rightTime = new Date(right?.createdAt ?? 0).getTime();
+    const leftTime = new Date(left?.createdAt ?? 0).getTime();
+
+    if (rightTime !== leftTime) {
+      return rightTime - leftTime;
+    }
+
+    return String(right?.id ?? "").localeCompare(String(left?.id ?? ""));
+  });
+}
+
 export default function KalyanPlayHistoryPage() {
   const queryClient = useQueryClient();
   const [searchInput, setSearchInput] = useState("");
@@ -109,7 +156,40 @@ export default function KalyanPlayHistoryPage() {
 
   const { data: marketsData } = useQuery({
     queryKey: ["kalyan-markets-all"],
-    queryFn: () => KalyanAdminService.getMarkets({ limit: 100 }),
+    queryFn: () => KalyanAdminService.getMarkets({ limit: MARKET_LIST_LIMIT }),
+  });
+
+  const markets: any[] = sortMarketsByOldest(marketsData?.data?.markets ?? marketsData?.data ?? []);
+  const uniqueMarkets = Array.from(
+    new Map(markets.map((market: any) => [String(market?.id ?? ""), market])).values(),
+  ).filter((market: any) => String(market?.id ?? "").trim().length > 0);
+  const marketOptions = markets.flatMap((market: any) => {
+    const explicitSessionType = resolveMarketSessionType(market);
+
+    if (explicitSessionType) {
+      return [{
+        key: `${market.id}:${explicitSessionType}`,
+        marketId: market.id,
+        sessionType: explicitSessionType,
+        label: getKalyanMarketSessionLabel(market, explicitSessionType),
+      }];
+    }
+
+    const baseName = getKalyanMarketOptionLabel(market);
+    return [
+      {
+        key: `${market.id}:OPEN`,
+        marketId: market.id,
+        sessionType: "OPEN" as const,
+        label: `${baseName} - Open`,
+      },
+      {
+        key: `${market.id}:CLOSE`,
+        marketId: market.id,
+        sessionType: "CLOSE" as const,
+        label: `${baseName} - Close`,
+      },
+    ];
   });
 
   const { data, isLoading } = useQuery({
@@ -123,10 +203,12 @@ export default function KalyanPlayHistoryPage() {
       dateFilter,
       page,
     ],
+    enabled: !!marketFilter || marketOptions.length === 0,
     queryFn: () =>
       KalyanAdminService.getAdminEntries({
         search: search || undefined,
         marketId: marketFilter || undefined,
+        sessionType: sessionFilter || undefined,
         playType: playTypeFilter || undefined,
         status: statusFilter || undefined,
         date: dateFilter || undefined,
@@ -135,19 +217,91 @@ export default function KalyanPlayHistoryPage() {
       }),
   });
 
-  const markets: any[] = Array.from(
-    new Map(
-      (marketsData?.data?.markets ?? marketsData?.data ?? []).map((m: any) => [
-        (m.name ?? m.marketName ?? m.title ?? "").trim().toLowerCase(),
-        m,
-      ])
-    ).values()
-  );
-  const rawEntries: any[] = Array.isArray(data?.data?.entries)
-    ? data.data.entries
-    : Array.isArray(data?.data)
-      ? data.data
-      : [];
+  const { data: allMarketsData, isLoading: loadingAllMarkets } = useQuery({
+    queryKey: [
+      "kalyan-entries-all-markets",
+      search,
+      playTypeFilter,
+      statusFilter,
+      dateFilter,
+      uniqueMarkets.map((market: any) => market.id).join("|"),
+    ],
+    enabled: !marketFilter && uniqueMarkets.length > 0,
+    queryFn: async () => {
+      const responses = await Promise.all(
+        uniqueMarkets.map((market: any) =>
+          KalyanAdminService.getAdminEntries({
+            search: search || undefined,
+            marketId: market.id,
+            playType: playTypeFilter || undefined,
+            status: statusFilter || undefined,
+            date: dateFilter || undefined,
+            page: 1,
+            limit: ALL_MARKETS_FETCH_LIMIT,
+          }).catch(() => null),
+        ),
+      );
+
+      const deduped = new Map<string, any>();
+
+      responses.forEach((response) => {
+        extractEntryList(response).forEach((entry) => {
+          const key = String(entry?.id ?? "");
+          if (!key || deduped.has(key)) return;
+          deduped.set(key, entry);
+        });
+      });
+
+      const entries = sortEntriesByNewest([...deduped.values()]);
+      return {
+        entries,
+        total: entries.length,
+      };
+    },
+  });
+
+  const { data: allMarketsBaseData, isLoading: loadingAllMarketsBase } = useQuery({
+    queryKey: [
+      "kalyan-entries-all-markets-base",
+      search,
+      playTypeFilter,
+      statusFilter,
+      dateFilter,
+    ],
+    enabled: !marketFilter,
+    queryFn: async () => {
+      const response = await KalyanAdminService.getAdminEntries({
+        search: search || undefined,
+        playType: playTypeFilter || undefined,
+        status: statusFilter || undefined,
+        date: dateFilter || undefined,
+        page: 1,
+        limit: ALL_MARKETS_BASE_LIMIT,
+      }).catch(() => null);
+
+      const entries = sortEntriesByNewest(extractEntryList(response));
+      return {
+        entries,
+        total: entries.length,
+      };
+    },
+  });
+  const usingAllMarketsDataset = !marketFilter;
+  const entriesLoading = usingAllMarketsDataset
+    ? loadingAllMarkets || loadingAllMarketsBase
+    : isLoading;
+  const mergedAllMarketEntries = usingAllMarketsDataset
+    ? sortEntriesByNewest([
+        ...(allMarketsBaseData?.entries ?? []),
+        ...(allMarketsData?.entries ?? []),
+      ]).filter(
+        (entry, index, allEntries) =>
+          allEntries.findIndex((candidate) => String(candidate?.id ?? "") === String(entry?.id ?? "")) === index,
+      )
+    : [];
+  const rawEntries: any[] = usingAllMarketsDataset
+    ? mergedAllMarketEntries
+    : extractEntryList(data);
   const isRemovedEntity = (value: any) =>
     isRemovedStatus(value?.gameStatus) ||
     isRemovedStatus(value?.status) ||
@@ -163,9 +317,10 @@ export default function KalyanPlayHistoryPage() {
     }
     return true;
   });
-  const total: number = entries.length;
-  const totalPages = Math.ceil(total / LIMIT);
-  const rows = entries.flatMap((entry: any) => {
+  const pagedEntries = usingAllMarketsDataset
+    ? entries.slice((page - 1) * LIMIT, page * LIMIT)
+    : entries;
+  const rows = pagedEntries.flatMap((entry: any) => {
     const items = (Array.isArray(entry?.items) ? entry.items : []).filter(
       (item: any) => !isRemovedEntity(item),
     );
@@ -204,6 +359,10 @@ export default function KalyanPlayHistoryPage() {
       dateTime: item.createdAt ?? entry.createdAt,
     }));
   });
+  const total: number = usingAllMarketsDataset
+    ? mergedAllMarketEntries.length
+    : data?.data?.total ?? entries.length;
+  const totalPages = Math.max(1, Math.ceil(total / LIMIT));
 
   const formatDate = (value?: string) => {
     if (!value) return "-";
@@ -309,17 +468,14 @@ export default function KalyanPlayHistoryPage() {
           className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-1.5 text-xs text-white outline-none"
         >
           <option value="">All Markets</option>
-          {markets.map((market: any) => {
-            const baseName = getKalyanMarketOptionLabel(market);
-            return [
-              <option key={`${market.id}:OPEN`} value={`${market.id}:OPEN`}>
-                {baseName} — Open
-              </option>,
-              <option key={`${market.id}:CLOSE`} value={`${market.id}:CLOSE`}>
-                {baseName} — Close
-              </option>,
-            ];
-          })}
+          {marketOptions.map((option) => (
+            <option
+              key={option.key}
+              value={`${option.marketId}:${option.sessionType}`}
+            >
+              {option.label}
+            </option>
+          ))}
         </select>
 
         <select
@@ -390,7 +546,7 @@ export default function KalyanPlayHistoryPage() {
             </tr>
           </thead>
           <tbody>
-            {isLoading ? (
+            {entriesLoading ? (
               Array.from({ length: 8 }).map((_, rowIndex) => (
                 <tr key={rowIndex} className="border-b border-slate-700/50">
                   {Array.from({ length: 9 }).map((_, colIndex) => (
@@ -533,12 +689,12 @@ export default function KalyanPlayHistoryPage() {
                 x
               </button>
             </div>
-              <div className="space-y-3">
-                <div className="rounded-xl border border-slate-700 bg-slate-800/80 px-3 py-2 text-xs text-slate-300">
-                  <p><span className="text-slate-500">User:</span> {editTarget.userName}</p>
-                  <p><span className="text-slate-500">Game:</span> {editTarget.gameName}</p>
-                  <p><span className="text-slate-500">Number:</span> {editTarget.betNumber}</p>
-                </div>
+            <div className="space-y-3">
+              <div className="rounded-xl border border-slate-700 bg-slate-800/80 px-3 py-2 text-xs text-slate-300">
+                <p><span className="text-slate-500">User:</span> {editTarget.userName}</p>
+                <p><span className="text-slate-500">Game:</span> {editTarget.gameName}</p>
+                <p><span className="text-slate-500">Number:</span> {editTarget.betNumber}</p>
+              </div>
               <div>
                 <label className="mb-1 block text-xs text-slate-400">Bet Number</label>
                 <input
