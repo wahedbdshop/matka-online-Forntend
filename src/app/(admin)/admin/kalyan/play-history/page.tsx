@@ -332,7 +332,7 @@ export default function KalyanPlayHistoryPage() {
           entry,
           itemId: null,
           entryId: entry.id,
-          userName: entry.user?.name ?? entry.user?.username ?? "-",
+          userName: entry.user?.username ?? "-",
           gameName: formatGameName(entry),
           sessionType: resolveSessionType(entry),
           category: resolvePlayType(entry),

@@ -80,6 +80,9 @@ export default function UserTransactionsPage() {
     createdAt: t.createdAt ?? t.created_at ?? "",
     senderUsername: t.senderUsername ?? t.sender_username ?? t.sender?.username ?? t.fromUser?.username ?? null,
     receiverUsername: t.receiverUsername ?? t.receiver_username ?? t.receiver?.username ?? t.toUser?.username ?? null,
+    bonusAmount: t.bonusAmount ?? t.bonus_amount ?? null,
+    bonusName: t.bonusName ?? t.bonus_name ?? null,
+    reason: t.reason ?? t.description ?? t.note ?? t.remarks ?? t.chargeReason ?? t.charge_reason ?? null,
   }));
 
   const meta: AdminUserTransactionsResponse["meta"] = (rawData as any)?.meta ?? (rawData as any)?.pagination;
@@ -216,9 +219,6 @@ export default function UserTransactionsPage() {
                     </td>
                     <td className="px-5 py-3.5 border-r border-slate-700/30">
                       <p className="font-semibold text-white">{row.username}</p>
-                      {row.name && (
-                        <p className="text-[10px] text-slate-500 mt-0.5">{row.name}</p>
-                      )}
                     </td>
                     <td className="px-5 py-3.5 font-mono text-slate-300 border-r border-slate-700/30">
                       {row.transactionId || "-"}
@@ -270,12 +270,24 @@ export default function UserTransactionsPage() {
                         const isCredit = row.balanceChangeType?.toLowerCase() === "credit";
                         const isDebit = row.balanceChangeType?.toLowerCase() === "debit";
                         return (
-                          <div className={cn(
-                            "inline-flex items-center gap-1",
-                            isCredit ? "text-emerald-400" : isDebit ? "text-red-400" : "text-white",
-                          )}>
-                            {isCredit ? <Plus className="h-3 w-3" /> : isDebit ? <Minus className="h-3 w-3" /> : null}
-                            <span>Rs {fmt(row.amount)}</span>
+                          <div className="flex flex-col items-end gap-0.5">
+                            <div className={cn(
+                              "inline-flex items-center gap-1",
+                              isCredit ? "text-emerald-400" : isDebit ? "text-red-400" : "text-white",
+                            )}>
+                              {isCredit ? <Plus className="h-3 w-3" /> : isDebit ? <Minus className="h-3 w-3" /> : null}
+                              <span>Rs {fmt(row.amount)}</span>
+                            </div>
+                            {row.bonusAmount != null && Number(row.bonusAmount) > 0 && (
+                              <span className="text-[10px] text-yellow-400 font-normal">
+                                {row.bonusName ? `${row.bonusName}: ` : "Bonus: "}Rs {fmt(row.bonusAmount)}
+                              </span>
+                            )}
+                            {isDebit && row.reason && (
+                              <span className="text-[10px] text-slate-400 font-normal max-w-[140px] text-right leading-tight">
+                                {row.reason}
+                              </span>
+                            )}
                           </div>
                         );
                       })()}

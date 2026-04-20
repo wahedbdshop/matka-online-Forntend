@@ -82,9 +82,9 @@ export default function AdminKycPage() {
             <CardContent className="p-4">
               <div className="flex items-start justify-between">
                 <div>
-                  <p className="text-white font-medium">{kyc.user?.name}</p>
+                  <p className="text-white font-medium">{kyc.user?.username}</p>
                   <p className="text-slate-400 text-xs">
-                    @{kyc.user?.username} • {kyc.user?.email}
+                    {kyc.user?.email}
                   </p>
                   <p className="text-slate-400 text-xs">
                     Doc: {kyc.documentType || "Not specified"}

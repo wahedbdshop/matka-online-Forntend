@@ -116,7 +116,7 @@ export default function AdminTicketsPage() {
                         </Badge>
                       </div>
                       <p className="text-slate-400 text-xs">
-                        {ticket.user?.name} (@{ticket.user?.username})
+                        {ticket.user?.username}
                       </p>
                       <p className="text-slate-500 text-xs line-clamp-2 mt-1">
                         {ticket.message}

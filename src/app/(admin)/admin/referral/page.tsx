@@ -584,16 +584,10 @@ export default function AdminReferralPage() {
                       className="transition-colors hover:bg-slate-700/20"
                     >
                       <td className="py-3 text-white">
-                        {entry.user?.name}
-                        <span className="block text-xs text-slate-500">
-                          @{entry.user?.username}
-                        </span>
+                        {entry.user?.username ?? "-"}
                       </td>
                       <td className="py-3 text-slate-300">
-                        {entry.fromUser?.name}
-                        <span className="block text-xs text-slate-500">
-                          @{entry.fromUser?.username}
-                        </span>
+                        {entry.fromUser?.username ?? "-"}
                       </td>
                       <td className="py-3 text-center">
                         <span className="rounded-full bg-purple-600/20 px-2 py-0.5 text-xs text-purple-400">

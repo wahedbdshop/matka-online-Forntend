@@ -365,10 +365,7 @@ function WithdrawalsContent() {
                   </td>
                   <td className="px-4 py-3">
                     <p className="text-xs font-medium text-white">
-                      {w.user?.name ?? "-"}
-                    </p>
-                    <p className="text-[10px] text-slate-500">
-                      @{w.user?.username ?? "-"}
+                      {w.user?.username ?? "-"}
                     </p>
                   </td>
                   <td className="px-4 py-3 text-xs text-slate-300">

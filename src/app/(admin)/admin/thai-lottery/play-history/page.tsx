@@ -274,10 +274,7 @@ export default function ThaiPlayHistoryPage() {
                   </td>
                   <td className="px-4 py-3">
                     <p className="text-xs font-medium text-white">
-                      {bet.user?.name ?? "-"}
-                    </p>
-                    <p className="text-[10px] text-slate-500">
-                      @{bet.user?.username ?? "-"}
+                      {bet.user?.username ?? "-"}
                     </p>
                   </td>
                   <td className="px-4 py-3">

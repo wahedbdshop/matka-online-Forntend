@@ -39,6 +39,9 @@ export interface AdminUserTransaction {
   createdAt: string;
   senderUsername?: string | null;
   receiverUsername?: string | null;
+  bonusAmount?: number | string | null;
+  bonusName?: string | null;
+  reason?: string | null;
 }
 
 export interface AdminUserTransactionsResponse {
