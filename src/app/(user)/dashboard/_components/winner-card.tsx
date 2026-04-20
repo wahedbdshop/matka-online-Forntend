@@ -37,11 +37,20 @@ function getAvatarLabel(winner: any) {
   return value.charAt(0).toUpperCase() || "U";
 }
 
+const THAI_PLAY_TYPE_LABEL: Record<string, string> = {
+  THREE_UP_DIRECT: "3Up Direct",
+  THREE_UP_RUMBLE: "3Up Rumble",
+  THREE_UP_SINGLE: "3Up Single",
+  THREE_UP_TOTAL: "3Up Total",
+  TWO_UP_DIRECT: "2Up Direct",
+  DOWN_DIRECT: "Down Direct",
+  DOWN_SINGLE: "Down Single",
+  DOWN_TOTAL: "Down Total",
+};
+
 function getThaiMeta(winner: any) {
-  return String(winner?.playType ?? winner?.lotteryType ?? "")
-    .replace(/\s*\+\s*/g, " ")
-    .replace(/\s{2,}/g, " ")
-    .trim();
+  const raw = String(winner?.playType ?? winner?.lotteryType ?? "").trim();
+  return THAI_PLAY_TYPE_LABEL[raw] ?? raw.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
 function getKalyanPlayTypeLabel(value: unknown) {

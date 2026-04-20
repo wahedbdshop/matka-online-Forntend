@@ -65,8 +65,68 @@ export const ThaiLotteryUserService = {
   },
 
   getRecentWinners: async () => {
-    const res = await publicApi.get<ApiResponse<any>>("/home/winners");
-    return res.data;
+    const extractList = (d: any): any[] => {
+      if (Array.isArray(d)) return d;
+      if (Array.isArray(d?.data)) return d.data;
+      if (Array.isArray(d?.bets)) return d.bets;
+      if (Array.isArray(d?.rounds)) return d.rounds;
+      if (Array.isArray(d?.results)) return d.results;
+      if (Array.isArray(d?.data?.bets)) return d.data.bets;
+      if (Array.isArray(d?.data?.rounds)) return d.data.rounds;
+      if (Array.isArray(d?.data?.results)) return d.data.results;
+      return [];
+    };
+
+    const tryGetRoundId = async (): Promise<string | null> => {
+      // try 1: latest CLOSED round via auth API
+      try {
+        const res = await api.get<ApiResponse<any>>(
+          "/thai-lottery/rounds?page=1&limit=10",
+        );
+        const rounds = extractList(res.data);
+        // find the most recent CLOSED/RESULT_DECLARED round (skip active/open)
+        const closed = rounds.find((r: any) => {
+          const s = String(r?.status ?? "").toUpperCase();
+          return s === "CLOSED" || s === "RESULT_DECLARED" || s === "COMPLETED" || s === "FINISHED";
+        });
+        const id = closed?.id ?? closed?.roundId;
+        if (id) return String(id);
+      } catch { /* ignore */ }
+
+      // try 2: public-results (already completed rounds)
+      try {
+        const res = await publicApi.get<ApiResponse<any>>(
+          "/thai-lottery/public-results?page=1&limit=1",
+        );
+        const items = extractList(res.data);
+        const first = items[0];
+        const id = first?.roundId ?? first?.id ?? first?.round?.id;
+        if (id) return String(id);
+      } catch { /* ignore */ }
+
+      return null;
+    };
+
+    const roundId = await tryGetRoundId();
+
+    if (roundId) {
+      try {
+        const betsRes = await api.get<ApiResponse<any>>(
+          `/thai-lottery/rounds/${roundId}/bets?status=WON&limit=20`,
+        );
+        const bets = extractList(betsRes.data);
+        if (bets.length > 0) return { success: true, data: bets };
+      } catch { /* ignore */ }
+    }
+
+    // fallback: /thai-lottery/public-winners
+    try {
+      const res = await publicApi.get<ApiResponse<any>>("/thai-lottery/public-winners");
+      const data = extractList(res.data);
+      if (data.length > 0) return { success: true, data };
+    } catch { /* ignore */ }
+
+    return { success: true, data: [] };
   },
 
   getMyBets: async (

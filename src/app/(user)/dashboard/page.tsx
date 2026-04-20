@@ -77,7 +77,8 @@ export default function DashboardPage() {
   const paymentMethods = home?.paymentMethods ?? [];
   const thaiRatesCount = thaiRatesData?.data?.length ?? 0;
   const allThaiWinners = (thaiWinnersData?.data ?? []) as Record<string, unknown>[];
-  const thaiWinners = sortByAmountDesc(allThaiWinners);
+  const filteredThaiWinners = filterLatestDraw(allThaiWinners);
+  const thaiWinners = sortByAmountDesc(filteredThaiWinners.length ? filteredThaiWinners : allThaiWinners);
 
   const recentWinners = kalyanWinnersData?.data ?? [];
   // Kalyan: all winners sorted by amount desc

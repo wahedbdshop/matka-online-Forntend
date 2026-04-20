@@ -92,6 +92,7 @@ export default function WinHistoryPage() {
       const res = await KalyanUserService.getMyEntries({
         page: p,
         limit: 10,
+        status: "WON",
       });
       const data: EntrySlip[] = Array.isArray(res.data) ? res.data : [];
       setEntries((prev) => (append ? [...prev, ...data] : data));
@@ -209,15 +210,17 @@ export default function WinHistoryPage() {
     <div className="space-y-5 pb-6">
       <KalyanPageHeader title="Win History" subtitle="All your winning bets" backHref="/kalyan" />
 
-      <div className="flex items-center gap-3 rounded-2xl border border-amber-500/20 bg-gradient-to-r from-amber-600/20 to-yellow-500/10 p-4">
-        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-500/15">
-          <Trophy className="h-5 w-5 text-amber-400" />
+      {!loading && rows.length === 0 && (
+        <div className="flex items-center gap-3 rounded-2xl border border-amber-500/20 bg-gradient-to-r from-amber-600/20 to-yellow-500/10 p-4">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-500/15">
+            <Trophy className="h-5 w-5 text-amber-400" />
+          </div>
+          <div>
+            <p className="text-sm font-bold text-white">Your Winning Bets</p>
+            <p className="mt-0.5 text-xs text-slate-400">Only bets with status WON are shown here.</p>
+          </div>
         </div>
-        <div>
-          <p className="text-sm font-bold text-white">Your Winning Bets</p>
-          <p className="mt-0.5 text-xs text-slate-400">Only bets with status WON are shown here.</p>
-        </div>
-      </div>
+      )}
 
       {loading && page === 1 && <LoadingState message="Loading wins..." rows={4} />}
 
@@ -225,7 +228,7 @@ export default function WinHistoryPage() {
         <ErrorState message={error} onRetry={() => fetchWins(1, false)} />
       )}
 
-      {!loading && !error && entries.length === 0 && (
+      {!loading && !error && rows.length === 0 && (
         <EmptyState
           icon={Trophy}
           title="No wins yet"
