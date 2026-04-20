@@ -76,11 +76,8 @@ export default function DashboardPage() {
   const popup = home?.popup ?? null;
   const paymentMethods = home?.paymentMethods ?? [];
   const thaiRatesCount = thaiRatesData?.data?.length ?? 0;
-  const allThaiWinners = (thaiWinnersData?.data ?? []).filter(
-    (winner: Record<string, unknown>) => matchesGameType(winner, "thai"),
-  );
-  // Thai: only last draw winners, sorted by amount desc
-  const thaiWinners = sortByAmountDesc(filterLatestDraw(allThaiWinners));
+  const allThaiWinners = (thaiWinnersData?.data ?? []) as Record<string, unknown>[];
+  const thaiWinners = sortByAmountDesc(allThaiWinners);
 
   const recentWinners = kalyanWinnersData?.data ?? [];
   // Kalyan: all winners sorted by amount desc

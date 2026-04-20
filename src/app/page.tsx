@@ -107,10 +107,8 @@ export default function LandingPage() {
     multiplier: r.rate ?? r.multiplier ?? 0,
     label: KALYAN_LABELS[r.playType] ?? r.playType,
   }));
-  const recentWinners = recentWinnersData?.data ?? thaiWinnersData?.data ?? [];
-  const thaiWinners = recentWinners.filter((winner: Record<string, unknown>) =>
-    matchesGameType(winner, "thai"),
-  );
+  const recentWinners = recentWinnersData?.data ?? [];
+  const thaiWinners = (thaiWinnersData?.data ?? []) as Record<string, unknown>[];
   const kalyanWinners = recentWinners.filter((winner: Record<string, unknown>) =>
     matchesGameType(winner, "kalyan"),
   );
@@ -447,6 +445,7 @@ export default function LandingPage() {
                       "1% register bonus with quick customer support",
                       "www.matkaonline24.online",
                       "www.matkaonline24.com",
+                      "www.matka24.org",
                     ].map((text) => (
                       <p key={text}>{text}</p>
                     ))}

@@ -182,13 +182,9 @@ export function WinnerCard({
         <span
           className={`ml-auto flex items-center gap-1 rounded-full px-1.5 py-0.5 ${styles.liveBg}`}
         >
-          <span
-            className={`h-1.5 w-1.5 rounded-full ${
-              bets?.length ? "animate-pulse bg-emerald-500" : "animate-pulse bg-yellow-400"
-            }`}
-          />
+          <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-500" />
           <span className={`text-[9px] font-bold ${styles.liveText}`}>
-            {bets?.length ? "Live" : "Next Draw"}
+            Live
           </span>
         </span>
       </div>

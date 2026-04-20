@@ -37,6 +37,8 @@ export interface AdminUserTransaction {
   newBalance: number | string;
   balanceChangeType: "Credit" | "Debit" | string;
   createdAt: string;
+  senderUsername?: string | null;
+  receiverUsername?: string | null;
 }
 
 export interface AdminUserTransactionsResponse {

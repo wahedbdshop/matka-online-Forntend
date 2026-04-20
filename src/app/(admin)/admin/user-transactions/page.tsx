@@ -10,6 +10,8 @@ import {
   ChevronRight,
   ReceiptText,
   X,
+  Plus,
+  Minus,
 } from "lucide-react";
 import {
   AdminService,
@@ -32,13 +34,6 @@ const GROUP_COLORS = [
   "bg-yellow-900/10",
 ];
 
-function balancePillColor(balanceChangeType?: string) {
-  if (balanceChangeType?.toLowerCase() === "credit")
-    return "bg-emerald-500/10 text-emerald-400 border-emerald-500/20";
-  if (balanceChangeType?.toLowerCase() === "debit")
-    return "bg-red-500/10 text-red-400 border-red-500/20";
-  return "bg-slate-500/10 text-slate-300 border-slate-500/20";
-}
 
 function tranColor(tranType: string) {
   if (tranType.startsWith("Deposit"))            return "bg-emerald-500/10 text-emerald-400 border-emerald-500/20";
@@ -83,6 +78,8 @@ export default function UserTransactionsPage() {
     newBalance: t.newBalance ?? t.balanceAfter ?? t.balance_after ?? 0,
     balanceChangeType: t.balanceChangeType ?? t.balance_change_type ?? "",
     createdAt: t.createdAt ?? t.created_at ?? "",
+    senderUsername: t.senderUsername ?? t.sender_username ?? t.sender?.username ?? t.fromUser?.username ?? null,
+    receiverUsername: t.receiverUsername ?? t.receiver_username ?? t.receiver?.username ?? t.toUser?.username ?? null,
   }));
 
   const meta: AdminUserTransactionsResponse["meta"] = (rawData as any)?.meta ?? (rawData as any)?.pagination;
@@ -249,24 +246,55 @@ export default function UserTransactionsPage() {
                       >
                         {row.tranType}
                       </span>
+                      {row.tranType?.toLowerCase().includes("transfer") && (
+                        <div className="mt-1 flex items-center gap-1 text-xs">
+                          {row.balanceChangeType?.toLowerCase() === "credit" ? (
+                            <>
+                              <span className="text-slate-500">Receiver:</span>
+                              <span className="font-bold text-emerald-400">{row.username}</span>
+                            </>
+                          ) : row.balanceChangeType?.toLowerCase() === "debit" ? (
+                            <>
+                              <span className="text-slate-500">Sender:</span>
+                              <span className="font-bold text-red-400">{row.username}</span>
+                            </>
+                          ) : null}
+                        </div>
+                      )}
                     </td>
                     <td className="px-5 py-3.5 text-right font-mono text-slate-300 border-r border-slate-700/30">
                       Rs {fmt(row.oldBalance)}
                     </td>
-                    <td className="px-5 py-3.5 text-right font-mono font-bold text-white border-r border-slate-700/30">
-                      Rs {fmt(row.amount)}
+                    <td className="px-5 py-3.5 text-right font-mono font-bold border-r border-slate-700/30">
+                      {(() => {
+                        const isCredit = row.balanceChangeType?.toLowerCase() === "credit";
+                        const isDebit = row.balanceChangeType?.toLowerCase() === "debit";
+                        return (
+                          <div className={cn(
+                            "inline-flex items-center gap-1",
+                            isCredit ? "text-emerald-400" : isDebit ? "text-red-400" : "text-white",
+                          )}>
+                            {isCredit ? <Plus className="h-3 w-3" /> : isDebit ? <Minus className="h-3 w-3" /> : null}
+                            <span>Rs {fmt(row.amount)}</span>
+                          </div>
+                        );
+                      })()}
                     </td>
                     <td className="px-5 py-3.5 text-right font-mono text-white border-r border-slate-700/30">
                       <div className="flex items-center justify-end gap-2">
                         <span>Rs {fmt(row.newBalance)}</span>
-                        <span
-                          className={cn(
+                        {row.balanceChangeType && (
+                          <span className={cn(
                             "inline-flex items-center rounded-lg border px-2 py-0.5 text-[10px] font-semibold",
-                            balancePillColor(row.balanceChangeType),
-                          )}
-                        >
-                          {row.balanceChangeType || "-"}
-                        </span>
+                            row.balanceChangeType.toLowerCase() === "credit"
+                              ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
+                              : row.balanceChangeType.toLowerCase() === "debit"
+                                ? "bg-red-500/10 text-red-400 border-red-500/20"
+                                : "bg-slate-500/10 text-slate-300 border-slate-500/20",
+                          )}>
+                            {row.balanceChangeType}
+                          </span>
+                        )}
                       </div>
                     </td>
                     <td className="px-5 py-3.5 text-center">
@@ -285,10 +313,10 @@ export default function UserTransactionsPage() {
         </div>
 
         {/* Pagination */}
-        {totalPages > 1 && (
+        {rows.length > 0 && (
           <div className="flex items-center justify-between border-t border-slate-700/40 px-4 py-3">
             <span className="text-[10px] text-slate-500">
-              Page {meta?.page ?? 1} of {totalPages} · {fmt(meta?.total ?? 0)} records
+              Page {page} {meta?.total ? `of ${totalPages} · ${fmt(meta.total)} records` : ""}
             </span>
             <div className="flex items-center gap-1">
               <button
@@ -298,9 +326,10 @@ export default function UserTransactionsPage() {
               >
                 <ChevronLeft className="h-3.5 w-3.5" />
               </button>
+              <span className="px-2 text-[10px] text-slate-400 font-mono">{page}</span>
               <button
-                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                disabled={page >= totalPages}
+                onClick={() => setPage((p) => p + 1)}
+                disabled={rows.length < 20 && page >= totalPages}
                 className="flex h-7 w-7 items-center justify-center rounded-lg border border-slate-700 bg-slate-800 text-slate-400 hover:text-white disabled:opacity-40 transition-all"
               >
                 <ChevronRight className="h-3.5 w-3.5" />
