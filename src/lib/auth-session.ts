@@ -8,6 +8,8 @@ export type SessionSyncPayload = {
   accessToken?: string | null;
   refreshToken?: string | null;
   sessionToken?: string | null;
+  sessionMaxAgeMs?: number;
+  refreshTokenMaxAgeMs?: number;
 };
 
 export type RefreshedSessionPayload = SessionSyncPayload & {

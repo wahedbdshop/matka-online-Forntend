@@ -116,7 +116,8 @@ export default function LoginPage() {
     },
     staleTime: 0,
     refetchOnMount: "always",
-    retry: false,
+    retry: 1,
+    retryDelay: 1500,
   });
 
   const captchaErrorMessage =

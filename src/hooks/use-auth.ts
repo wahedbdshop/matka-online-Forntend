@@ -41,11 +41,15 @@ async function completeLogin(
     accessToken,
     refreshToken,
     sessionToken: token,
+    sessionMaxAgeMs: data.sessionMaxAgeMs,
+    refreshTokenMaxAgeMs: data.refreshTokenMaxAgeMs,
   });
   await syncServerSession({
     accessToken,
     refreshToken,
     sessionToken: token,
+    sessionMaxAgeMs: data.sessionMaxAgeMs,
+    refreshTokenMaxAgeMs: data.refreshTokenMaxAgeMs,
   });
 
   setAuth(user, accessToken);

@@ -21,6 +21,8 @@ export interface AuthenticatedLoginResponse {
   user: any;
   accessToken: string;
   refreshToken: string;
+  sessionMaxAgeMs?: number;
+  refreshTokenMaxAgeMs?: number;
 }
 
 export interface AdminOtpRequiredResponse {
@@ -78,22 +80,51 @@ export interface ForceChangePasswordPayload {
   newPassword: string;
 }
 
+const CAPTCHA_REQUEST_TIMEOUT_MS = 30_000;
+const CAPTCHA_REQUEST_RETRY_COUNT = 2;
+
+const sleep = (ms: number) =>
+  new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
+
 export const AuthService = {
   getCaptcha: async () => {
-    const res = await publicApi.get<ApiResponse<CaptchaResponse>>(
-      "/auth/captcha",
-      {
-        params: {
-          _: Date.now(),
-        },
-        headers: {
-          "Cache-Control": "no-store, no-cache, max-age=0, must-revalidate",
-          Pragma: "no-cache",
-          Expires: "0",
-        },
-      },
-    );
-    return res.data;
+    let lastError: unknown;
+
+    for (
+      let attempt = 0;
+      attempt <= CAPTCHA_REQUEST_RETRY_COUNT;
+      attempt += 1
+    ) {
+      try {
+        const res = await publicApi.get<ApiResponse<CaptchaResponse>>(
+          "/auth/captcha",
+          {
+            timeout: CAPTCHA_REQUEST_TIMEOUT_MS,
+            params: {
+              _: Date.now(),
+            },
+            headers: {
+              "Cache-Control": "no-store, no-cache, max-age=0, must-revalidate",
+              Pragma: "no-cache",
+              Expires: "0",
+            },
+          },
+        );
+        return res.data;
+      } catch (error) {
+        lastError = error;
+
+        if (attempt === CAPTCHA_REQUEST_RETRY_COUNT) {
+          break;
+        }
+
+        await sleep(800 * (attempt + 1));
+      }
+    }
+
+    throw lastError;
   },
 
   loginWithCaptcha: async (payload: LoginWithCaptchaPayload) => {

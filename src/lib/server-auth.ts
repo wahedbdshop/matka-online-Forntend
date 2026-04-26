@@ -16,6 +16,8 @@ export type SessionTokens = {
   accessToken?: string | null;
   refreshToken?: string | null;
   sessionToken?: string | null;
+  sessionMaxAgeMs?: number;
+  refreshTokenMaxAgeMs?: number;
 };
 
 export type RefreshedSession = SessionTokens & {
@@ -30,15 +32,15 @@ const isProduction = process.env.NODE_ENV === "production";
 
 const THIRTY_DAYS = 60 * 60 * 24 * 30;
 
-export const serverAuthCookieOptions = {
+const getServerAuthCookieOptions = (maxAge = THIRTY_DAYS) => ({
   httpOnly: true,
   sameSite: (isProduction ? "none" : "lax") as "none" | "lax",
   secure: isProduction,
   path: "/",
-  maxAge: THIRTY_DAYS,
-};
+  maxAge,
+});
 
-export const serverAuthFlagCookieOptions = {
+const serverAuthFlagCookieOptions = {
   httpOnly: false,
   sameSite: (isProduction ? "none" : "lax") as "none" | "lax",
   secure: isProduction,
@@ -68,10 +70,23 @@ export function applySessionCookies(
   cookieStore: CookieWriter,
   tokens: SessionTokens,
 ) {
+  const sessionCookieMaxAgeSeconds =
+    typeof tokens.sessionMaxAgeMs === "number" && tokens.sessionMaxAgeMs > 0
+      ? Math.max(1, Math.floor(tokens.sessionMaxAgeMs / 1000))
+      : THIRTY_DAYS;
+  const refreshCookieMaxAgeSeconds =
+    typeof tokens.refreshTokenMaxAgeMs === "number" &&
+    tokens.refreshTokenMaxAgeMs > 0
+      ? Math.max(1, Math.floor(tokens.refreshTokenMaxAgeMs / 1000))
+      : sessionCookieMaxAgeSeconds;
+
   if (tokens.accessToken) {
     // Keep accessToken non-httpOnly so client-side JS (getClientAccessTokenCookie)
     // can read it on page refresh and skip the full token-refresh round-trip.
-    const accessTokenOptions = { ...serverAuthCookieOptions, httpOnly: false };
+    const accessTokenOptions = {
+      ...getServerAuthCookieOptions(sessionCookieMaxAgeSeconds),
+      httpOnly: false,
+    };
     cookieStore.set("accessToken", tokens.accessToken, accessTokenOptions);
     cookieStore.set("auth_token", tokens.accessToken, accessTokenOptions);
   }
@@ -80,12 +95,12 @@ export function applySessionCookies(
     cookieStore.set(
       "refreshToken",
       tokens.refreshToken,
-      serverAuthCookieOptions,
+      getServerAuthCookieOptions(refreshCookieMaxAgeSeconds),
     );
     cookieStore.set(
       "refresh_token",
       tokens.refreshToken,
-      serverAuthCookieOptions,
+      getServerAuthCookieOptions(refreshCookieMaxAgeSeconds),
     );
   }
 
@@ -93,9 +108,13 @@ export function applySessionCookies(
     cookieStore.set(
       "betterAuthSession",
       tokens.sessionToken,
-      serverAuthCookieOptions,
+      getServerAuthCookieOptions(sessionCookieMaxAgeSeconds),
     );
-    cookieStore.set("token", tokens.sessionToken, serverAuthCookieOptions);
+    cookieStore.set(
+      "token",
+      tokens.sessionToken,
+      getServerAuthCookieOptions(sessionCookieMaxAgeSeconds),
+    );
   }
 
   cookieStore.set("auth_flag", "1", serverAuthFlagCookieOptions);
