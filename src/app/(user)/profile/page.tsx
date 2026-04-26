@@ -187,12 +187,18 @@ export default function ProfilePage() {
           </div>
 
           <div className="flex-1 min-w-0">
-            <h2 className="text-white font-bold text-xl leading-tight">
-              {profile?.name}
-            </h2>
-            <p className="text-slate-400 text-sm mt-0.5">
-              @{profile?.username}
-            </p>
+            <div className="flex items-center gap-1.5">
+              <span className="text-purple-400 font-semibold text-sm">Name :</span>
+              <h2 className="text-white font-bold text-xl leading-tight">
+                {profile?.name}
+              </h2>
+            </div>
+            <div className="flex items-center gap-1.5 mt-0.5">
+              <span className="text-blue-400 font-semibold text-sm">User Name :</span>
+              <p className="text-slate-300 text-sm font-medium">
+                @{profile?.username}
+              </p>
+            </div>
             <div className="flex items-center gap-2 mt-2 flex-wrap">
               <span
                 className={`rounded-full px-2.5 py-0.5 text-[10px] font-semibold ${

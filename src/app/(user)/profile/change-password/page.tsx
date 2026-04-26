@@ -6,8 +6,9 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Loader2, Lock, Eye, EyeOff } from "lucide-react";
+import { Loader2, Lock, Eye, EyeOff, ArrowLeft } from "lucide-react";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -71,6 +72,7 @@ function PasswordInput({
 }
 
 export default function ChangePasswordPage() {
+  const router = useRouter();
   const form = useForm<FormData>({
     resolver: zodResolver(schema),
     mode: "onChange",
@@ -148,11 +150,19 @@ export default function ChangePasswordPage() {
 
   return (
     <div className="space-y-5 max-w-lg">
-      <div>
-        <h1 className="text-xl font-bold text-white">Change Password</h1>
-        <p className="text-xs text-slate-500 mt-0.5">
-          Keep your account secure
-        </p>
+      <div className="flex items-center gap-3">
+        <button
+          onClick={() => router.back()}
+          className="text-slate-400 hover:text-white transition-colors"
+        >
+          <ArrowLeft className="h-5 w-5" />
+        </button>
+        <div>
+          <h1 className="text-xl font-bold text-white">Change Password</h1>
+          <p className="text-xs text-slate-500 mt-0.5">
+            Keep your account secure
+          </p>
+        </div>
       </div>
 
       <div className="rounded-2xl border border-slate-700 bg-slate-800/50 p-5">

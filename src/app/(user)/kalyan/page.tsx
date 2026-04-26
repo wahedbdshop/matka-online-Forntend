@@ -14,6 +14,7 @@ import {
   Star,
   Zap,
   ArrowRight,
+  ArrowLeft,
 } from "lucide-react";
 
 const QUICK_ACTIONS = [
@@ -101,6 +102,14 @@ export default function KalyanLandingPage() {
 
   return (
     <div className="space-y-5 pb-4">
+      {/* Back Button */}
+      <button
+        onClick={() => router.back()}
+        className="flex items-center gap-1.5 text-slate-400 hover:text-white transition-colors"
+      >
+        <ArrowLeft className="h-5 w-5" />
+      </button>
+
       {/* Hero */}
       <div className="rounded-2xl border border-purple-500/20 bg-gradient-to-br from-purple-700/30 via-indigo-600/20 to-slate-900/40 p-5 text-center">
         <div className="mb-3 flex justify-center">

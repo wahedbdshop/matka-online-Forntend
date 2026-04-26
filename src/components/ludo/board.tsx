@@ -40,11 +40,11 @@ export type LudoBoardProps = {
 // Color palette
 // ─────────────────────────────────────────────────────────────────────────────
 const PALETTE = {
-  RED:    { main: "#e8192c", tint: "#ffe3e5" },
-  GREEN:  { main: "#00a650", tint: "#d4f5e2" },
-  BLUE:   { main: "#0047ab", tint: "#d6e4ff" },
-  YELLOW: { main: "#f5a800", tint: "#fff3cc" },
-} satisfies Record<LudoColor, { main: string; tint: string }>;
+  RED:    { main: "#e8192c", dark: "#8a000f", tint: "#ffe3e5" },
+  GREEN:  { main: "#00a650", dark: "#005c2a", tint: "#d4f5e2" },
+  BLUE:   { main: "#3DB8D8", dark: "#1a6e82", tint: "#d0f0f8" },
+  YELLOW: { main: "#C8A200", dark: "#705a00", tint: "#fff0c0" },
+} satisfies Record<LudoColor, { main: string; dark: string; tint: string }>;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Mathematical layout
@@ -78,21 +78,18 @@ const HOME_CIRCLE_MAP = new Map<string, LudoColor>([
 ]);
 
 /**
- * Safe cells — 8 positions, full 4-fold symmetry about (7,7).
- * Pattern: 2 cells inward from each home-area entrance on every arm.
+ * Safe cells — 4 positions, rotationally symmetric about (7,7).
  *
- *   (2,6)↔(2,8)    top arm
- *   (6,2)↔(6,12)   left arm (top row)
- *   (8,2)↔(8,12)   left arm (bottom row)
- *   (12,6)↔(12,8)  bottom arm
- *
- * Symmetry check: ∀ (r,c) ∈ SAFE → (r,14-c), (14-r,c), (14-r,14-c) ∈ SAFE ✓
+ *   (2,6)   top arm
+ *   (6,12)  right arm
+ *   (12,8)  bottom arm
+ *   (8,2)   left arm
  */
 const SAFE_SET = new Set([
-  "2-6",  "2-8",
-  "6-2",  "6-12",
-  "8-2",  "8-12",
-  "12-6", "12-8",
+  "2-6",
+  "6-12",
+  "12-8",
+  "8-2",
 ]);
 
 /**
@@ -121,6 +118,17 @@ const START_MAP = new Map<string, LudoColor>([
   ["13-6", "BLUE"],
 ]);
 
+/**
+ * Directional arrow cells at the four arm edges — indicate travel direction
+ * and are tinted with the adjacent home color.
+ */
+const DIRECTION_MAP = new Map<string, { arrow: string; color: LudoColor }>([
+  ["0-7",  { arrow: "↓", color: "GREEN" }],
+  ["6-0",  { arrow: "→", color: "RED" }],
+  ["8-14", { arrow: "←", color: "YELLOW" }],
+  ["14-7", { arrow: "↑", color: "BLUE" }],
+]);
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Cell classification
 // ─────────────────────────────────────────────────────────────────────────────
@@ -131,6 +139,7 @@ type CellKind =
   | { t: "run-up";      color: LudoColor }
   | { t: "start";       color: LudoColor }
   | { t: "safe" }
+  | { t: "direction";   color: LudoColor; arrow: string }
   | { t: "center" }
   | { t: "path" };
 
@@ -170,6 +179,10 @@ function classify(row: number, col: number): CellKind {
   // ── Safe cells ───────────────────────────────────────────────────────────
   if (SAFE_SET.has(key)) return { t: "safe" };
 
+  // ── Directional arrow cells ───────────────────────────────────────────────
+  const dir = DIRECTION_MAP.get(key);
+  if (dir) return { t: "direction", color: dir.color, arrow: dir.arrow };
+
   // ── Regular path ─────────────────────────────────────────────────────────
   return { t: "path" };
 }
@@ -190,31 +203,74 @@ function TokenPin({
   fill?: string;
   onMove?: (id: string) => void;
 }) {
-  const hex = PALETTE[token.color].main;
+  const hex  = PALETTE[token.color].main;
+  const dark = PALETTE[token.color].dark;
+  const gid  = token.color.toLowerCase(); // unique per color, safe as SVG id prefix
 
   const svgEl = (
     <svg
-      viewBox="0 0 40 56"
+      viewBox="0 0 40 60"
       style={{ width: fill, height: fill, flexShrink: 0 }}
       className={cn(
         token.available &&
-          "drop-shadow-[0_0_6px_rgba(253,224,71,1)] animate-bounce",
+          "drop-shadow-[0_0_8px_rgba(253,224,71,1)] animate-bounce",
       )}
     >
-      {/* Shadow */}
-      <ellipse cx="20" cy="54" rx="7" ry="2.5" fill="rgba(0,0,0,.22)" />
-      {/* Head */}
-      <circle cx="20" cy="18" r="17" fill={hex} />
-      <circle cx="20" cy="18" r="17" fill="none" stroke="white" strokeWidth="3" />
-      {/* Shine */}
-      <ellipse cx="13" cy="11" rx="6" ry="3.5" fill="rgba(255,255,255,.4)" />
-      {/* Inner dot */}
-      <circle cx="20" cy="18" r="7" fill="rgba(255,255,255,.52)" />
-      {/* Tail */}
-      <polygon points="20,33 13,54 20,47 27,54" fill={hex} />
+      <defs>
+        {/* Sphere gradient — light from top-left → dark bottom-right */}
+        <radialGradient id={`sp-${gid}`} cx="30%" cy="25%" r="75%">
+          <stop offset="0%"   stopColor="white"   stopOpacity="0.65" />
+          <stop offset="35%"  stopColor={hex}     stopOpacity="1" />
+          <stop offset="100%" stopColor={dark}    stopOpacity="1" />
+        </radialGradient>
+        {/* Neck gradient — dark left, light right */}
+        <linearGradient id={`nk-${gid}`} x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%"   stopColor={dark} />
+          <stop offset="40%"  stopColor={hex} />
+          <stop offset="100%" stopColor={dark} />
+        </linearGradient>
+      </defs>
+
+      {/* Ground shadow */}
+      <ellipse cx="20" cy="58" rx="10" ry="3" fill="rgba(0,0,0,.40)" />
+
+      {/* ── Neck / stem ── */}
+      <path d="M15,35 Q13,47 12,57 L20,53 L28,57 Q27,47 25,35 Z"
+            fill={`url(#nk-${gid})`} />
+      {/* Neck left-edge highlight */}
+      <path d="M16,36 Q15,46 15,54 L20,52 Z"
+            fill="rgba(255,255,255,.22)" />
+
+      {/* ── Head — dark rim (gives depth) ── */}
+      <circle cx="20" cy="19" r="19" fill={dark} />
+
+      {/* ── Head — main sphere with 3-D radial gradient ── */}
+      <circle cx="20" cy="19" r="17" fill={`url(#sp-${gid})`} />
+
+      {/* Bottom ambient shadow on sphere */}
+      <ellipse cx="22" cy="28" rx="13" ry="8"
+               fill="rgba(0,0,0,.18)" />
+
+      {/* White rim (separates head from rim) */}
+      <circle cx="20" cy="19" r="17"
+              fill="none" stroke="rgba(255,255,255,.70)" strokeWidth="1.8" />
+
+      {/* ── Specular highlight — large soft zone ── */}
+      <ellipse cx="13" cy="11" rx="7" ry="5"
+               fill="rgba(255,255,255,.55)"
+               transform="rotate(-20,13,11)" />
+      {/* Specular core — tiny bright spot */}
+      <ellipse cx="11" cy="9"  rx="3" ry="2"
+               fill="white" opacity="0.92"
+               transform="rotate(-20,11,9)" />
+
+      {/* ── Inner circle (Ludo King style dot) ── */}
+      <circle cx="20" cy="19" r="5.5" fill="rgba(255,255,255,.30)" />
+
       {/* Available glow ring */}
       {token.available && (
-        <circle cx="20" cy="18" r="17" fill="none" stroke="#fbbf24" strokeWidth="3" />
+        <circle cx="20" cy="19" r="19"
+                fill="none" stroke="#fbbf24" strokeWidth="3" opacity="0.95" />
       )}
     </svg>
   );
@@ -299,7 +355,7 @@ function Cell({
   if (kind.t === "home-circle") {
     const hex = PALETTE[kind.color].main;
     return (
-      <div className="aspect-square bg-white flex items-center justify-center p-[9%]">
+      <div className="aspect-square bg-white flex items-center justify-center p-[5%]">
         {/* Decorative circle — shows under token if occupied */}
         <div
           className="relative w-full h-full rounded-full flex items-center justify-center overflow-hidden"
@@ -326,7 +382,7 @@ function Cell({
 
           {/* Token (if present) rendered on top */}
           {first && (
-            <div className="absolute inset-[4%]">
+            <div className="absolute inset-[1%]">
               <TokenPin
                 token={first}
                 fill="100%"
@@ -354,7 +410,7 @@ function Cell({
         {!multi && first ? (
           <TokenPin
             token={first}
-            fill="88%"
+            fill="100%"
             onMove={first.available ? onMove : undefined}
           />
         ) : (
@@ -381,7 +437,7 @@ function Cell({
         style={{ boxShadow: `inset 0 0 0 2.5px ${hex}` }}
       >
         {!multi && first ? (
-          <TokenPin token={first} fill="88%" onMove={first.available ? onMove : undefined} />
+          <TokenPin token={first} fill="100%" onMove={first.available ? onMove : undefined} />
         ) : (
           <span
             className="rounded-full opacity-55"
@@ -393,23 +449,37 @@ function Cell({
     );
   }
 
-  // ── SAFE CELL — white with centered star ──────────────────────────────────
+  // ── SAFE CELL — white with star icon ─────────────────────────────────────
   if (kind.t === "safe") {
     return (
       <div className="aspect-square border border-[#c8c8c8] bg-white flex items-center justify-center relative overflow-hidden">
-        {!multi && first ? (
-          <TokenPin token={first} fill="88%" onMove={first.available ? onMove : undefined} />
-        ) : (
-          <span
-            className="select-none pointer-events-none font-bold leading-none"
-            style={{ fontSize: "clamp(8px, 1.8vw, 14px)", color: "#f59e0b" }}
-          >
-            ★
-          </span>
+        {!multi && first && (
+          <TokenPin token={first} fill="100%" onMove={first.available ? onMove : undefined} />
         )}
         {!first && (
-          /* Subtle amber outline for safe cells */
-          <span className="absolute inset-px border border-amber-300/50 pointer-events-none" />
+          <svg viewBox="0 0 20 20" className="w-[55%] h-[55%] opacity-40" fill="none" stroke="#666" strokeWidth="1.4">
+            <polygon points="10,2 12.4,7.8 18.5,8.5 14,12.8 15.3,19 10,15.8 4.7,19 6,12.8 1.5,8.5 7.6,7.8" />
+          </svg>
+        )}
+        {multi && <MultiTokens tokens={tokens} onMove={onMove} />}
+      </div>
+    );
+  }
+
+  // ── DIRECTION CELL — colored arrow at arm edges ───────────────────────────
+  if (kind.t === "direction") {
+    return (
+      <div className="aspect-square border border-[#c8c8c8] bg-white flex items-center justify-center relative overflow-hidden">
+        {!multi && first && (
+          <TokenPin token={first} fill="100%" onMove={first.available ? onMove : undefined} />
+        )}
+        {!first && (
+          <span
+            className="select-none pointer-events-none leading-none"
+            style={{ color: PALETTE[kind.color].main, fontSize: "65%", fontWeight: 700 }}
+          >
+            {kind.arrow}
+          </span>
         )}
         {multi && <MultiTokens tokens={tokens} onMove={onMove} />}
       </div>
@@ -420,7 +490,7 @@ function Cell({
   return (
     <div className="aspect-square border border-[#c8c8c8] bg-white flex items-center justify-center relative overflow-hidden">
       {!multi && first && (
-        <TokenPin token={first} fill="88%" onMove={first.available ? onMove : undefined} />
+        <TokenPin token={first} fill="100%" onMove={first.available ? onMove : undefined} />
       )}
       {multi && <MultiTokens tokens={tokens} onMove={onMove} />}
     </div>
@@ -445,7 +515,7 @@ function MultiTokens({
         <div key={t.id} className="relative overflow-hidden flex items-center justify-center">
           <TokenPin
             token={t}
-            fill="88%"
+            fill="100%"
             onMove={t.available ? onMove : undefined}
           />
         </div>

@@ -107,7 +107,7 @@ const SAFE_ZONE_INDEXES = [23, 91, 133, 201];
 
 function renderStar() {
   return (
-    <svg viewBox="0 0 24 24" className="h-[58%] w-[58%]" aria-hidden="true">
+    <svg viewBox="0 0 24 24" className="h-[52%] w-[52%]" aria-hidden="true">
       <polygon
         points="12,2.5 14.8,8.2 21,9.1 16.5,13.5 17.6,19.7 12,16.6 6.4,19.7 7.5,13.5 3,9.1 9.2,8.2"
         fill="#facc15"
@@ -119,7 +119,7 @@ function renderStar() {
   );
 }
 
-function LudoBoard() {
+function LudoPreviewBoard() {
   const cells = Array.from(
     { length: LUDO_GRID_SIZE * LUDO_GRID_SIZE },
     (_, cellIndex) => {
@@ -131,41 +131,33 @@ function LudoBoard() {
   );
 
   const getCellClassName = (row: number, col: number) => {
-    if (row <= 5 && col <= 5) return "bg-[#e63946] border-white/40";
-    if (row <= 5 && col >= 9) return "bg-[#2dc653] border-white/40";
-    if (row >= 9 && col <= 5) return "bg-[#ffbe0b] border-white/40";
-    if (row >= 9 && col >= 9) return "bg-[#3a86ff] border-white/40";
+    if (row <= 5 && col <= 5) return "bg-[#ff434c] border-white/50";
+    if (row <= 5 && col >= 9) return "bg-[#2fd15c] border-white/50";
+    if (row >= 9 && col <= 5) return "bg-[#ffc91f] border-white/50";
+    if (row >= 9 && col >= 9) return "bg-[#4285ff] border-white/50";
 
     if (col >= 6 && col <= 8) {
       if (col === 7 && row >= 1 && row <= 5)
-        return "bg-[#e63946] border-slate-600";
-      if (col === 6 && row >= 1 && row <= 5)
-        return "bg-[#2dc653] border-slate-600";
-      if (col === 6 && row >= 9 && row <= 13)
-        return "bg-[#ffbe0b] border-slate-600";
+        return "bg-[#2fd15c]/20 border-slate-300";
       if (col === 7 && row >= 9 && row <= 13)
-        return "bg-[#3a86ff] border-slate-600";
-      return "bg-white border-slate-600";
+        return "bg-[#4285ff]/20 border-slate-300";
+      return "bg-white border-slate-300";
     }
 
     if (row >= 6 && row <= 8) {
-      if (row === 6 && col >= 1 && col <= 5)
-        return "bg-[#e63946] border-slate-600";
       if (row === 7 && col >= 1 && col <= 5)
-        return "bg-[#ffbe0b] border-slate-600";
+        return "bg-[#ff434c]/20 border-slate-300";
       if (row === 7 && col >= 9 && col <= 13)
-        return "bg-[#2dc653] border-slate-600";
-      if (row === 8 && col >= 9 && col <= 13)
-        return "bg-[#3a86ff] border-slate-600";
-      return "bg-white border-slate-600";
+        return "bg-[#ffc91f]/30 border-slate-300";
+      return "bg-white border-slate-300";
     }
 
-    return "bg-slate-50 border-slate-300";
+    return "bg-white border-slate-300";
   };
 
   const homeTokenGroups = [
     {
-      color: "bg-[#e63946]",
+      color: "bg-white",
       positions: [
         "col-start-2 row-start-2",
         "col-start-5 row-start-2",
@@ -174,7 +166,7 @@ function LudoBoard() {
       ],
     },
     {
-      color: "bg-[#2dc653]",
+      color: "bg-white",
       positions: [
         "col-start-11 row-start-2",
         "col-start-14 row-start-2",
@@ -183,7 +175,7 @@ function LudoBoard() {
       ],
     },
     {
-      color: "bg-[#ffbe0b]",
+      color: "bg-white",
       positions: [
         "col-start-2 row-start-11",
         "col-start-5 row-start-11",
@@ -192,7 +184,7 @@ function LudoBoard() {
       ],
     },
     {
-      color: "bg-[#3a86ff]",
+      color: "bg-white",
       positions: [
         "col-start-11 row-start-11",
         "col-start-14 row-start-11",
@@ -203,7 +195,7 @@ function LudoBoard() {
   ];
 
   return (
-    <div className="relative aspect-square w-full overflow-hidden rounded-[22px] border-[3px] border-slate-900 bg-white shadow-[0_18px_36px_rgba(15,23,42,0.22)]">
+    <div className="relative aspect-square w-[214px] overflow-hidden rounded-[20px] border-[2px] border-white/80 bg-white shadow-[0_20px_50px_rgba(0,0,0,0.22)]">
       <div
         className="grid h-full w-full"
         style={{
@@ -231,10 +223,10 @@ function LudoBoard() {
           gridTemplateRows: `repeat(${LUDO_GRID_SIZE}, minmax(0, 1fr))`,
         }}
       >
-        <div className="col-start-7 col-end-10 row-start-7 row-end-10 [clip-path:polygon(50%_50%,0_0,100%_0)] bg-[#e63946]" />
-        <div className="col-start-7 col-end-10 row-start-7 row-end-10 [clip-path:polygon(50%_50%,100%_0,100%_100%)] bg-[#2dc653]" />
-        <div className="col-start-7 col-end-10 row-start-7 row-end-10 [clip-path:polygon(50%_50%,100%_100%,0_100%)] bg-[#3a86ff]" />
-        <div className="col-start-7 col-end-10 row-start-7 row-end-10 [clip-path:polygon(50%_50%,0_100%,0_0)] bg-[#ffbe0b]" />
+        <div className="col-start-7 col-end-10 row-start-7 row-end-10 [clip-path:polygon(50%_50%,0_0,100%_0)] bg-[#ff434c]" />
+        <div className="col-start-7 col-end-10 row-start-7 row-end-10 [clip-path:polygon(50%_50%,100%_0,100%_100%)] bg-[#2fd15c]" />
+        <div className="col-start-7 col-end-10 row-start-7 row-end-10 [clip-path:polygon(50%_50%,100%_100%,0_100%)] bg-[#4285ff]" />
+        <div className="col-start-7 col-end-10 row-start-7 row-end-10 [clip-path:polygon(50%_50%,0_100%,0_0)] bg-[#ffc91f]" />
 
         {homeTokenGroups.flatMap((group, groupIndex) =>
           group.positions.map((position, index) => (
@@ -242,11 +234,7 @@ function LudoBoard() {
               key={`${groupIndex}-${index}`}
               className={`flex h-full w-full items-center justify-center ${position}`}
             >
-              <div className="flex h-[62%] w-[62%] items-center justify-center rounded-full bg-white/30">
-                <div
-                  className={`h-[64%] w-[64%] rounded-full border-[3px] border-white ${group.color}`}
-                />
-              </div>
+              <div className="h-[34%] w-[34%] rounded-full border-2 border-white/90 bg-white shadow-[0_0_0_2px_rgba(255,255,255,0.18)]" />
             </div>
           )),
         )}
@@ -470,7 +458,6 @@ export default function LudoPage() {
 
   const isSearching = isQueueSearching;
   const livePlayerCount = lobby?.activePlayerCount ?? 2;
-
   if (!authChecked) return null;
 
   if (settingsLoading) {
@@ -550,7 +537,7 @@ export default function LudoPage() {
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom,rgba(239,68,68,0.1)_0%,transparent_60%)]" />
       </div>
 
-      <div className="relative mx-auto max-w-md px-4 pt-6">
+      <div className="relative mx-auto max-w-6xl px-4 pt-6">
         {/* Header */}
         <div className="mb-5 flex items-center justify-center gap-3">
           <Crown className="h-7 w-7 text-[#ffd700] drop-shadow-[0_0_8px_rgba(255,215,0,0.8)]" />
@@ -560,19 +547,16 @@ export default function LudoPage() {
           <Crown className="h-7 w-7 text-[#ffd700] drop-shadow-[0_0_8px_rgba(255,215,0,0.8)]" />
         </div>
 
-        {/* Board preview */}
-        <div className="relative mb-6 flex justify-center">
-          {/* Glow ring behind board */}
-          <div className="absolute inset-4 rounded-2xl bg-[radial-gradient(circle,rgba(130,80,255,0.35)_0%,transparent_70%)] blur-2xl" />
-          <div className="relative w-[220px]">
-            <LudoBoard />
-          </div>
-          {/* Online badge */}
-          <div className="absolute right-2 top-0 flex items-center gap-1.5 rounded-full border border-[#2dc653]/40 bg-[#0d1f15] px-3 py-1.5 shadow-[0_0_12px_rgba(45,198,83,0.3)]">
-            <span className="h-2 w-2 animate-pulse rounded-full bg-[#2dc653] shadow-[0_0_6px_#2dc653]" />
-            <span className="text-xs font-bold text-[#2dc653]">
-              {livePlayerCount} Online
-            </span>
+        <div className="relative mb-7 flex justify-center">
+          <div className="absolute inset-x-12 top-8 h-40 rounded-full bg-[radial-gradient(circle,rgba(125,89,255,0.28)_0%,transparent_72%)] blur-3xl" />
+          <div className="relative">
+            <LudoPreviewBoard />
+            <div className="absolute -right-24 top-3 flex items-center gap-2 rounded-full border border-[#2dc653]/45 bg-[#081a11] px-4 py-2 shadow-[0_0_16px_rgba(45,198,83,0.26)]">
+              <span className="h-2.5 w-2.5 rounded-full bg-[#2dc653] shadow-[0_0_8px_#2dc653]" />
+              <span className="text-sm font-bold text-[#69f28d]">
+                {livePlayerCount} Online
+              </span>
+            </div>
           </div>
         </div>
 

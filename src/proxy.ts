@@ -5,6 +5,12 @@ import {
   createClearedAuthRedirect,
   refreshBackendSession,
 } from "@/lib/server-auth";
+import {
+  isAdminPortalRole,
+  isSupportAgentRole,
+  resolveHomePathByRole,
+  resolveLoginPathByPathname,
+} from "@/lib/auth-role";
 
 const protectedRoutes = [
   "/dashboard",
@@ -15,10 +21,11 @@ const protectedRoutes = [
   "/notifications",
   "/referral",
   "/admin",
+  "/agent",
 ];
 
 // These paths under /admin are public (no token required)
-const adminPublicPaths = ["/admin/login"];
+const publicAuthPaths = ["/admin/login", "/agent/login"];
 
 type SessionUser = {
   role?: string;
@@ -158,7 +165,7 @@ export async function proxy(request: NextRequest) {
     request.cookies.get("refresh_token")?.value;
   const pathname = request.nextUrl.pathname;
 
-  const isAdminPublicPath = adminPublicPaths.some(
+  const isAdminPublicPath = publicAuthPaths.some(
     (p) => pathname === p || pathname.startsWith(p + "/"),
   );
 
@@ -203,7 +210,7 @@ export async function proxy(request: NextRequest) {
       return finalizeResponse(NextResponse.next());
     }
 
-    const loginPath = pathname.startsWith("/admin") ? "/admin/login" : "/login";
+    const loginPath = resolveLoginPathByPathname(pathname);
     return withSecurityHeaders(
       createClearedAuthRedirect(new URL(loginPath, request.url)),
     );
@@ -242,7 +249,7 @@ export async function proxy(request: NextRequest) {
       return finalizeResponse(NextResponse.next());
     }
 
-    const loginPath = pathname.startsWith("/admin") ? "/admin/login" : "/login";
+    const loginPath = resolveLoginPathByPathname(pathname);
     return withSecurityHeaders(
       createClearedAuthRedirect(new URL(loginPath, request.url)),
     );
@@ -250,12 +257,14 @@ export async function proxy(request: NextRequest) {
 
   const response = NextResponse.next();
 
-  const isAdmin = sessionUser.role === "ADMIN" || sessionUser.role === "AGENT";
+  const isAdmin = isAdminPortalRole(sessionUser.role);
+  const isSupportAgent = isSupportAgentRole(sessionUser.role);
 
   // Banned user can only access /profile
   if (
     sessionUser.status === "BANNED" &&
     !isAdmin &&
+    !isSupportAgent &&
     pathname !== "/profile" &&
     !pathname.startsWith("/profile/")
   ) {
@@ -267,7 +276,17 @@ export async function proxy(request: NextRequest) {
   // Non-admin trying to access admin-only paths (excluding admin/login)
   if (pathname.startsWith("/admin") && !isAdminPublicPath && !isAdmin) {
     return finalizeResponse(
-      NextResponse.redirect(new URL("/dashboard", request.url)),
+      NextResponse.redirect(
+        new URL(resolveHomePathByRole(sessionUser.role), request.url),
+      ),
+    );
+  }
+
+  if (pathname.startsWith("/agent") && !isAdminPublicPath && !isSupportAgent) {
+    return finalizeResponse(
+      NextResponse.redirect(
+        new URL(resolveHomePathByRole(sessionUser.role), request.url),
+      ),
     );
   }
 
@@ -275,16 +294,17 @@ export async function proxy(request: NextRequest) {
   if (
     pathname === "/login" ||
     pathname === "/register" ||
-    pathname === "/admin/login"
+    pathname === "/admin/login" ||
+    pathname === "/agent/login"
   ) {
-    const redirectTo = isAdmin ? "/admin" : "/dashboard";
+    const redirectTo = resolveHomePathByRole(sessionUser.role);
     return finalizeResponse(
       NextResponse.redirect(new URL(redirectTo, request.url)),
     );
   }
 
   if (pathname === "/") {
-    const redirectTo = isAdmin ? "/admin" : "/dashboard";
+    const redirectTo = resolveHomePathByRole(sessionUser.role);
     return finalizeResponse(
       NextResponse.redirect(new URL(redirectTo, request.url)),
     );

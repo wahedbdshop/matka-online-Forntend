@@ -328,7 +328,7 @@ export default function LudoAdminPage() {
 
       <div className="grid gap-6 lg:grid-cols-2">
         {/* Settings Card */}
-        <div className="space-y-4 rounded-2xl border border-slate-700 bg-slate-800/50 p-5">
+        <div className="space-y-4 overflow-hidden rounded-2xl border border-slate-700 bg-slate-800/50 p-5">
           <h2 className="text-sm font-bold text-white">Game Settings</h2>
 
           {loadingSettings ? (
@@ -340,25 +340,45 @@ export default function LudoAdminPage() {
           ) : (
             <div className="space-y-4">
               {/* On/Off Toggle */}
-              <div className="flex items-center justify-between rounded-xl border border-slate-700 bg-slate-900/60 px-4 py-3">
+              <div
+                className={cn(
+                  "flex items-center justify-between rounded-xl border px-4 py-3 transition-colors duration-300",
+                  settings.isEnabled
+                    ? "border-emerald-500/40 bg-emerald-500/10"
+                    : "border-red-500/40 bg-red-500/10",
+                )}
+              >
                 <div className="flex items-center gap-2">
-                  <Power className="h-4 w-4 text-slate-400" />
-                  <span className="text-sm text-slate-300">Game Status</span>
+                  <Power
+                    className={cn(
+                      "h-4 w-4 transition-colors duration-300",
+                      settings.isEnabled ? "text-emerald-400" : "text-red-400",
+                    )}
+                  />
+                  <div>
+                    <p className="text-sm font-medium text-slate-200">Game Status</p>
+                    <p className={cn("text-xs font-semibold", settings.isEnabled ? "text-emerald-400" : "text-slate-500")}>
+                      {settings.isEnabled ? "ONLINE" : "OFFLINE"}
+                    </p>
+                  </div>
                 </div>
                 <button
                   onClick={() => updateSettings({ isEnabled: !settings.isEnabled })}
                   disabled={saving}
                   className={cn(
-                    "relative h-6 w-11 rounded-full transition-colors duration-200",
-                    settings.isEnabled ? "bg-emerald-500" : "bg-slate-600",
+                    "flex items-center gap-2 rounded-lg px-4 py-2 text-xs font-bold transition-all duration-200 disabled:opacity-50",
+                    settings.isEnabled
+                      ? "bg-emerald-500 text-white shadow-lg shadow-emerald-500/30 hover:bg-emerald-600"
+                      : "bg-red-500 text-white shadow-lg shadow-red-500/30 hover:bg-red-600",
                   )}
                 >
                   <span
                     className={cn(
-                      "absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform duration-200",
-                      settings.isEnabled ? "translate-x-5" : "translate-x-0.5",
+                      "h-2 w-2 rounded-full",
+                      settings.isEnabled ? "bg-white animate-pulse" : "bg-white",
                     )}
                   />
+                  {settings.isEnabled ? "Turn OFF" : "Turn ON"}
                 </button>
               </div>
 

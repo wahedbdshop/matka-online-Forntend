@@ -126,7 +126,7 @@ const normalizeLudoToken = (token: LudoToken): LudoToken => ({
   status: normalizeLudoTokenStatus(token.status),
 });
 
-const normalizeLudoRoom = (room: LudoRoom): LudoRoom => ({
+export const normalizeLudoRoom = (room: LudoRoom): LudoRoom => ({
   ...room,
   id: room.id ?? room.roomId ?? "",
   status: normalizeLudoRoomStatus(room.status),

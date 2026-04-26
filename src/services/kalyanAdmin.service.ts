@@ -423,8 +423,8 @@ export const KalyanAdminService = {
   createResult: async (data: {
     marketId: string;
     resultDate: string;
-    openPatti: string;
-    closePatti: string;
+    openPatti?: string;
+    closePatti?: string;
   }) => {
     const res = await api.post<ApiResponse<any>>(`${BASE}/results`, data);
     return res.data;

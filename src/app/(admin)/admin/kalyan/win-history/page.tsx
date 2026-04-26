@@ -127,8 +127,13 @@ function KalyanWinHistoryPageContent() {
   const searchParams = useSearchParams();
   const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState("");
-  const [marketFilter, setMarketFilter] = useState("");
-  const [sessionFilter, setSessionFilter] = useState<"" | "OPEN" | "CLOSE">("");
+  const [marketFilter, setMarketFilter] = useState(
+    () => searchParams.get("marketId") ?? "",
+  );
+  const [sessionFilter, setSessionFilter] = useState<"" | "OPEN" | "CLOSE">(() => {
+    const sessionType = String(searchParams.get("sessionType") ?? "").toUpperCase();
+    return sessionType === "OPEN" || sessionType === "CLOSE" ? sessionType : "";
+  });
   const [playTypeFilter, setPlayTypeFilter] = useState("");
   const [dateFilter, setDateFilter] = useState(() => searchParams.get("date") ?? "");
   const [page, setPage] = useState(1);

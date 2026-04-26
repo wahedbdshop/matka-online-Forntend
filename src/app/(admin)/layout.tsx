@@ -306,10 +306,11 @@ const navItems: NavItem[] = [
     ],
   },
 
-  { href: "/admin/kyc", icon: Shield, label: "KYC", section: "Support" },
-  { href: "/admin/tickets", icon: HelpCircle, label: "Support" },
-  { href: "/admin/audit-logs", icon: ClipboardList, label: "Audit Logs" },
-  { href: "/admin/chat", icon: MessageCircle, label: "Live Chat" },
+      { href: "/admin/kyc", icon: Shield, label: "KYC", section: "Support" },
+      { href: "/admin/tickets", icon: HelpCircle, label: "Support" },
+      { href: "/admin/support-agents", icon: UserCog, label: "Support Agents" },
+      { href: "/admin/audit-logs", icon: ClipboardList, label: "Audit Logs" },
+      { href: "/admin/chat", icon: MessageCircle, label: "Live Chat" },
 
   {
     icon: Settings,

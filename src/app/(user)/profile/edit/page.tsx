@@ -88,24 +88,6 @@ export default function EditProfilePage() {
             onSubmit={form.handleSubmit((d) => mutate(d))}
             className="space-y-4"
           >
-            {/* Email — readonly */}
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-slate-400">
-                Email
-              </label>
-              <div className="relative">
-                <Mail className="absolute left-3 top-2.5 h-4 w-4 text-slate-500" />
-                <input
-                  value={profile?.email ?? ""}
-                  readOnly
-                  className="w-full rounded-lg border border-slate-700 bg-slate-900/50 px-3 py-2 pl-10 text-sm text-slate-500 cursor-not-allowed"
-                />
-              </div>
-              <p className="text-[10px] text-slate-600">
-                Email cannot be changed
-              </p>
-            </div>
-
             {/* Name */}
             <FormField
               control={form.control}
@@ -130,24 +112,6 @@ export default function EditProfilePage() {
               )}
             />
 
-            {/* Phone — readonly */}
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-slate-400">
-                Phone Number
-              </label>
-              <div className="relative">
-                <Phone className="absolute left-3 top-2.5 h-4 w-4 text-slate-500" />
-                <input
-                  value={profile?.phone ?? ""}
-                  readOnly
-                  className="w-full rounded-lg border border-slate-700 bg-slate-900/50 px-3 py-2 pl-10 text-sm text-slate-500 cursor-not-allowed"
-                />
-              </div>
-              <p className="text-[10px] text-slate-600">
-                Phone number cannot be changed
-              </p>
-            </div>
-
             {/* Username — readonly */}
             <div className="space-y-1.5">
               <label className="text-xs font-medium text-slate-400">
@@ -163,6 +127,42 @@ export default function EditProfilePage() {
               </div>
               <p className="text-[10px] text-slate-600">
                 Username cannot be changed
+              </p>
+            </div>
+
+            {/* Email — readonly */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-slate-400">
+                Email
+              </label>
+              <div className="relative">
+                <Mail className="absolute left-3 top-2.5 h-4 w-4 text-slate-500" />
+                <input
+                  value={profile?.email ?? ""}
+                  readOnly
+                  className="w-full rounded-lg border border-slate-700 bg-slate-900/50 px-3 py-2 pl-10 text-sm text-slate-500 cursor-not-allowed"
+                />
+              </div>
+              <p className="text-[10px] text-slate-600">
+                Email cannot be changed
+              </p>
+            </div>
+
+            {/* Phone — readonly */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-slate-400">
+                Phone Number
+              </label>
+              <div className="relative">
+                <Phone className="absolute left-3 top-2.5 h-4 w-4 text-slate-500" />
+                <input
+                  value={profile?.phone ?? ""}
+                  readOnly
+                  className="w-full rounded-lg border border-slate-700 bg-slate-900/50 px-3 py-2 pl-10 text-sm text-slate-500 cursor-not-allowed"
+                />
+              </div>
+              <p className="text-[10px] text-slate-600">
+                Phone number cannot be changed
               </p>
             </div>
 

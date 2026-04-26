@@ -1,7 +1,7 @@
 "use client";
 
 import { useParams, useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { ArrowLeft, DoorOpen, Loader2 } from "lucide-react";
 import { toast } from "sonner";
@@ -10,6 +10,7 @@ import { cn } from "@/lib/utils";
 import { LudoBoard, type LudoToken as BoardToken } from "@/components/ludo/board";
 import {
   LudoService,
+  normalizeLudoRoom,
   type LudoRoom,
   type LudoRoomPlayer,
   type LudoToken,
@@ -37,12 +38,13 @@ const TRACK: Array<[number, number]> = [
   [8,12],[8,11],[8,10],[8,9],
 ];
 
-/** Token home circle positions per color on the 15×15 grid. */
+/** Token home circle positions per color on the 15×15 grid.
+ *  Must match HOME_CIRCLE_MAP in board.tsx exactly. */
 const HOME_CELLS: Record<string, Array<[number, number]>> = {
-  RED:    [[1,1],[1,3],[3,1],[3,3]],
-  GREEN:  [[1,10],[1,12],[3,10],[3,12]],
-  BLUE:   [[10,1],[10,3],[12,1],[12,3]],
-  YELLOW: [[10,10],[10,12],[12,10],[12,12]],
+  RED:    [[1,1],  [1,3],  [3,1],  [3,3]],
+  GREEN:  [[1,11], [1,13], [3,11], [3,13]],
+  BLUE:   [[11,1], [11,3], [13,1], [13,3]],
+  YELLOW: [[11,11],[11,13],[13,11],[13,13]],
 };
 
 /** Goal cell (just before center entry) per color. */
@@ -152,18 +154,41 @@ export default function LudoRoomPage() {
     queryKey: ["ludo-room", roomId],
     queryFn: () => LudoService.getRoom(roomId),
     enabled: Boolean(roomId),
-    refetchInterval: 7000,
+    refetchInterval: 2000,
   });
+
+  // Normalize any socket/API payload and preserve per-client yourColor.
+  // Server broadcasts the same room object to all clients so yourColor is absent.
+  const applyRoomUpdate = useCallback((incoming: unknown) => {
+    if (!incoming || typeof incoming !== "object") return;
+    // Payload can be { room: {...} } or the room object directly
+    const raw = (incoming as Record<string, unknown>).room ?? incoming;
+    if (!raw || typeof raw !== "object" || !("players" in raw)) return;
+    const normalized = normalizeLudoRoom(raw as LudoRoom);
+    setRoomState((prev) => ({
+      ...normalized,
+      yourColor: normalized.yourColor ?? prev?.yourColor,
+    }));
+  }, []);
 
   const rollMutation = useMutation({
     mutationFn: () => LudoService.rollDice(roomId),
-    onSuccess: ({ data }) => { setRoomState(data); },
+    onSuccess: ({ data }) => {
+      setRoomState(data);
+      // Notify room so the opponent's client gets the update instantly
+      emitEvent("ludo:room:join", { roomId });
+      void refetch();
+    },
     onError: (err: unknown) => { toast.error(getErrorMessage(err, "Failed to roll dice")); },
   });
 
   const moveMutation = useMutation({
     mutationFn: (tokenId: string) => LudoService.moveToken(roomId, tokenId),
-    onSuccess: ({ data }) => { setRoomState(data); },
+    onSuccess: ({ data }) => {
+      setRoomState(data);
+      emitEvent("ludo:room:join", { roomId });
+      void refetch();
+    },
     onError: (err: unknown) => { toast.error(getErrorMessage(err, "Failed to move token")); },
   });
 
@@ -177,15 +202,23 @@ export default function LudoRoomPage() {
     if (!isConnected || !roomId) return;
     emitEvent("ludo:room:join", { roomId });
 
-    const offUpdate  = onEvent("ludo:room:update", (p: RoomEventPayload) => { setRoomState((p?.room as LudoRoom) ?? null); });
-    const offTurn    = onEvent("ludo:turn",        (p: RoomEventPayload) => { setRoomState((p?.room as LudoRoom) ?? null); });
-    const offFinish  = onEvent("ludo:finished",    (p: RoomEventPayload) => {
-      setRoomState((p?.room as LudoRoom) ?? null);
-      toast.success(p?.winnerName ? `${p.winnerName} won!` : "Match finished");
-    });
+    // Listen to all common event names the server might use
+    const offs = [
+      onEvent("ludo:room:update",  applyRoomUpdate),
+      onEvent("ludo:turn",         applyRoomUpdate),
+      onEvent("ludo:state",        applyRoomUpdate),
+      onEvent("ludo:dice:rolled",  applyRoomUpdate),
+      onEvent("ludo:token:moved",  applyRoomUpdate),
+      onEvent("ludo:game:update",  applyRoomUpdate),
+      onEvent("ludo:finished", (p: unknown) => {
+        applyRoomUpdate(p);
+        const winner = (p as Record<string, unknown>)?.winnerName as string | undefined;
+        toast.success(winner ? `${winner} won!` : "Match finished");
+      }),
+    ];
 
-    return () => { offUpdate(); offTurn(); offFinish(); };
-  }, [emitEvent, isConnected, onEvent, roomId]);
+    return () => { offs.forEach((off) => off()); };
+  }, [applyRoomUpdate, emitEvent, isConnected, onEvent, roomId]);
 
   const room     = roomState ?? (roomData?.data ?? null);
   const me       = room?.players.find((p) => p.color === room?.yourColor);

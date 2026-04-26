@@ -5,6 +5,7 @@ import {
   clearServerSession,
   requestSessionRefresh,
 } from "@/lib/auth-session";
+import { resolveLoginPathByPathname } from "@/lib/auth-role";
 import { useAuthStore } from "@/store/auth.store";
 
 type RequestConfigWithAuth = InternalAxiosRequestConfig & {
@@ -34,9 +35,7 @@ function getLoginPath() {
     return "/login";
   }
 
-  return window.location.pathname.startsWith("/admin")
-    ? "/admin/login"
-    : "/login";
+  return resolveLoginPathByPathname(window.location.pathname);
 }
 
 async function refreshAccessToken() {

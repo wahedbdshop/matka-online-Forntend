@@ -87,4 +87,14 @@ export const ReferralService = {
     );
     return res.data;
   },
+
+  getMonthlyBonusStatus: async () => {
+    const res = await api.get<ApiResponse<any>>("/referral/monthly-bonus/status");
+    return res.data;
+  },
+
+  claimMonthlyBonus: async () => {
+    const res = await api.post<ApiResponse<any>>("/referral/monthly-bonus/claim");
+    return res.data;
+  },
 };

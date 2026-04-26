@@ -44,6 +44,17 @@ function matchesGameType(
   return target === "kalyan" ? source === "KALYAN" : source === "THAI";
 }
 
+function extractList(payload: any): any[] {
+  if (Array.isArray(payload)) return payload;
+  if (Array.isArray(payload?.data)) return payload.data;
+  if (Array.isArray(payload?.data?.data)) return payload.data.data;
+  if (Array.isArray(payload?.data?.winners)) return payload.data.winners;
+  if (Array.isArray(payload?.data?.results)) return payload.data.results;
+  if (Array.isArray(payload?.winners)) return payload.winners;
+  if (Array.isArray(payload?.results)) return payload.results;
+  return [];
+}
+
 const publicBottomNavItems = [
   { href: "#games-hub", label: "HOT", icon: Flame, highlighted: true },
   { href: "#winners", label: "Live", icon: Radio, highlighted: false },
@@ -90,11 +101,15 @@ export default function LandingPage() {
   });
 
   const home = homeData?.data;
-  const banners = home?.banners ?? [];
-  const favSlides = home?.favouriteSlides ?? [];
-  const popularGames = home?.popularGames ?? [];
-  const paymentMethods = home?.paymentMethods ?? [];
-  const thaiRates = thaiRatesData?.data ?? [];
+  const banners = Array.isArray(home?.banners) ? home.banners : [];
+  const favSlides = Array.isArray(home?.favouriteSlides)
+    ? home.favouriteSlides
+    : [];
+  const popularGames = Array.isArray(home?.popularGames) ? home.popularGames : [];
+  const paymentMethods = Array.isArray(home?.paymentMethods)
+    ? home.paymentMethods
+    : [];
+  const thaiRates = extractList(thaiRatesData);
   const KALYAN_LABELS: Record<string, string> = {
     GAME_TOTAL: "Game Total",
     SINGLE_PATTI: "Single Patti",
@@ -102,13 +117,13 @@ export default function LandingPage() {
     TRIPLE_PATTI: "Triple Patti",
     JORI: "Jori",
   };
-  const kalyanRates = (kalyanRatesData?.data ?? []).map((r: any) => ({
+  const kalyanRates = extractList(kalyanRatesData).map((r: any) => ({
     ...r,
     multiplier: r.rate ?? r.multiplier ?? 0,
     label: KALYAN_LABELS[r.playType] ?? r.playType,
   }));
-  const recentWinners = recentWinnersData?.data ?? [];
-  const thaiWinners = (thaiWinnersData?.data ?? []) as Record<string, unknown>[];
+  const recentWinners = extractList(recentWinnersData);
+  const thaiWinners = extractList(thaiWinnersData) as Record<string, unknown>[];
   const kalyanWinners = recentWinners.filter((winner: Record<string, unknown>) =>
     matchesGameType(winner, "kalyan"),
   );

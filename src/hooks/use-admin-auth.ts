@@ -1,6 +1,7 @@
 "use client";
 
 import { useAuthStore } from "@/store/auth.store";
+import { isBackofficeRole } from "@/lib/auth-role";
 
 export function useAdminAuth() {
   const user = useAuthStore((state) => state.user);
@@ -8,8 +9,7 @@ export function useAdminAuth() {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const isAuthReady = useAuthStore((state) => state.isAuthReady);
 
-  const roleUpper = user?.role?.toUpperCase();
-  const isAdmin = roleUpper === "ADMIN" || roleUpper === "AGENT";
+  const isAdmin = isBackofficeRole(user?.role);
   const hasSessionToken = Boolean(token);
 
   return {

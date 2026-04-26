@@ -14,7 +14,9 @@ import {
   AlertCircle,
   Loader2,
   Camera,
+  ArrowLeft,
 } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { api } from "@/lib/axios";
 import { cn } from "@/lib/utils";
 
@@ -117,6 +119,7 @@ const toBase64 = (file: File): Promise<string> =>
 
 // ─── Main Page ────────────────────────────────────────────────
 export default function KycPage() {
+  const router = useRouter();
   const queryClient = useQueryClient();
 
   const [docType, setDocType] = useState("NID");
@@ -189,11 +192,19 @@ export default function KycPage() {
 
   return (
     <div className="space-y-5 max-w-lg">
-      <div>
-        <h1 className="text-xl font-bold text-white">KYC Verification</h1>
-        <p className="text-xs text-slate-500 mt-0.5">
-          Verify your identity to unlock full features
-        </p>
+      <div className="flex items-center gap-3">
+        <button
+          onClick={() => router.back()}
+          className="text-slate-400 hover:text-white transition-colors"
+        >
+          <ArrowLeft className="h-5 w-5" />
+        </button>
+        <div>
+          <h1 className="text-xl font-bold text-white">KYC Verification</h1>
+          <p className="text-xs text-slate-500 mt-0.5">
+            Verify your identity to unlock full features
+          </p>
+        </div>
       </div>
 
       {/* Status Card */}

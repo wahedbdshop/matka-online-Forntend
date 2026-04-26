@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { TrendingUp, Trophy, Users } from "lucide-react";
 import { FloatingChatButton } from "@/components/user/floating-chat-button";
+import { GlobalNoticeBar } from "@/components/shared/global-notice-bar";
 import { HomeService } from "@/services/home.service";
 import { ThaiLotteryUserService } from "@/services/thai-lottery.service";
 import { cn } from "@/lib/utils";
@@ -13,7 +14,6 @@ import { PopupBanner } from "./_components/popup-banner";
 import { PaymentMethodsRow } from "./_components/payment-methods-row";
 import { HomeGameHub } from "./_components/home-game-hub";
 import { WinnerCard } from "./_components/winner-card";
-import { GlobalNoticeBar } from "@/components/shared/global-notice-bar";
 
 function matchesGameType(
   winner: Record<string, unknown>,
@@ -30,6 +30,17 @@ function getWinAmount(w: Record<string, unknown>) {
 
 function sortByAmountDesc(winners: Record<string, unknown>[]) {
   return [...winners].sort((a, b) => getWinAmount(b) - getWinAmount(a));
+}
+
+function extractList(payload: any): Record<string, unknown>[] {
+  if (Array.isArray(payload)) return payload;
+  if (Array.isArray(payload?.data)) return payload.data;
+  if (Array.isArray(payload?.data?.data)) return payload.data.data;
+  if (Array.isArray(payload?.data?.winners)) return payload.data.winners;
+  if (Array.isArray(payload?.data?.results)) return payload.data.results;
+  if (Array.isArray(payload?.winners)) return payload.winners;
+  if (Array.isArray(payload?.results)) return payload.results;
+  return [];
 }
 
 // Thai: only show winners from the latest draw (roundId / drawId)
@@ -71,16 +82,20 @@ export default function DashboardPage() {
     queryFn: () => HomeService.getRecentWinners(),
   });
   const home = homeData?.data;
-  const banners = home?.banners ?? [];
-  const popularGames = home?.popularGames ?? [];
+  const banners = Array.isArray(home?.banners) ? home.banners : [];
+  const popularGames = Array.isArray(home?.popularGames) ? home.popularGames : [];
   const popup = home?.popup ?? null;
-  const paymentMethods = home?.paymentMethods ?? [];
+  const paymentMethods = Array.isArray(home?.paymentMethods)
+    ? home.paymentMethods
+    : [];
   const thaiRatesCount = thaiRatesData?.data?.length ?? 0;
-  const allThaiWinners = (thaiWinnersData?.data ?? []) as Record<string, unknown>[];
+  const allThaiWinners = extractList(thaiWinnersData);
   const filteredThaiWinners = filterLatestDraw(allThaiWinners);
-  const thaiWinners = sortByAmountDesc(filteredThaiWinners.length ? filteredThaiWinners : allThaiWinners);
+  const thaiWinners = sortByAmountDesc(
+    filteredThaiWinners.length ? filteredThaiWinners : allThaiWinners,
+  );
 
-  const recentWinners = kalyanWinnersData?.data ?? [];
+  const recentWinners = extractList(kalyanWinnersData);
   // Kalyan: all winners sorted by amount desc
   const kalyanWinners = sortByAmountDesc(
     recentWinners.filter((winner: Record<string, unknown>) =>
@@ -97,7 +112,11 @@ export default function DashboardPage() {
         <BannerSlider banners={banners} />
         <GlobalNoticeBar />
         <HomeGameHub popularGames={popularGames} />
-        <WinnerCard title="Last Kalyan Winners" bets={kalyanWinners} theme="kalyan" />
+        <WinnerCard
+          title="Last Kalyan Winners"
+          bets={kalyanWinners}
+          theme="kalyan"
+        />
         <WinnerCard title="Last Thai Winners" bets={thaiWinners} />
         {/* Stats */}
         <div className="grid grid-cols-3 gap-3">

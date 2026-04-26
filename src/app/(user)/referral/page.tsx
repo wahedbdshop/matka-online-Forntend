@@ -1,8 +1,8 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
-import { Users, Copy, Share2, TrendingUp, Clock, Gift } from "lucide-react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { Users, Copy, Share2, TrendingUp, Clock, Gift, ChevronLeft, Loader2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -11,11 +11,14 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { ReferralService } from "@/services/referral.service";
 import { useAuthStore } from "@/store/auth.store";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
 export default function ReferralPage() {
   const user = useAuthStore((s) => s.user);
+  const router = useRouter();
+  const queryClient = useQueryClient();
 
   const { data: referralsData, isLoading: referralsLoading } = useQuery({
     queryKey: ["my-referrals"],
@@ -32,6 +35,26 @@ export default function ReferralPage() {
     queryFn: ReferralService.getConfig,
   });
 
+  const { data: bonusStatusData } = useQuery({
+    queryKey: ["monthly-bonus-status"],
+    queryFn: ReferralService.getMonthlyBonusStatus,
+    retry: false,
+  });
+
+  const claimMutation = useMutation({
+    mutationFn: ReferralService.claimMonthlyBonus,
+    onSuccess: () => {
+      toast.success("Monthly bonus claimed successfully!");
+      queryClient.invalidateQueries({ queryKey: ["monthly-bonus-status"] });
+    },
+    onError: (err: any) => {
+      const msg =
+        err?.response?.data?.message ||
+        "Could not claim bonus. Please try again.";
+      toast.error(msg);
+    },
+  });
+
   const referrals = referralsData?.data?.referrals || [];
   const totalReferrals = referralsData?.data?.totalReferrals || 0;
   const earnings = earningsData?.data?.earnings || [];
@@ -43,6 +66,10 @@ export default function ReferralPage() {
   const monthlyLoginBonus = !Array.isArray(rawConfig)
     ? rawConfig?.monthlyLoginBonus
     : null;
+
+  const bonusStatus = bonusStatusData?.data;
+  const canClaim = bonusStatus?.canClaim ?? true;
+  const alreadyClaimed = bonusStatus?.alreadyClaimed ?? false;
 
   const referralCode = (user?.referralCode || "").toLowerCase();
   const referralLink = `${process.env.NEXT_PUBLIC_APP_URL || "https://matkaonline24.com"}/register?ref=${referralCode}`;
@@ -71,7 +98,18 @@ export default function ReferralPage() {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-white text-xl font-bold">Referral Program</h1>
+      <div>
+        <button
+          type="button"
+          onClick={() => router.back()}
+          className="mb-2 inline-flex items-center gap-1 rounded-full border border-[#295487] bg-gradient-to-r from-[#0b1730] to-[#10203a] px-2.5 py-1 text-white/90 shadow-[0_8px_18px_rgba(0,0,0,0.2)] transition-all duration-200 hover:-translate-y-0.5 hover:border-[#4f8fcc] hover:text-white"
+          aria-label="Go back"
+        >
+          <ChevronLeft className="h-3 w-3" />
+          <span className="text-[10px] font-semibold tracking-[0.06em]">Back</span>
+        </button>
+        <h1 className="text-white text-xl font-bold">Referral Program</h1>
+      </div>
 
       {/* Referral Code Card */}
       <Card className="bg-gradient-to-br from-purple-600 to-purple-800 border-0">
@@ -349,8 +387,31 @@ export default function ReferralPage() {
               <p className="text-slate-400 text-xs">
                 ৩০ দিন active থাকলে প্রতি মাসে পাবেন
               </p>
+              {alreadyClaimed && (
+                <p className="text-green-400 text-xs mt-1 font-medium">✓ এই মাসে claim করা হয়েছে</p>
+              )}
             </div>
-            <Gift className="h-8 w-8 text-amber-400" />
+            <button
+              type="button"
+              disabled={!canClaim || alreadyClaimed || claimMutation.isPending}
+              onClick={() => claimMutation.mutate()}
+              className={cn(
+                "flex flex-col items-center gap-1 rounded-xl p-2 transition-all duration-200",
+                canClaim && !alreadyClaimed
+                  ? "cursor-pointer hover:scale-110 active:scale-95"
+                  : "cursor-not-allowed opacity-50"
+              )}
+              aria-label="Claim monthly bonus"
+            >
+              {claimMutation.isPending ? (
+                <Loader2 className="h-8 w-8 text-amber-400 animate-spin" />
+              ) : (
+                <Gift className="h-8 w-8 text-amber-400" />
+              )}
+              <span className="text-amber-400 text-[10px] font-semibold">
+                {alreadyClaimed ? "Claimed" : "Claim"}
+              </span>
+            </button>
           </CardContent>
         </Card>
       )}

@@ -14,9 +14,14 @@ import {
   setForcedPasswordResetSession,
 } from "@/lib/forced-password-reset";
 import { markLoginPopupPending } from "@/lib/login-popup";
+import {
+  isAdminPortalRole,
+  isSupportAgentRole,
+  resolveHomePathByRole,
+} from "@/lib/auth-role";
 
 function isAdminRole(role?: string | null) {
-  return role === "ADMIN" || role === "AGENT";
+  return isAdminPortalRole(role);
 }
 
 async function completeLogin(
@@ -112,6 +117,17 @@ export const useLogin = () => {
         return;
       }
 
+      if (
+        isAuthenticatedLoginResponse(data.data) &&
+        isSupportAgentRole(data.data.user?.role)
+      ) {
+        toast.error(
+          "Support agents must sign in from the support agent login page.",
+        );
+        router.push("/agent/login");
+        return;
+      }
+
       const user = await completeLogin(data.data, setAuth);
       if (!user) return;
 
@@ -154,6 +170,17 @@ export const useLoginWithCaptcha = () => {
         return;
       }
 
+      if (
+        isAuthenticatedLoginResponse(data.data) &&
+        isSupportAgentRole(data.data.user?.role)
+      ) {
+        toast.error(
+          "Support agents must sign in from the support agent login page.",
+        );
+        router.push("/agent/login");
+        return;
+      }
+
       const user = await completeLogin(data.data, setAuth);
       if (!user) return;
 
@@ -191,7 +218,7 @@ export const useAdminLoginWithCaptcha = () => {
       }
 
       const userRole = data.data.user?.role;
-      if (userRole !== "ADMIN" && userRole !== "AGENT") {
+      if (!isAdminRole(userRole)) {
         toast.error("Access denied. This portal is for admins only.");
         return;
       }
@@ -363,8 +390,8 @@ export const useForceChangePassword = () => {
       if (!user) return;
 
       toast.success("Password updated successfully!");
-      if (isAdminRole(user.role)) {
-        router.push("/admin");
+      if (isAdminRole(user.role) || isSupportAgentRole(user.role)) {
+        router.push(resolveHomePathByRole(user.role));
       } else {
         markLoginPopupPending();
         router.push("/dashboard");

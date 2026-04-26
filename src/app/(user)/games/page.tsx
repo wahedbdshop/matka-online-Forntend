@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
+import { ArrowLeft } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { GAME_LOGO_SRC } from "@/lib/game-branding";
@@ -169,6 +170,7 @@ function GameCard({ game, index }: { game: (typeof games)[0]; index: number }) {
 }
 
 export default function GamesPage() {
+  const router = useRouter();
   const { data: globalData } = useQuery({
     queryKey: ["public-settings"],
     queryFn: () => AdminService.getPublicSettings(),
@@ -196,13 +198,21 @@ export default function GamesPage() {
 
   return (
     <div className="space-y-5 pb-6">
-      <div className="animate-in fade-in slide-in-from-top-2 duration-300">
-        <h1 className="text-2xl font-extrabold tracking-tight text-white">
-          Games
-        </h1>
-        <p className="mt-1 text-sm text-slate-400">
-          Pick a game and start playing
-        </p>
+      <div className="animate-in fade-in slide-in-from-top-2 duration-300 flex items-center gap-3">
+        <button
+          onClick={() => router.back()}
+          className="text-slate-400 hover:text-white transition-colors"
+        >
+          <ArrowLeft className="h-5 w-5" />
+        </button>
+        <div>
+          <h1 className="text-2xl font-extrabold tracking-tight text-white">
+            Games
+          </h1>
+          <p className="mt-1 text-sm text-slate-400">
+            Pick a game and start playing
+          </p>
+        </div>
       </div>
 
       <div className="space-y-3">
