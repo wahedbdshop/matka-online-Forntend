@@ -3,7 +3,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback, Suspense } from "react";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
   Send,
@@ -11,7 +11,6 @@ import {
   Bot,
   Headphones,
   MessageCircle,
-  CheckCircle2,
   ArrowLeft,
   Search,
   ImageIcon,
@@ -60,24 +59,64 @@ function lastMsgPreview(msg: any): string {
   return msg.message ?? "";
 }
 
+function getResponderThread(role?: string): "AI" | "AGENT" | null {
+  if (role === "AI") return "AI";
+  if (role === "AGENT") return "AGENT";
+  return null;
+}
+
+function getMessageThread(list: any[], index: number): "AI" | "AGENT" {
+  const msg = list[index];
+  const explicitThread = msg?.thread ?? msg?.mode;
+  if (explicitThread === "AI" || explicitThread === "AGENT") return explicitThread;
+
+  const ownResponderThread = getResponderThread(msg?.role);
+  if (ownResponderThread) return ownResponderThread;
+
+  for (let i = index + 1; i < list.length; i += 1) {
+    const nextThread =
+      list[i]?.thread ?? list[i]?.mode ?? getResponderThread(list[i]?.role);
+    if (nextThread === "AI" || nextThread === "AGENT") return nextThread;
+  }
+
+  for (let i = index - 1; i >= 0; i -= 1) {
+    const prevThread =
+      list[i]?.thread ?? list[i]?.mode ?? getResponderThread(list[i]?.role);
+    if (prevThread === "AI" || prevThread === "AGENT") return prevThread;
+  }
+
+  return "AI";
+}
+
+function getAgentMessages(list: any[]) {
+  return list
+    .map((msg, index) => ({
+      ...msg,
+      originalIndex: index,
+      thread: getMessageThread(list, index),
+    }))
+    .filter((msg) => msg.thread === "AGENT");
+}
+
 function AdminChatPageInner() {
   const [selectedSession, setSelectedSession] = useState<any>(null);
   const [messages, setMessages] = useState<any[]>([]);
   const [replyText, setReplyText] = useState("");
-  const [activeTab, setActiveTab] = useState<"live" | "closed">("live");
-  const [closedSessions, setClosedSessions] = useState<any[]>([]);
   const [search, setSearch] = useState("");
   const [showChat, setShowChat] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [isSendingMedia, setIsSendingMedia] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesViewportRef = useRef<HTMLDivElement>(null);
+  const shouldAutoScrollRef = useRef(true);
+  const scrollBehaviorRef = useRef<ScrollBehavior>("smooth");
   const inputRef = useRef<HTMLInputElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
   const { joinSession } = useSocket();
   const { isRecording, startRecording, stopRecording } = useVoiceRecorder();
 
-  const { data: sessionsData, refetch } = useQuery({
-    queryKey: ["waiting-sessions"],
+  const { data: sessionsData } = useQuery({
+    queryKey: ["admin-chat-sessions"],
     queryFn: async () => {
       const res = await api.get("/chat/agent/waiting");
       return res.data;
@@ -85,58 +124,20 @@ function AdminChatPageInner() {
     refetchInterval: 10000,
   });
 
-  const waitingSessions = sessionsData?.data || [];
+  const chatSessions = sessionsData?.data || [];
   const liveSessions = selectedSession
-    ? [selectedSession, ...waitingSessions.filter((s: any) => s.id !== selectedSession.id)].filter(
+    ? [selectedSession, ...chatSessions.filter((s: any) => s.id !== selectedSession.id)].filter(
         (s: any) => s.status !== "CLOSED",
       )
-    : waitingSessions;
-
-  const syncClosedSession = (session: any) => {
-    if (!session || session.status !== "CLOSED") return;
-    setClosedSessions((prev) => {
-      const withoutCurrent = prev.filter((s) => s.id !== session.id);
-      return [session, ...withoutCurrent];
-    });
-  };
-
-  const { mutate: takeSession } = useMutation({
-    mutationFn: async (sessionId: string) => {
-      const res = await api.patch(`/chat/agent/session/${sessionId}/take`);
-      return res.data;
-    },
-    onSuccess: (_, sessionId) => {
-      toast.success("Session taken!");
-      setActiveTab("live");
-      refetch();
-      loadSession(sessionId);
-    },
-  });
-
-  const { mutate: closeSession, isPending: isClosing } = useMutation({
-    mutationFn: async (sessionId: string) => ChatService.closeSession(sessionId),
-    onSuccess: (_, sessionId) => {
-      toast.success("Session closed");
-      localStorage.removeItem("admin_chat_session");
-      setSelectedSession((prev: any) => {
-        if (!prev || prev.id !== sessionId) return prev;
-        const next = { ...prev, status: "CLOSED" };
-        syncClosedSession(next);
-        return next;
-      });
-      setActiveTab("closed");
-      refetch();
-    },
-    onError: () => toast.error("Failed to close session"),
-  });
+    : chatSessions;
 
   const loadSession = async (sessionId: string) => {
     const res = await api.get(`/chat/agent/session/${sessionId}`);
     const session = res.data.data;
+    shouldAutoScrollRef.current = true;
+    scrollBehaviorRef.current = "auto";
     setSelectedSession(session);
     setMessages(session.messages || []);
-    setActiveTab(session.status === "CLOSED" ? "closed" : "live");
-    syncClosedSession(session);
     joinSession(sessionId);
     setShowChat(true);
     localStorage.setItem("admin_chat_session", sessionId);
@@ -160,18 +161,31 @@ function AdminChatPageInner() {
         const session = res.data.data;
         setMessages(session.messages || []);
         setSelectedSession(session);
-        syncClosedSession(session);
       } catch { /* silent */ }
     }, 3000);
     return () => clearInterval(interval);
   }, [selectedSession?.id]);
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    if (!shouldAutoScrollRef.current) return;
+    messagesEndRef.current?.scrollIntoView({
+      behavior: scrollBehaviorRef.current,
+      block: "end",
+    });
+    scrollBehaviorRef.current = "smooth";
   }, [messages]);
+
+  const handleMessagesScroll = () => {
+    const viewport = messagesViewportRef.current;
+    if (!viewport) return;
+    const distanceFromBottom =
+      viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight;
+    shouldAutoScrollRef.current = distanceFromBottom < 120;
+  };
 
   const handleReply = async () => {
     if (!replyText.trim() || !selectedSession) return;
+    shouldAutoScrollRef.current = true;
     try {
       await api.post(`/chat/agent/session/${selectedSession.id}/reply`, { message: replyText });
       setReplyText("");
@@ -183,6 +197,7 @@ function AdminChatPageInner() {
 
   const sendMedia = async (file: File | Blob, filename?: string) => {
     if (!selectedSession) return;
+    shouldAutoScrollRef.current = true;
     setIsSendingMedia(true);
     try {
       const fd = new FormData();
@@ -217,7 +232,7 @@ function AdminChatPageInner() {
     await sendMedia(blob, "voice.webm");
   }, [stopRecording, selectedSession]);
 
-  const sessionsToRender = (activeTab === "live" ? liveSessions : closedSessions).filter(
+  const sessionsToRender = liveSessions.filter(
     (s: any) => {
       if (!search) return true;
       const q = search.toLowerCase();
@@ -230,14 +245,15 @@ function AdminChatPageInner() {
   );
 
   const lastMsg = (session: any) => {
-    const msgs = session.messages ?? [];
+    const msgs = getAgentMessages(session.messages ?? []);
     return msgs[msgs.length - 1];
   };
 
   const isBusy = isSendingMedia || isRecording;
+  const agentMessages = getAgentMessages(messages);
 
   return (
-    <div className="flex h-[calc(100vh-4rem)] overflow-hidden rounded-xl border border-slate-700/60 bg-[#0b0f1e]">
+    <div className="flex h-[calc(100dvh-4.5rem)] min-h-0 overflow-hidden rounded-lg border border-slate-200 bg-white md:rounded-xl dark:border-slate-700/60 dark:bg-[#0b0f1e] lg:h-[calc(100dvh-5rem)]">
 
       {/* Hidden inputs */}
       <input
@@ -256,58 +272,37 @@ function AdminChatPageInner() {
       {/* ── Left: Session list ── */}
       <div
         className={cn(
-          "flex w-full flex-col border-r border-slate-700/60 bg-[#111827] md:w-80 md:shrink-0",
+          "flex w-full flex-col border-r border-slate-200 bg-slate-50 md:w-72 lg:w-80 md:shrink-0 dark:border-slate-700/60 dark:bg-[#111827]",
           showChat ? "hidden md:flex" : "flex",
         )}
       >
-        <div className="flex items-center justify-between border-b border-slate-700/60 px-4 py-3">
+        <div className="flex items-center justify-between border-b border-slate-200 px-3 py-2.5 md:px-4 md:py-3 dark:border-slate-700/60">
           <div className="flex items-center gap-2">
             <Headphones className="h-5 w-5 text-purple-400" />
-            <span className="font-bold text-white">Live Chat</span>
+            <span className="font-bold text-slate-950 dark:text-white">Live Chat</span>
           </div>
-          <MessageCircle className="h-5 w-5 text-slate-400" />
+          <MessageCircle className="h-5 w-5 text-slate-500 dark:text-slate-400" />
         </div>
 
         <div className="px-3 py-2">
-          <div className="flex items-center gap-2 rounded-xl bg-slate-800/80 px-3 py-2">
+          <div className="flex items-center gap-2 rounded-xl bg-white px-3 py-2 shadow-sm ring-1 ring-slate-200 dark:bg-slate-800/80 dark:shadow-none dark:ring-0">
             <Search className="h-3.5 w-3.5 text-slate-500" />
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search..."
-              className="flex-1 bg-transparent text-xs text-white placeholder:text-slate-500 outline-none"
+              className="flex-1 bg-transparent text-xs text-slate-900 placeholder:text-slate-400 outline-none dark:text-white dark:placeholder:text-slate-500"
             />
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-1 px-3 pb-2">
-          <button
-            type="button"
-            onClick={() => setActiveTab("live")}
-            className={cn(
-              "rounded-lg py-1.5 text-xs font-semibold transition-colors",
-              activeTab === "live"
-                ? "bg-purple-600/20 text-purple-300"
-                : "text-slate-400 hover:text-slate-200",
-            )}
-          >
-            Live ({liveSessions.length})
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab("closed")}
-            className={cn(
-              "rounded-lg py-1.5 text-xs font-semibold transition-colors",
-              activeTab === "closed"
-                ? "bg-emerald-600/15 text-emerald-300"
-                : "text-slate-400 hover:text-slate-200",
-            )}
-          >
-            Closed ({closedSessions.length})
-          </button>
+        <div className="px-3 pb-2">
+          <div className="rounded-lg bg-purple-600/20 py-1.5 text-center text-xs font-semibold text-purple-300">
+            Chats ({liveSessions.length})
+          </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto">
+        <div className="hide-scrollbar flex-1 overflow-y-auto">
           {sessionsToRender.length === 0 ? (
             <div className="flex flex-col items-center justify-center gap-2 py-16 text-slate-500">
               <MessageCircle className="h-8 w-8 opacity-30" />
@@ -323,12 +318,12 @@ function AdminChatPageInner() {
                   type="button"
                   onClick={() => loadSession(session.id)}
                   className={cn(
-                    "flex w-full items-center gap-3 border-b border-slate-800/60 px-4 py-3 text-left transition-colors",
-                    isActive ? "bg-slate-700/60" : "hover:bg-slate-800/50",
+                  "flex w-full items-center gap-2.5 border-b border-slate-200 px-3 py-2.5 text-left transition-colors md:gap-3 md:px-4 md:py-3 dark:border-slate-800/60",
+                    isActive ? "bg-purple-50 dark:bg-slate-700/60" : "hover:bg-slate-100 dark:hover:bg-slate-800/50",
                   )}
                 >
                   <div className="relative shrink-0">
-                    <div className="flex h-11 w-11 items-center justify-center rounded-full bg-purple-600/20 text-sm font-bold text-purple-300">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-purple-600/20 text-sm font-bold text-purple-300 md:h-11 md:w-11">
                       {session.user?.name?.charAt(0)?.toUpperCase() ?? "U"}
                     </div>
                     <span className="absolute -bottom-0.5 -right-0.5">
@@ -337,7 +332,7 @@ function AdminChatPageInner() {
                   </div>
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center justify-between">
-                      <p className="truncate text-sm font-semibold text-white">
+                      <p className="truncate text-sm font-semibold text-slate-950 dark:text-white">
                         {session.user?.name ?? "Unknown"}
                       </p>
                       {last?.createdAt && (
@@ -346,7 +341,7 @@ function AdminChatPageInner() {
                         </span>
                       )}
                     </div>
-                    <p className="truncate text-xs text-slate-400">
+                    <p className="truncate text-xs text-slate-500 dark:text-slate-400">
                       @{session.user?.username}
                     </p>
                     {last && (
@@ -377,7 +372,7 @@ function AdminChatPageInner() {
       >
         {!selectedSession ? (
           <div className="flex flex-1 flex-col items-center justify-center gap-3 text-slate-500">
-            <div className="flex h-20 w-20 items-center justify-center rounded-full bg-slate-800/60">
+            <div className="flex h-20 w-20 items-center justify-center rounded-full bg-slate-100 dark:bg-slate-800/60">
               <Headphones className="h-9 w-9 opacity-40" />
             </div>
             <p className="text-sm">Select a conversation</p>
@@ -385,16 +380,16 @@ function AdminChatPageInner() {
         ) : (
           <>
             {/* Chat header */}
-            <div className="flex items-center gap-3 border-b border-slate-700/60 bg-[#111827] px-4 py-3">
+            <div className="flex items-center gap-2.5 border-b border-slate-200 bg-slate-50 px-3 py-2.5 md:gap-3 md:px-4 md:py-3 dark:border-slate-700/60 dark:bg-[#111827]">
               <button
                 type="button"
-                className="mr-1 shrink-0 text-slate-400 md:hidden"
+                className="mr-1 shrink-0 text-slate-500 dark:text-slate-400 md:hidden"
                 onClick={() => { setShowChat(false); }}
               >
                 <ArrowLeft className="h-5 w-5" />
               </button>
               <div className="relative shrink-0">
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-purple-600/25 text-sm font-bold text-purple-300">
+                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-purple-600/25 text-sm font-bold text-purple-300 md:h-10 md:w-10">
                   {selectedSession.user?.name?.charAt(0)?.toUpperCase() ?? "U"}
                 </div>
                 <span className="absolute -bottom-0.5 -right-0.5">
@@ -402,60 +397,53 @@ function AdminChatPageInner() {
                 </span>
               </div>
               <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-bold text-white">
+                <p className="truncate text-sm font-bold text-slate-950 dark:text-white">
                   {selectedSession.user?.name}
                 </p>
-                <p className="truncate text-xs text-slate-400">
+                <p className="truncate text-xs text-slate-500 dark:text-slate-400">
                   @{selectedSession.user?.username}
                   {selectedSession.user?.phone ? ` · ${selectedSession.user.phone}` : ""}
                 </p>
-              </div>
-              <div className="flex items-center gap-2">
-                {selectedSession.status !== "CLOSED" && (
-                  <button
-                    type="button"
-                    disabled={isClosing}
-                    onClick={() => closeSession(selectedSession.id)}
-                    className="flex items-center gap-1.5 rounded-lg bg-rose-500/15 px-3 py-1.5 text-xs font-semibold text-rose-400 transition-colors hover:bg-rose-500/25 disabled:opacity-50"
-                  >
-                    <CheckCircle2 className="h-3.5 w-3.5" />
-                    <span className="hidden sm:inline">Close</span>
-                  </button>
-                )}
-                {selectedSession.status === "CLOSED" && (
-                  <span className="rounded-full bg-slate-700/60 px-2.5 py-1 text-[10px] font-semibold text-slate-400">
-                    CLOSED
-                  </span>
-                )}
               </div>
             </div>
 
             {/* Messages */}
             <div
-              className="flex-1 overflow-y-auto px-4 py-3"
+              ref={messagesViewportRef}
+              onScroll={handleMessagesScroll}
+              className="hide-scrollbar flex-1 overflow-y-auto px-3 py-2.5 md:px-4 md:py-3"
               style={{
                 backgroundImage:
                   "radial-gradient(circle at 20% 50%, rgba(168,85,247,0.03) 0%, transparent 50%), radial-gradient(circle at 80% 20%, rgba(59,130,246,0.03) 0%, transparent 50%)",
               }}
             >
               <div className="space-y-1.5">
-                {messages.map((msg: any, i: number) => {
+                {agentMessages.length === 0 && (
+                  <div className="flex min-h-[45vh] items-center justify-center text-center">
+                    <div className="space-y-2 text-slate-500">
+                      <Headphones className="mx-auto h-9 w-9 opacity-40" />
+                      <p className="text-sm text-slate-600 dark:text-slate-300">No agent messages yet</p>
+                    </div>
+                  </div>
+                )}
+
+                {agentMessages.map((msg: any, i: number) => {
                   const isUser = msg.role === "USER";
                   const isAgent = msg.role === "AGENT";
                   const isAI = msg.role === "AI";
                   const time = formatTime(msg.createdAt);
 
-                  const prevMsg = messages[i - 1];
+                  const prevMsg = agentMessages[i - 1];
                   const showDate =
                     !prevMsg ||
                     new Date(msg.createdAt).toDateString() !==
                       new Date(prevMsg.createdAt).toDateString();
 
                   return (
-                    <div key={i}>
+                    <div key={msg.id ?? `${msg.originalIndex}-${msg.createdAt ?? ""}`}>
                       {showDate && msg.createdAt && (
                         <div className="my-3 flex items-center justify-center">
-                          <span className="rounded-full bg-slate-800/80 px-3 py-1 text-[10px] text-slate-400">
+                          <span className="rounded-full bg-slate-100 px-3 py-1 text-[10px] text-slate-500 dark:bg-slate-800/80 dark:text-slate-400">
                             {new Date(msg.createdAt).toLocaleDateString([], {
                               weekday: "short",
                               day: "2-digit",
@@ -471,7 +459,7 @@ function AdminChatPageInner() {
                         })}
                       >
                         {(isUser || isAI) && (
-                          <div className="mb-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-slate-700">
+                          <div className="mb-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-slate-200 dark:bg-slate-700">
                             {isUser ? (
                               <User className="h-3.5 w-3.5 text-purple-300" />
                             ) : (
@@ -481,18 +469,18 @@ function AdminChatPageInner() {
                         )}
 
                         <div
-                          className={cn("max-w-[72%] sm:max-w-[60%]", {
+                          className={cn("max-w-[78%] sm:max-w-[66%] lg:max-w-[60%]", {
                             "items-start": isUser || isAI,
                             "items-end": isAgent,
                           })}
                         >
                           <div
                             className={cn(
-                              "relative rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed shadow-md",
+                              "relative rounded-2xl px-3 py-2 text-[13px] leading-relaxed shadow-md md:px-3.5 md:py-2.5 md:text-sm",
                               {
-                                "rounded-bl-sm bg-[#1e2a3a] text-slate-100": isUser,
-                                "rounded-bl-sm bg-[#1a2540] text-blue-100": isAI,
-                                "rounded-br-sm bg-[#1a3a2a] text-emerald-50": isAgent,
+                                "rounded-bl-sm bg-slate-200 !text-black shadow-slate-300/70 dark:bg-[#1e2a3a] dark:!text-slate-100 dark:shadow-black/20": isUser,
+                                "rounded-bl-sm bg-blue-100 !text-black shadow-blue-200/70 dark:bg-[#1a2540] dark:!text-blue-100 dark:shadow-black/20": isAI,
+                                "rounded-br-sm bg-emerald-200 !text-black shadow-emerald-200/70 dark:bg-[#1a3a2a] dark:!text-emerald-50 dark:shadow-black/20": isAgent,
                               },
                             )}
                           >
@@ -505,8 +493,8 @@ function AdminChatPageInner() {
                                 {msg.message}
                                 <span
                                   className={cn("ml-2 inline-block align-bottom text-[10px]", {
-                                    "text-slate-500": isUser || isAI,
-                                    "text-emerald-600/70": isAgent,
+                                    "!text-black/80 dark:!text-slate-500": isUser || isAI,
+                                    "!text-black/80 dark:!text-emerald-600/70": isAgent,
                                   })}
                                 >
                                   {time}
@@ -514,7 +502,7 @@ function AdminChatPageInner() {
                               </>
                             )}
                             {(msg.imageUrl || msg.voiceUrl) && (
-                              <p className="mt-1 text-[10px] text-white/40">{time}</p>
+                              <p className="mt-1 text-[10px] !text-black/80 dark:!text-white/40">{time}</p>
                             )}
                           </div>
                         </div>
@@ -533,9 +521,7 @@ function AdminChatPageInner() {
             </div>
 
             {/* Input */}
-            <div className="border-t border-slate-700/60 bg-[#111827] px-4 py-3">
-              {selectedSession.status === "AGENT_HANDLING" ? (
-                <>
+            <div className="border-t border-slate-200 bg-slate-50 px-3 py-2.5 md:px-4 md:py-3 dark:border-slate-700/60 dark:bg-[#111827]">
                   {/* Recording indicator */}
                   {isRecording && (
                     <div className="mb-2 flex items-center gap-2 rounded-full bg-red-500/15 px-3 py-1.5">
@@ -547,7 +533,7 @@ function AdminChatPageInner() {
                     </div>
                   )}
                   <div className="flex items-center gap-2">
-                    <div className="flex flex-1 items-center gap-2 rounded-full bg-slate-800 px-4 py-2">
+                    <div className="flex flex-1 items-center gap-2 rounded-full bg-white px-3 py-1.5 shadow-sm ring-1 ring-slate-200 md:px-4 md:py-2 dark:bg-slate-800 dark:shadow-none dark:ring-0">
                       <input
                         ref={inputRef}
                         value={replyText}
@@ -555,7 +541,7 @@ function AdminChatPageInner() {
                         onKeyDown={(e) => { if (e.key === "Enter") handleReply(); }}
                         placeholder={isRecording ? "Recording…" : "Type a message..."}
                         disabled={isBusy}
-                        className="flex-1 bg-transparent text-sm text-white placeholder:text-slate-500 outline-none disabled:opacity-50"
+                        className="flex-1 bg-transparent text-[13px] text-slate-900 placeholder:text-slate-400 outline-none disabled:opacity-50 dark:text-white dark:placeholder:text-slate-500 md:text-sm"
                       />
                     </div>
 
@@ -564,7 +550,7 @@ function AdminChatPageInner() {
                       type="button"
                       onClick={() => imageInputRef.current?.click()}
                       disabled={isBusy}
-                      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-slate-700 text-slate-300 transition-colors hover:bg-slate-600 hover:text-white disabled:opacity-40"
+                      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white text-slate-600 shadow-sm ring-1 ring-slate-200 transition-colors hover:bg-slate-100 hover:text-slate-900 disabled:opacity-40 dark:bg-slate-700 dark:text-slate-300 dark:shadow-none dark:ring-0 dark:hover:bg-slate-600 dark:hover:text-white md:h-10 md:w-10"
                       aria-label="Send image"
                     >
                       {isSendingMedia ? (
@@ -582,10 +568,10 @@ function AdminChatPageInner() {
                       onPointerCancel={handleMicPointerUp}
                       disabled={isSendingMedia}
                       className={cn(
-                        "flex h-10 w-10 shrink-0 items-center justify-center rounded-full transition-colors disabled:opacity-40",
+                        "flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition-colors disabled:opacity-40 md:h-10 md:w-10",
                         isRecording
                           ? "bg-red-500 text-white shadow-[0_0_12px_rgba(239,68,68,0.6)]"
-                          : "bg-slate-700 text-slate-300 hover:bg-slate-600 hover:text-white",
+                          : "bg-white text-slate-600 shadow-sm ring-1 ring-slate-200 hover:bg-slate-100 hover:text-slate-900 dark:bg-slate-700 dark:text-slate-300 dark:shadow-none dark:ring-0 dark:hover:bg-slate-600 dark:hover:text-white",
                       )}
                       aria-label="Record voice"
                     >
@@ -597,26 +583,11 @@ function AdminChatPageInner() {
                       type="button"
                       onClick={handleReply}
                       disabled={!replyText.trim() || isBusy}
-                      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-purple-600 text-white transition-colors hover:bg-purple-700 disabled:opacity-40"
+                      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-purple-600 text-white transition-colors hover:bg-purple-700 disabled:opacity-40 md:h-10 md:w-10"
                     >
                       <Send className="h-4 w-4" />
                     </button>
                   </div>
-                </>
-              ) : selectedSession.status === "WAITING_AGENT" ? (
-                <button
-                  type="button"
-                  onClick={() => takeSession(selectedSession.id)}
-                  className="w-full rounded-full bg-purple-600 py-2.5 text-sm font-bold text-white transition-colors hover:bg-purple-700"
-                >
-                  <Headphones className="mr-2 inline h-4 w-4" />
-                  Take This Session
-                </button>
-              ) : (
-                <div className="rounded-full bg-slate-800/60 px-4 py-2.5 text-center text-xs text-slate-500">
-                  This session is closed
-                </div>
-              )}
             </div>
           </>
         )}

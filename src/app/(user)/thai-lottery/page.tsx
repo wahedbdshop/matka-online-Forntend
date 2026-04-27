@@ -519,6 +519,105 @@ export default function ThaiLotteryPage() {
             inset 0 1px 0 rgba(255, 255, 255, 0.04);
         }
 
+        .light .thai-lottery-shell {
+          background: linear-gradient(180deg, #f8fbff 0%, #eef4ff 100%);
+        }
+
+        .light .thai-lottery-frame {
+          color: #0f172a;
+        }
+
+        .light .glass-card {
+          background:
+            linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(241, 245, 249, 0.98));
+          box-shadow:
+            0 20px 40px rgba(148, 163, 184, 0.18),
+            inset 0 1px 0 rgba(255, 255, 255, 0.9);
+        }
+
+        .light .thai-lottery-panel,
+        .light .thai-lottery-dropdown,
+        .light .thai-lottery-row,
+        .light .thai-lottery-footer,
+        .light .thai-lottery-summary-card,
+        .light .thai-lottery-balance,
+        .light .thai-lottery-action-card {
+          background: rgba(255, 255, 255, 0.96);
+          border-color: rgba(148, 163, 184, 0.35);
+        }
+
+        .light .thai-lottery-action-card:hover {
+          background: rgba(248, 250, 252, 1);
+        }
+
+        .light .thai-lottery-row {
+          background: rgba(248, 250, 252, 0.98);
+        }
+
+        .light .thai-lottery-row.is-focused {
+          background: rgba(219, 234, 254, 0.45);
+          border-color: rgba(59, 130, 246, 0.35);
+          box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.08);
+        }
+
+        .light .thai-lottery-amount-input,
+        .light .thai-lottery-number-input {
+          background: rgba(255, 255, 255, 0.98);
+          color: #0f172a;
+          border-color: rgba(234, 179, 8, 0.85);
+        }
+
+        .light .thai-lottery-amount-input::placeholder,
+        .light .thai-lottery-number-input::placeholder {
+          color: #64748b;
+        }
+
+        .light .thai-lottery-amount-input:focus,
+        .light .thai-lottery-number-input:focus {
+          background: #ffffff;
+        }
+
+        .light .thai-lottery-action-label,
+        .light .thai-lottery-balance-amount,
+        .light .thai-lottery-dropdown-item,
+        .light .thai-lottery-category-label {
+          color: #0f172a;
+        }
+
+        .light .thai-lottery-title,
+        .light .thai-lottery-summary-label {
+          color: #2563eb;
+        }
+
+        .light .thai-lottery-subtitle,
+        .light .thai-lottery-dropdown-helper,
+        .light .thai-lottery-column-label {
+          color: #64748b;
+        }
+
+        .light .thai-lottery-chip {
+          background: rgba(6, 182, 212, 0.1);
+          border-color: rgba(6, 182, 212, 0.2);
+          color: #0f766e;
+        }
+
+        .light .thai-lottery-chip-icon {
+          color: #0891b2;
+        }
+
+        .light .thai-lottery-warning {
+          background: linear-gradient(135deg, rgba(255, 247, 237, 0.98), rgba(255, 251, 235, 0.98));
+          border-color: rgba(245, 158, 11, 0.25);
+        }
+
+        .light .thai-lottery-warning-title {
+          color: #b45309;
+        }
+
+        .light .thai-lottery-warning-copy {
+          color: #92400e;
+        }
+
         .primary-gradient {
           background: linear-gradient(135deg, #1d4ed8 0%, #2563eb 45%, #7c3aed 100%);
         }
@@ -546,8 +645,8 @@ export default function ThaiLotteryPage() {
         .scroll-area::-webkit-scrollbar { display: none; }
       `}</style>
 
-      <div className="min-h-screen bg-[#020810]">
-        <div className="mx-auto flex min-h-[100dvh] w-full max-w-[520px] flex-col px-3 py-3 text-white sm:px-4">
+      <div className="thai-lottery-shell min-h-screen bg-[#020810]">
+        <div className="thai-lottery-frame mx-auto flex min-h-[100dvh] w-full max-w-[520px] flex-col px-3 py-3 text-white sm:px-4">
           <div className="glass-card relative overflow-hidden rounded-[28px] border border-white/8">
             <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-purple-400/60 to-transparent" />
 
@@ -557,19 +656,19 @@ export default function ThaiLotteryPage() {
                   <Link
                     key={item.label}
                     href={item.href}
-                    className="flex min-h-[60px] flex-col items-center justify-center gap-1 rounded-[16px] border border-slate-700/70 bg-slate-800/55 px-1 py-1.5 text-center transition-colors hover:bg-slate-800"
+                    className="thai-lottery-action-card flex min-h-[60px] flex-col items-center justify-center gap-1 rounded-[16px] border border-slate-700/70 bg-slate-800/55 px-1 py-1.5 text-center transition-colors hover:bg-slate-800"
                   >
                     <div className={`rounded-xl p-1 ${item.color}`}>
                       <item.icon className="h-3.5 w-3.5" />
                     </div>
-                    <span className="whitespace-nowrap text-[8.5px] font-semibold leading-none text-slate-200">
+                    <span className="thai-lottery-action-label whitespace-nowrap text-[8.5px] font-semibold leading-none text-slate-200">
                       {item.label}
                     </span>
                   </Link>
                 ))}
               </div>
 
-              <div className="flex items-start justify-between gap-3 rounded-[24px] border border-[#1d2e5c] bg-[#060f22] px-4 py-4">
+              <div className="thai-lottery-panel flex items-start justify-between gap-3 rounded-[24px] border border-[#1d2e5c] bg-[#060f22] px-4 py-4">
                 <div className="min-w-0">
                   <div className="flex items-center gap-2">
                     <Image
@@ -580,17 +679,17 @@ export default function ThaiLotteryPage() {
                       className="h-5 w-5 object-contain"
                       priority
                     />
-                    <p className="text-[11px] font-bold uppercase tracking-[0.25em] text-blue-300/80">
+                    <p className="thai-lottery-title text-[11px] font-bold uppercase tracking-[0.25em] text-blue-300/80">
                       Thai Lottery
                     </p>
                   </div>
-                  <p className="mt-1 text-[10px] text-slate-500">
+                  <p className="thai-lottery-subtitle mt-1 text-[10px] text-slate-500">
                     Thailand Lottery Official Games
                   </p>
                   {closeTimeLabel ? (
                     <div className="mt-2 flex justify-center">
-                      <div className="inline-flex items-center gap-1.5 rounded-full border border-cyan-400/25 bg-cyan-400/8 px-2.5 py-1 text-[10px] font-semibold text-cyan-200">
-                        <Clock3 className="h-3 w-3 text-cyan-300" />
+                      <div className="thai-lottery-chip inline-flex items-center gap-1.5 rounded-full border border-cyan-400/25 bg-cyan-400/8 px-2.5 py-1 text-[10px] font-semibold text-cyan-200">
+                        <Clock3 className="thai-lottery-chip-icon h-3 w-3 text-cyan-300" />
                         <span>Close Time: {closeTimeLabel}</span>
                       </div>
                     </div>
@@ -599,10 +698,10 @@ export default function ThaiLotteryPage() {
 
                 <Link
                   href="/deposit"
-                  className="shrink-0 rounded-full border border-blue-400/20 bg-[#081428] px-3 py-2 text-right transition-colors hover:border-blue-300/40"
+                  className="thai-lottery-balance shrink-0 rounded-full border border-blue-400/20 bg-[#081428] px-3 py-2 text-right transition-colors hover:border-blue-300/40"
                 >
                   <div className="flex items-center gap-2">
-                    <span className="text-base font-black text-white">
+                    <span className="thai-lottery-balance-amount text-base font-black text-white">
                       USD {usdBalance.toFixed(2)}
                     </span>
                     <span className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-600">
@@ -613,11 +712,11 @@ export default function ThaiLotteryPage() {
               </div>
 
               {!hasOpenRound && (
-                <div className="rounded-[22px] border border-amber-400/20 bg-[linear-gradient(135deg,_rgba(70,36,11,0.95),_rgba(45,23,10,0.95))] px-4 py-3">
-                  <p className="text-[10px] font-black uppercase tracking-[0.24em] text-amber-300">
+                <div className="thai-lottery-warning rounded-[22px] border border-amber-400/20 bg-[linear-gradient(135deg,_rgba(70,36,11,0.95),_rgba(45,23,10,0.95))] px-4 py-3">
+                  <p className="thai-lottery-warning-title text-[10px] font-black uppercase tracking-[0.24em] text-amber-300">
                     Waiting For Next Round
                   </p>
-                  <p className="mt-1 text-sm leading-6 text-amber-100/75">
+                  <p className="thai-lottery-warning-copy mt-1 text-sm leading-6 text-amber-100/75">
                     This play is not available right now. Please wait for the next round.
                   </p>
                 </div>
@@ -632,7 +731,7 @@ export default function ThaiLotteryPage() {
                     className="primary-gradient shine relative flex min-h-10 w-full items-center justify-between overflow-hidden rounded-[18px] border border-blue-400/20 px-3 py-2 text-left shadow-[0_10px_20px_rgba(0,0,0,0.18)] transition-transform duration-200 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-45"
                   >
                     <div>
-                      <p className="text-sm font-black tracking-[0.04em] text-white">
+                      <p className="thai-lottery-category-label text-sm font-black tracking-[0.04em] text-white">
                         {selectedPlay?.label ?? "Select Category"}
                       </p>
                     </div>
@@ -644,7 +743,7 @@ export default function ThaiLotteryPage() {
                   </button>
 
                   {showDropdown && (
-                    <div className="absolute left-0 right-0 top-[calc(100%+8px)] z-30 overflow-hidden rounded-[22px] border border-[#1d2e5c] bg-[#060f22] shadow-[0_28px_48px_rgba(0,0,0,0.45)]">
+                    <div className="thai-lottery-dropdown absolute left-0 right-0 top-[calc(100%+8px)] z-30 overflow-hidden rounded-[22px] border border-[#1d2e5c] bg-[#060f22] shadow-[0_28px_48px_rgba(0,0,0,0.45)]">
                       {PLAY_TYPES.map((item) => (
                         <button
                           key={item.value}
@@ -654,14 +753,14 @@ export default function ThaiLotteryPage() {
                             setShowDropdown(false);
                             resetRows();
                           }}
-                          className={`block w-full border-b border-white/5 px-4 py-3 text-left transition-colors last:border-0 ${
+                          className={`thai-lottery-dropdown-item block w-full border-b border-white/5 px-4 py-3 text-left transition-colors last:border-0 ${
                             selectedPlayType === item.value
                               ? "bg-blue-500/10 text-white"
                               : "text-white/80 hover:bg-white/5 hover:text-white"
                           }`}
                         >
                           <p className="text-sm font-bold">{item.label}</p>
-                          <p className="mt-0.5 text-[11px] text-white/45">
+                          <p className="thai-lottery-dropdown-helper mt-0.5 text-[11px] text-white/45">
                             {item.helper}
                           </p>
                         </button>
@@ -671,7 +770,7 @@ export default function ThaiLotteryPage() {
                 </div>
 
                 <div
-                  className={`grid gap-2 px-1 text-[10px] font-bold uppercase tracking-[0.18em] text-white/35 ${
+                  className={`thai-lottery-column-label grid gap-2 px-1 text-[10px] font-bold uppercase tracking-[0.18em] text-white/35 ${
                     isComboMode
                       ? "grid-cols-[1.2fr_1fr_1fr]"
                       : "grid-cols-[1.35fr_1.1fr]"
@@ -694,15 +793,15 @@ export default function ThaiLotteryPage() {
                 const isFocused = focusedId === row.id;
 
                 return (
-                  <div
-                    key={row.id}
-                    className={`grid items-center gap-1 rounded-[16px] border px-0.5 py-0.5 transition-all ${
+                    <div
+                      key={row.id}
+                      className={`thai-lottery-row grid items-center gap-1 rounded-[16px] border px-0.5 py-0.5 transition-all ${
                       isComboMode
                         ? "grid-cols-[1.2fr_1fr_1fr]"
                         : "grid-cols-[1.35fr_1.1fr]"
                     } ${
                       isFocused
-                        ? "border-blue-400/40 bg-blue-500/5 shadow-[0_0_0_1px_rgba(59,130,246,0.08)]"
+                        ? "is-focused border-blue-400/40 bg-blue-500/5 shadow-[0_0_0_1px_rgba(59,130,246,0.08)]"
                         : "border-[#0f2244] bg-[#060f22]"
                     }`}
                   >
@@ -721,7 +820,7 @@ export default function ThaiLotteryPage() {
                       }
                       placeholder="Number"
                       disabled={!selectedPlayType}
-                      className="h-8 w-full rounded-[14px] border border-yellow-400/90 bg-transparent px-2 text-center text-sm font-black text-white outline-none transition-colors placeholder:text-white/80 focus:border-yellow-400"
+                      className="thai-lottery-number-input h-8 w-full rounded-[14px] border border-yellow-400/90 bg-transparent px-2 text-center text-sm font-black text-white outline-none transition-colors placeholder:text-white/80 focus:border-yellow-400"
                     />
 
                     {isComboMode ? (
@@ -741,7 +840,7 @@ export default function ThaiLotteryPage() {
                           }
                           placeholder="Direct"
                           disabled={!selectedPlayType}
-                          className="h-8 w-full rounded-[14px] border border-yellow-400/90 bg-[#0d2545] px-1.5 text-center text-sm font-black text-white outline-none transition-colors placeholder:text-white/80 focus:border-yellow-400 focus:bg-[#112d52]"
+                          className="thai-lottery-amount-input h-8 w-full rounded-[14px] border border-yellow-400/90 bg-[#0d2545] px-1.5 text-center text-sm font-black text-white outline-none transition-colors placeholder:text-white/80 focus:border-yellow-400 focus:bg-[#112d52]"
                         />
                         <input
                           type="text"
@@ -758,7 +857,7 @@ export default function ThaiLotteryPage() {
                           }
                           placeholder="Rumble"
                           disabled={!selectedPlayType}
-                          className="h-8 w-full rounded-[14px] border border-yellow-400/90 bg-[#0d2545] px-1.5 text-center text-sm font-black text-white outline-none transition-colors placeholder:text-white/80 focus:border-yellow-400 focus:bg-[#112d52]"
+                          className="thai-lottery-amount-input h-8 w-full rounded-[14px] border border-yellow-400/90 bg-[#0d2545] px-1.5 text-center text-sm font-black text-white outline-none transition-colors placeholder:text-white/80 focus:border-yellow-400 focus:bg-[#112d52]"
                         />
                       </>
                     ) : (
@@ -773,7 +872,7 @@ export default function ThaiLotteryPage() {
                         }
                         placeholder="Amount"
                         disabled={!selectedPlayType}
-                        className="h-8 w-full rounded-[14px] border border-yellow-400/90 bg-[#0d2545] px-1.5 text-center text-sm font-black text-white outline-none transition-colors placeholder:text-white/80 focus:border-yellow-400 focus:bg-[#112d52]"
+                        className="thai-lottery-amount-input h-8 w-full rounded-[14px] border border-yellow-400/90 bg-[#0d2545] px-1.5 text-center text-sm font-black text-white outline-none transition-colors placeholder:text-white/80 focus:border-yellow-400 focus:bg-[#112d52]"
                       />
                     )}
                   </div>
@@ -792,7 +891,7 @@ export default function ThaiLotteryPage() {
               </div>
             </div>
 
-            <div className="space-y-3 border-t border-[#0f2244] bg-[#060f22] px-4 pb-8 pt-4 sm:px-5">
+            <div className="thai-lottery-footer space-y-3 border-t border-[#0f2244] bg-[#060f22] px-4 pb-8 pt-4 sm:px-5">
               <div className="grid grid-cols-3 gap-3">
                 {[
                   { label: "Bet Total", value: totals.betTotal.toFixed(2) },
@@ -801,9 +900,9 @@ export default function ThaiLotteryPage() {
                 ].map((item) => (
                   <div
                     key={item.label}
-                    className="rounded-[12px] border border-[#1d2e5c] bg-[#04091a] px-2 py-1.5 text-center"
+                    className="thai-lottery-summary-card rounded-[12px] border border-[#1d2e5c] bg-[#04091a] px-2 py-1.5 text-center"
                   >
-                    <p className="text-[7px] font-bold uppercase tracking-[0.1em] text-blue-300/70">
+                    <p className="thai-lottery-summary-label text-[7px] font-bold uppercase tracking-[0.1em] text-blue-300/70">
                       {item.label}
                     </p>
                     <p className="mt-1 text-xs font-black text-white">

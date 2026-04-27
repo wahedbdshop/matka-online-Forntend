@@ -67,7 +67,7 @@ function BetDetailModal({
     >
       {/* Bottom sheet: flex column so inner scroll works correctly */}
       <div
-        className="w-full max-w-[480px] max-h-[80vh] flex flex-col rounded-t-3xl border border-[#0f2244] bg-[#060f22] shadow-[0_-8px_40px_rgba(0,0,0,0.6)]"
+        className="thai-win-modal w-full max-w-[480px] max-h-[80vh] flex flex-col rounded-t-3xl border border-[#0f2244] bg-[#060f22] shadow-[0_-8px_40px_rgba(0,0,0,0.6)]"
         style={{ animation: "slideUp .22s cubic-bezier(.32,1.2,.55,1) both" }}
         onClick={(e) => e.stopPropagation()}
       >
@@ -97,8 +97,8 @@ function BetDetailModal({
           </div>
 
           {/* Big number */}
-          <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/5 p-5 text-center">
-            <p className="mb-1 text-[10px] uppercase tracking-widest text-white/30">
+          <div className="thai-win-modal-card rounded-2xl border border-emerald-500/20 bg-emerald-500/5 p-5 text-center">
+            <p className="thai-win-soft mb-1 text-[10px] uppercase tracking-widest text-white/30">
               Winning Number
             </p>
             <p className="font-mono text-4xl font-black tracking-[0.2em] text-white break-all">
@@ -127,9 +127,9 @@ function BetDetailModal({
             ].map((item) => (
               <div
                 key={item.lbl}
-                className="rounded-xl border border-[#0f2244] bg-[#04091a] p-3"
+                className="thai-win-modal-card rounded-xl border border-[#0f2244] bg-[#04091a] p-3"
               >
-                <p className="text-[9px] uppercase tracking-widest text-white/30">
+                <p className="thai-win-soft text-[9px] uppercase tracking-widest text-white/30">
                   {item.lbl}
                 </p>
                 <p
@@ -145,8 +145,8 @@ function BetDetailModal({
 
           {/* Confirm code */}
           {bet.confirmCode && (
-            <div className="flex items-center justify-between gap-3 rounded-xl border border-[#2a3f7a] bg-[#0d183a] px-4 py-3">
-              <p className="text-[10px] uppercase tracking-widest text-white/30 shrink-0">
+            <div className="thai-win-confirm flex items-center justify-between gap-3 rounded-xl border border-[#2a3f7a] bg-[#0d183a] px-4 py-3">
+              <p className="thai-win-soft text-[10px] uppercase tracking-widest text-white/30 shrink-0">
                 Confirm Code
               </p>
               <span className="font-mono text-sm font-bold text-[#71a6ff] break-all text-right">
@@ -195,7 +195,42 @@ export default function ThaiLotteryWinHistoryPage() {
   );
 
   return (
-    <div className="min-h-screen bg-[#020810] text-white">
+    <>
+      <style>{`
+        .light .thai-win-shell { background: linear-gradient(180deg, #f8fbff 0%, #eefbf5 100%); color: #0f172a; }
+        .light .thai-win-back,
+        .light .thai-win-stat,
+        .light .thai-win-table,
+        .light .thai-win-pager-btn,
+        .light .thai-win-modal,
+        .light .thai-win-modal-card,
+        .light .thai-win-confirm,
+        .light .thai-win-chip {
+          background: rgba(255,255,255,0.96);
+          border-color: rgba(148,163,184,0.35);
+          color: #0f172a;
+        }
+        .light .thai-win-table-head { background: rgba(16,185,129,0.08); border-color: rgba(16,185,129,0.18); }
+        .light .thai-win-row { border-color: rgba(226,232,240,0.95); }
+        .light .thai-win-row:hover { background: rgba(16,185,129,0.04); }
+        .light .thai-win-muted { color: #64748b; }
+        .light .thai-win-soft { color: #94a3b8; }
+        .light .thai-win-modal strong,
+        .light .thai-win-modal .text-white,
+        .light .thai-win-modal-card .text-white { color: #0f172a; }
+        .light .thai-win-modal button { color: #475569; }
+        .light .thai-win-title {
+          background-image: linear-gradient(135deg, #10b981 0%, #14b8a6 55%, #22c55e 100%);
+        }
+        .light .thai-win-number,
+        .light .thai-win-bet-amount {
+          color: #0f172a;
+        }
+        .light .thai-win-confirm-inline {
+          color: #1d4ed8;
+        }
+      `}</style>
+    <div className="thai-win-shell min-h-screen bg-[#020810] text-white">
       {/* bg glows */}
       <div className="pointer-events-none fixed inset-0 overflow-hidden">
         <div className="absolute -top-24 -right-16 h-80 w-80 rounded-full bg-emerald-700/10 blur-[80px]" />
@@ -206,7 +241,7 @@ export default function ThaiLotteryWinHistoryPage() {
         <button
           type="button"
           onClick={() => router.back()}
-          className="mb-0.5 inline-flex items-center gap-1.5 rounded-full border border-[#295487] bg-gradient-to-r from-[#0b1730] to-[#10203a] px-3 py-1.5 text-white/90 shadow-[0_10px_24px_rgba(0,0,0,0.22)] transition-all duration-200 hover:-translate-y-0.5 hover:scale-[1.02] hover:border-[#4f8fcc] hover:text-white hover:shadow-[0_14px_30px_rgba(10,35,70,0.38)] active:scale-[0.98]"
+          className="thai-win-back mb-0.5 inline-flex items-center gap-1.5 rounded-full border border-[#295487] bg-gradient-to-r from-[#0b1730] to-[#10203a] px-3 py-1.5 text-white/90 shadow-[0_10px_24px_rgba(0,0,0,0.22)] transition-all duration-200 hover:-translate-y-0.5 hover:scale-[1.02] hover:border-[#4f8fcc] hover:text-white hover:shadow-[0_14px_30px_rgba(10,35,70,0.38)] active:scale-[0.98]"
           aria-label="Go back"
         >
           <ChevronLeft className="h-3.5 w-3.5" />
@@ -227,12 +262,12 @@ export default function ThaiLotteryWinHistoryPage() {
             </span>
           </div>
           <h1 className="text-2xl sm:text-3xl font-black tracking-tight">
-            <span className="bg-gradient-to-br from-white via-emerald-100 to-emerald-400 bg-clip-text text-transparent">
+            <span className="thai-win-title bg-gradient-to-br from-white via-emerald-100 to-emerald-400 bg-clip-text text-transparent">
               Winning History
             </span>
           </h1>
           <div className="mx-auto mt-2 h-px w-40 bg-gradient-to-r from-transparent via-emerald-500/60 to-transparent" />
-          <p className="mt-1 text-xs text-white/35 tracking-wide">
+          <p className="thai-win-muted mt-1 text-xs text-white/35 tracking-wide">
             Your victories · All winning bets
           </p>
         </div>
@@ -264,7 +299,7 @@ export default function ThaiLotteryWinHistoryPage() {
           ].map((s) => (
             <div
               key={s.lbl}
-              className="relative overflow-hidden rounded-2xl border border-[#0f2244] bg-[#060f22] px-2 py-3 text-center"
+              className="thai-win-stat relative overflow-hidden rounded-2xl border border-[#0f2244] bg-[#060f22] px-2 py-3 text-center"
             >
               <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-emerald-600/40 to-transparent" />
               <div className={`mb-1 flex justify-center ${s.color}`}>
@@ -276,11 +311,11 @@ export default function ThaiLotteryWinHistoryPage() {
                 {s.val}
               </p>
               {s.sub && (
-                <p className="text-[9px] font-mono text-white/30 leading-tight mt-0.5 truncate px-1">
+                <p className="thai-win-soft text-[9px] font-mono text-white/30 leading-tight mt-0.5 truncate px-1">
                   {s.sub}
                 </p>
               )}
-              <p className="text-[9px] uppercase tracking-wider text-white/25 mt-1">
+              <p className="thai-win-soft text-[9px] uppercase tracking-wider text-white/25 mt-1">
                 {s.lbl}
               </p>
             </div>
@@ -288,12 +323,12 @@ export default function ThaiLotteryWinHistoryPage() {
         </div>
 
         {/* ── TABLE ── */}
-        <div className="overflow-hidden rounded-2xl border border-[#0f2244] bg-[#060f22] shadow-2xl">
+        <div className="thai-win-table overflow-hidden rounded-2xl border border-[#0f2244] bg-[#060f22] shadow-2xl">
           <div className="h-px bg-gradient-to-r from-transparent via-emerald-600/50 to-yellow-600/30" />
 
           {/* Header */}
           <div
-            className={`${GRID} items-center border-b-2 border-emerald-500/20 bg-emerald-500/5 px-3 py-2.5`}
+            className={`thai-win-table-head ${GRID} items-center border-b-2 border-emerald-500/20 bg-emerald-500/5 px-3 py-2.5`}
           >
             {["#", "Date", "Game Type", "Play Number", "USD", "Win", ""].map(
               (h, i) => (
@@ -323,10 +358,10 @@ export default function ThaiLotteryWinHistoryPage() {
               <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl border border-emerald-500/20 bg-emerald-500/8">
                 <Trophy className="h-7 w-7 text-emerald-400/50" />
               </div>
-              <p className="text-sm font-semibold text-white/60">
+              <p className="thai-win-muted text-sm font-semibold text-white/60">
                 No winning history found
               </p>
-              <p className="mt-1 text-xs text-white/25">Win</p>
+              <p className="thai-win-soft mt-1 text-xs text-white/25">Win</p>
             </div>
           )}
 
@@ -344,35 +379,35 @@ export default function ThaiLotteryWinHistoryPage() {
                   <div
                     key={bet.id ?? idx}
                     onClick={() => setSelectedBet(bet)}
-                    className={`${GRID} items-center border-b border-[#0a1a38]/60 px-3 py-3 last:border-0 hover:bg-emerald-500/5 active:bg-white/5 transition-colors cursor-pointer`}
+                    className={`thai-win-row ${GRID} items-center border-b border-[#0a1a38]/60 px-3 py-3 last:border-0 hover:bg-emerald-500/5 active:bg-white/5 transition-colors cursor-pointer`}
                   >
                     {/* # */}
-                    <span className="font-mono text-[10px] font-semibold text-white/25">
+                    <span className="thai-win-soft font-mono text-[10px] font-semibold text-white/25">
                       {String(serial).padStart(2, "0")}
                     </span>
 
                     {/* Date */}
                     <div className="leading-snug min-w-0">
-                      <p className="text-[9px] text-white/50 truncate">
+                      <p className="thai-win-muted text-[9px] text-white/50 truncate">
                         {dt.top}
                       </p>
-                      <p className="text-[9px] text-white/25">{dt.btm}</p>
+                      <p className="thai-win-soft text-[9px] text-white/25">{dt.btm}</p>
                     </div>
 
                     {/* Game */}
                     <div className="min-w-0">
-                      <span className="inline-block rounded-md border border-emerald-500/20 bg-emerald-500/8 px-1.5 py-0.5 text-[9px] font-bold text-emerald-400 leading-tight max-w-full truncate">
+                      <span className="thai-win-chip inline-block rounded-md border border-emerald-500/20 bg-emerald-500/8 px-1.5 py-0.5 text-[9px] font-bold text-emerald-400 leading-tight max-w-full truncate">
                         {PLAY_TYPE_LABEL[bet.playType] ?? bet.playType}
                       </span>
                     </div>
 
                     {/* Number */}
                     <div className="text-center">
-                      <span className="font-mono text-[13px] font-black tracking-widest text-white">
+                      <span className="thai-win-number font-mono text-[13px] font-black tracking-widest text-white">
                         {bet.betNumber ?? "-"}
                       </span>
                       {bet.confirmCode && (
-                        <p className="mt-0.5 font-mono text-[9px] font-bold text-[#71a6ff]">
+                        <p className="thai-win-confirm thai-win-confirm-inline mt-0.5 font-mono text-[9px] font-bold text-[#71a6ff]">
                           #{bet.confirmCode}
                         </p>
                       )}
@@ -380,7 +415,7 @@ export default function ThaiLotteryWinHistoryPage() {
 
                     {/* Bet Amount */}
                     <div className="text-right min-w-0">
-                      <p className="font-mono text-[11px] font-bold text-white truncate">
+                      <p className="thai-win-bet-amount font-mono text-[11px] font-bold text-white truncate">
                         {fmtUsd(betAmt)}
                       </p>
                     </div>
@@ -394,7 +429,7 @@ export default function ThaiLotteryWinHistoryPage() {
 
                     {/* Eye — visual only */}
                     <div className="flex justify-center">
-                      <Eye className="h-3.5 w-3.5 text-blue-400/70" />
+                      <Eye className="h-3.5 w-3.5 text-blue-500/70" />
                     </div>
                   </div>
                 );
@@ -410,18 +445,18 @@ export default function ThaiLotteryWinHistoryPage() {
               type="button"
               disabled={page <= 1}
               onClick={() => setPage((p) => p - 1)}
-              className="flex h-10 items-center gap-1.5 rounded-[14px] border border-[#0f2244] bg-[#060f22] px-4 text-sm font-semibold transition-all duration-200 hover:-translate-y-0.5 hover:scale-[1.02] hover:border-emerald-700/50 hover:shadow-[0_12px_24px_rgba(16,185,129,0.12)] active:scale-[0.98] disabled:opacity-30 disabled:hover:translate-y-0 disabled:hover:scale-100 disabled:hover:shadow-none"
+              className="thai-win-pager-btn flex h-10 items-center gap-1.5 rounded-[14px] border border-[#0f2244] bg-[#060f22] px-4 text-sm font-semibold transition-all duration-200 hover:-translate-y-0.5 hover:scale-[1.02] hover:border-emerald-700/50 hover:shadow-[0_12px_24px_rgba(16,185,129,0.12)] active:scale-[0.98] disabled:opacity-30 disabled:hover:translate-y-0 disabled:hover:scale-100 disabled:hover:shadow-none"
             >
               <ChevronLeft className="h-4 w-4" /> Prev
             </button>
-            <span className="font-mono text-xs text-white/30">
+            <span className="thai-win-soft font-mono text-xs text-white/30">
               {page} / {totalPages}
             </span>
             <button
               type="button"
               disabled={page >= totalPages}
               onClick={() => setPage((p) => p + 1)}
-              className="flex h-10 items-center gap-1.5 rounded-[14px] border border-[#0f2244] bg-[#060f22] px-4 text-sm font-semibold transition-all duration-200 hover:-translate-y-0.5 hover:scale-[1.02] hover:border-emerald-700/50 hover:shadow-[0_12px_24px_rgba(16,185,129,0.12)] active:scale-[0.98] disabled:opacity-30 disabled:hover:translate-y-0 disabled:hover:scale-100 disabled:hover:shadow-none"
+              className="thai-win-pager-btn flex h-10 items-center gap-1.5 rounded-[14px] border border-[#0f2244] bg-[#060f22] px-4 text-sm font-semibold transition-all duration-200 hover:-translate-y-0.5 hover:scale-[1.02] hover:border-emerald-700/50 hover:shadow-[0_12px_24px_rgba(16,185,129,0.12)] active:scale-[0.98] disabled:opacity-30 disabled:hover:translate-y-0 disabled:hover:scale-100 disabled:hover:shadow-none"
             >
               Next <ChevronLeft className="h-4 w-4 rotate-180" />
             </button>
@@ -438,5 +473,6 @@ export default function ThaiLotteryWinHistoryPage() {
         />
       )}
     </div>
+    </>
   );
 }

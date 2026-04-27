@@ -47,13 +47,14 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { Sheet, SheetContent } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { ThemeToggle } from "@/components/shared/theme-toggle";
 import { ThemeProvider } from "@/providers/theme-provider";
 import { useAuthStore } from "@/store/auth.store";
 import { cn } from "@/lib/utils";
 import { FloatingAdminChatButton } from "@/components/admin/floating-admin-chat-button";
+import { AdminChatNotificationPopup } from "@/components/admin/admin-chat-notification-popup";
 import { AuthService } from "@/services/auth.service";
 import { clearClientAuthCookies } from "@/lib/auth-cookie";
 
@@ -346,7 +347,7 @@ function AdminProfileMenu() {
     <div className="relative">
       <button
         onClick={() => setOpen((p) => !p)}
-        className="flex items-center gap-2 rounded-xl border border-slate-700 bg-slate-800 px-2.5 py-1.5 hover:border-slate-600 transition-all"
+        className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-2.5 py-1.5 transition-all hover:border-slate-300 dark:border-slate-700 dark:bg-slate-800 dark:hover:border-slate-600"
       >
         <Avatar className="h-6 w-6 shrink-0">
           {user?.image && (
@@ -360,12 +361,12 @@ function AdminProfileMenu() {
             {user?.name?.charAt(0)?.toUpperCase() ?? "A"}
           </AvatarFallback>
         </Avatar>
-        <span className="hidden sm:block text-xs font-medium text-slate-300 max-w-20 truncate">
+        <span className="hidden max-w-20 truncate text-xs font-medium text-slate-700 dark:text-slate-300 sm:block">
           {user?.name}
         </span>
         <ChevronDown
           className={cn(
-            "h-3 w-3 text-slate-500 transition-transform duration-200",
+            "h-3 w-3 text-slate-400 transition-transform duration-200 dark:text-slate-500",
             open && "rotate-180",
           )}
         />
@@ -379,13 +380,13 @@ function AdminProfileMenu() {
             onClick={() => setOpen(false)}
           />
           {/* dropdown */}
-          <div className="absolute right-0 top-full mt-2 z-50 w-52 rounded-2xl border border-slate-700 bg-slate-900 shadow-xl shadow-black/40 overflow-hidden">
+          <div className="absolute right-0 top-full z-50 mt-2 w-52 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl shadow-slate-200/70 dark:border-slate-700 dark:bg-slate-900 dark:shadow-black/40">
             {/* user info */}
-            <div className="px-4 py-3 border-b border-slate-700/60">
-              <p className="text-xs font-semibold text-white truncate">
+            <div className="border-b border-slate-200 px-4 py-3 dark:border-slate-700/60">
+              <p className="truncate text-xs font-semibold text-slate-900 dark:text-white">
                 {user?.name}
               </p>
-              <p className="text-[11px] text-slate-400 truncate">
+              <p className="truncate text-[11px] text-slate-500 dark:text-slate-400">
                 {user?.email}
               </p>
               <span className="mt-1 inline-block rounded-full bg-purple-500/15 border border-purple-500/30 px-2 py-0.5 text-[10px] font-semibold text-purple-400 capitalize">
@@ -394,16 +395,16 @@ function AdminProfileMenu() {
             </div>
 
             {/* actions */}
-            <div className="p-1.5 space-y-0.5">
+            <div className="space-y-0.5 p-1.5">
               <Link
                 href="/admin/profile"
                 onClick={() => setOpen(false)}
-                className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-xs text-slate-300 hover:bg-slate-800 hover:text-white transition-colors"
+                className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-xs text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-950 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white"
               >
                 <UserCircle className="h-3.5 w-3.5 text-purple-400" />
                 Edit Profile
               </Link>
-              <div className="h-px bg-slate-800 my-1" />
+              <div className="my-1 h-px bg-slate-100 dark:bg-slate-800" />
               <button
                 onClick={() => {
                   setOpen(false);
@@ -466,10 +467,10 @@ function DynamicRoundGroup({
 
   return (
     <div className="space-y-0.5">
-      <p className="px-2 pt-1 pb-0.5 text-[10px] uppercase tracking-wider text-slate-600 font-semibold">
+      <p className="px-2 pt-1 pb-0.5 text-[10px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-600">
         Round Pages
       </p>
-      <div className="space-y-0.5 border-l border-purple-500/20 ml-1 pl-3">
+      <div className="ml-1 space-y-0.5 border-l border-violet-200 pl-3 dark:border-purple-500/20">
         {roundPages.map((page) => {
           const isActive = pathname === page.href;
           return (
@@ -480,8 +481,8 @@ function DynamicRoundGroup({
               className={cn(
                 "flex items-center gap-2 rounded-lg px-2 py-1.5 text-[11px] transition-colors",
                 isActive
-                  ? "bg-purple-600/15 text-purple-400"
-                  : "text-slate-500 hover:bg-slate-800 hover:text-slate-300",
+                  ? "bg-violet-50 text-violet-600 dark:bg-purple-600/15 dark:text-purple-400"
+                  : "text-slate-500 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800 dark:hover:text-slate-300",
               )}
             >
               <page.icon className="h-3 w-3 shrink-0" />
@@ -508,10 +509,10 @@ function NavItemRow({
 }) {
   const color = item.color ?? "purple";
 
-  const activeParentBg   = color === "blue" ? "bg-blue-600/20 border-blue-500/30"   : "bg-purple-600/20 border-purple-500/30";
-  const activeParentText = color === "blue" ? "text-blue-400"                        : "text-purple-400";
-  const activeChildBg    = color === "blue" ? "bg-blue-600/15 text-blue-400"         : "bg-purple-600/15 text-purple-400";
-  const borderL          = color === "blue" ? "border-blue-500/30"                   : "border-slate-700";
+  const activeParentBg   = color === "blue" ? "bg-blue-50 border-blue-200 dark:bg-blue-600/20 dark:border-blue-500/30"   : "bg-violet-50 border-violet-200 dark:bg-purple-600/20 dark:border-purple-500/30";
+  const activeParentText = color === "blue" ? "text-blue-600 dark:text-blue-400"                        : "text-violet-600 dark:text-purple-400";
+  const activeChildBg    = color === "blue" ? "bg-blue-50 text-blue-600 dark:bg-blue-600/15 dark:text-blue-400"         : "bg-violet-50 text-violet-600 dark:bg-purple-600/15 dark:text-purple-400";
+  const borderL          = color === "blue" ? "border-blue-200 dark:border-blue-500/30"                   : "border-slate-200 dark:border-slate-700";
 
   const isParentActive = item.href
     ? item.exact
@@ -546,7 +547,7 @@ function NavItemRow({
               href={item.href}
               className={cn(
                 "flex flex-1 items-center gap-3 px-3 py-2.5 text-sm rounded-l-lg transition-colors",
-                isParentActive ? activeParentText : "text-slate-400 hover:text-white",
+                isParentActive ? activeParentText : "text-slate-600 hover:text-slate-950 dark:text-slate-400 dark:hover:text-white",
               )}
             >
               <item.icon className="h-4 w-4 shrink-0" />
@@ -557,7 +558,7 @@ function NavItemRow({
               onClick={() => setOpen((p) => !p)}
               className={cn(
                 "flex flex-1 items-center gap-3 px-3 py-2.5 text-sm rounded-l-lg transition-colors",
-                isParentActive ? activeParentText : "text-slate-400 hover:text-white",
+                isParentActive ? activeParentText : "text-slate-600 hover:text-slate-950 dark:text-slate-400 dark:hover:text-white",
               )}
             >
               <item.icon className="h-4 w-4 shrink-0" />
@@ -569,8 +570,8 @@ function NavItemRow({
           <button
             onClick={() => setOpen((p) => !p)}
             className={cn(
-              "flex items-center px-2.5 rounded-r-lg border-l border-slate-700/40 transition-colors",
-              isParentActive ? activeParentText : "text-slate-500 hover:text-white",
+              "flex items-center rounded-r-lg border-l border-slate-200 px-2.5 transition-colors dark:border-slate-700/40",
+              isParentActive ? activeParentText : "text-slate-400 hover:text-slate-900 dark:text-slate-500 dark:hover:text-white",
             )}
           >
             <ChevronDown
@@ -613,7 +614,7 @@ function NavItemRow({
                     "flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-xs transition-colors",
                     isChildActive
                       ? activeChildBg
-                      : "text-slate-500 hover:bg-slate-800 hover:text-slate-300",
+                      : "text-slate-500 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800 dark:hover:text-slate-300",
                   )}
                 >
                   <child.icon className="h-3.5 w-3.5 shrink-0" />
@@ -636,7 +637,7 @@ function NavItemRow({
         "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors",
         isParentActive
           ? `${activeParentBg} border ${activeParentText}`
-          : "text-slate-400 hover:bg-slate-800 hover:text-white",
+          : "text-slate-600 hover:bg-slate-100 hover:text-slate-950 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-white",
       )}
     >
       <item.icon className="h-4 w-4 shrink-0" />
@@ -684,39 +685,39 @@ function Sidebar({ onClose }: { onClose?: () => void }) {
   };
 
   return (
-    <div className="flex h-full flex-col border-r border-slate-700/60 bg-slate-900">
+    <div className="flex h-full flex-col border-r border-slate-200 bg-slate-50 dark:border-slate-700/60 dark:bg-slate-900">
       {/* ── Logo ── */}
-      <div className="border-b border-slate-700/60 px-4 py-3">
+      <div className="border-b border-slate-200 px-4 py-3 dark:border-slate-700/60">
         <div className="flex items-center gap-2.5">
           <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-linear-to-br from-purple-500 to-indigo-600 text-sm font-extrabold text-white shadow-lg shadow-purple-900/40">
             M
           </div>
           <div>
-            <p className="text-sm font-bold text-white leading-tight">Matka Online</p>
-            <p className="text-[10px] text-purple-400 font-medium tracking-wide uppercase">Admin Panel</p>
+            <p className="text-sm font-bold leading-tight text-slate-900 dark:text-white">Matka Online</p>
+            <p className="text-[10px] font-medium uppercase tracking-wide text-violet-600 dark:text-purple-400">Admin Panel</p>
           </div>
         </div>
       </div>
 
       {/* ── Nav ── */}
-      <nav className="flex-1 overflow-y-auto p-2 space-y-0.5">
+      <nav className="hide-scrollbar flex-1 overflow-y-auto p-2 space-y-0.5">
         {navItems.map((item, idx) => (
           <div key={item.href ?? idx}>
             {item.section && (
               <div className="mt-3 mb-1 flex items-center gap-2 px-2">
                 <div className={cn(
                   "h-px flex-1",
-                  item.color === "blue" ? "bg-blue-500/20" : "bg-slate-700/60",
+                  item.color === "blue" ? "bg-blue-200/70 dark:bg-blue-500/20" : "bg-slate-200 dark:bg-slate-700/60",
                 )} />
                 <p className={cn(
                   "text-[9px] font-bold uppercase tracking-widest shrink-0",
-                  item.color === "blue" ? "text-blue-500/70" : "text-slate-500",
+                  item.color === "blue" ? "text-blue-600/80 dark:text-blue-500/70" : "text-slate-500",
                 )}>
                   {item.section}
                 </p>
                 <div className={cn(
                   "h-px flex-1",
-                  item.color === "blue" ? "bg-blue-500/20" : "bg-slate-700/60",
+                  item.color === "blue" ? "bg-blue-200/70 dark:bg-blue-500/20" : "bg-slate-200 dark:bg-slate-700/60",
                 )} />
               </div>
             )}
@@ -731,25 +732,25 @@ function Sidebar({ onClose }: { onClose?: () => void }) {
       </nav>
 
       {/* ── User footer ── */}
-      <div className="border-t border-slate-700/60 p-3">
-        <div className="flex items-center gap-3 rounded-xl bg-slate-800/70 px-3 py-2.5 ring-1 ring-slate-700/40">
+      <div className="border-t border-slate-200 p-3 dark:border-slate-700/60">
+        <div className="flex items-center gap-3 rounded-xl bg-white px-3 py-2.5 ring-1 ring-slate-200 dark:bg-slate-800/70 dark:ring-slate-700/40">
           <Avatar className="h-8 w-8 shrink-0">
             <AvatarFallback className="bg-linear-to-br from-purple-600 to-indigo-600 text-xs font-bold text-white">
               {user?.name?.charAt(0)?.toUpperCase()}
             </AvatarFallback>
           </Avatar>
           <div className="min-w-0 flex-1">
-            <p className="truncate text-xs font-semibold text-white">
+            <p className="truncate text-xs font-semibold text-slate-900 dark:text-white">
               {user?.name}
             </p>
-            <p className="text-[10px] text-slate-400 capitalize">{user?.role}</p>
+            <p className="text-[10px] capitalize text-slate-500 dark:text-slate-400">{user?.role}</p>
           </div>
           <Button
             variant="ghost"
             size="icon"
             onClick={handleLogout}
             disabled={isLoggingOut}
-            className="h-7 w-7 text-slate-400 hover:text-red-400 hover:bg-red-400/10 transition-colors"
+            className="h-7 w-7 text-slate-500 transition-colors hover:bg-red-400/10 hover:text-red-500 dark:text-slate-400 dark:hover:text-red-400"
           >
             <LogOut className="h-3.5 w-3.5" />
           </Button>
@@ -809,7 +810,7 @@ export default function AdminLayout({
 
   return (
     <ThemeProvider>
-      <div className="flex h-screen overflow-hidden bg-slate-950">
+      <div className="flex h-screen overflow-hidden bg-slate-100 dark:bg-slate-950">
         <div className="hidden w-56 shrink-0 lg:flex">
           <div className="w-full">
             <Sidebar />
@@ -819,24 +820,25 @@ export default function AdminLayout({
         <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
           <SheetContent
             side="left"
-            className="w-56 border-slate-700 bg-slate-900 p-0"
+            className="w-56 border-slate-200 bg-slate-50 p-0 dark:border-slate-700 dark:bg-slate-900"
           >
+            <SheetTitle className="sr-only">Admin navigation menu</SheetTitle>
             <Sidebar onClose={() => setSidebarOpen(false)} />
           </SheetContent>
         </Sheet>
 
         <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
-          <header className="flex h-14 shrink-0 items-center justify-between border-b border-slate-700 bg-slate-900/95 px-4">
+          <header className="flex h-14 shrink-0 items-center justify-between border-b border-slate-200 bg-white/95 px-4 backdrop-blur dark:border-slate-700 dark:bg-slate-900/95">
             <div className="flex items-center gap-3">
               <Button
                 variant="ghost"
                 size="icon"
                 onClick={() => setSidebarOpen(true)}
-                className="lg:hidden text-slate-400"
+                className="text-slate-500 dark:text-slate-400 lg:hidden"
               >
                 <Menu className="h-5 w-5" />
               </Button>
-              <h1 className="text-sm font-semibold text-white">
+              <h1 className="text-sm font-semibold text-slate-900 dark:text-white">
                 {currentLabel}
               </h1>
             </div>
@@ -845,7 +847,7 @@ export default function AdminLayout({
               <Button
                 variant="ghost"
                 size="icon"
-                className="text-slate-400 hover:text-white"
+                className="text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white"
               >
                 <Bell className="h-5 w-5" />
               </Button>
@@ -853,8 +855,16 @@ export default function AdminLayout({
             </div>
           </header>
 
-          <main className="flex-1 overflow-y-auto p-4 lg:p-6">{children}</main>
-          <FloatingAdminChatButton />
+          <main
+            className={cn(
+              "hide-scrollbar flex-1 overflow-y-auto",
+              pathname === "/admin/chat" ? "bg-slate-50 p-2 dark:bg-slate-950 lg:p-3" : "bg-slate-100 p-4 dark:bg-slate-950 lg:p-6",
+            )}
+          >
+            {children}
+          </main>
+          <AdminChatNotificationPopup />
+          {pathname !== "/admin/chat" && <FloatingAdminChatButton />}
         </div>
       </div>
     </ThemeProvider>

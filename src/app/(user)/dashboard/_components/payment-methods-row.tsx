@@ -310,8 +310,8 @@ export function PaymentMethodsRow({ methods }: { methods: any[] }) {
   };
 
   return (
-    <div className="rounded-xl border border-slate-700/50 bg-slate-800/40 p-4">
-      <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">
+    <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700/50 dark:bg-slate-800/40 dark:shadow-none">
+      <p className="text-xs font-semibold text-slate-700 uppercase tracking-wider mb-3 dark:text-slate-400">
         Accepted Payment Methods
       </p>
 
@@ -325,7 +325,7 @@ export function PaymentMethodsRow({ methods }: { methods: any[] }) {
             key={m.id}
             type="button"
             onClick={handleClick}
-            className="flex items-center justify-center rounded-md border border-slate-200 bg-white px-3 py-2.5 min-h-13 shadow-sm shadow-white/10 cursor-pointer select-none transition-all duration-150 active:scale-95 active:brightness-90 hover:border-slate-300 hover:shadow-md hover:shadow-black/20"
+            className="flex items-center justify-center rounded-md border border-slate-200 bg-white px-3 py-2.5 min-h-13 shadow-sm cursor-pointer select-none transition-all duration-150 active:scale-95 active:brightness-90 hover:border-slate-300 hover:shadow-md dark:shadow-white/10 dark:hover:shadow-black/20"
           >
             {m.logo}
           </button>
@@ -337,7 +337,7 @@ export function PaymentMethodsRow({ methods }: { methods: any[] }) {
             key={m.id}
             type="button"
             onClick={handleClick}
-            className="flex items-center justify-center rounded-md border border-slate-200 bg-white px-3 py-2.5 min-h-13 shadow-sm shadow-white/10 cursor-pointer select-none transition-all duration-150 active:scale-95 active:brightness-90 hover:border-slate-300 hover:shadow-md hover:shadow-black/20"
+            className="flex items-center justify-center rounded-md border border-slate-200 bg-white px-3 py-2.5 min-h-13 shadow-sm cursor-pointer select-none transition-all duration-150 active:scale-95 active:brightness-90 hover:border-slate-300 hover:shadow-md dark:shadow-white/10 dark:hover:shadow-black/20"
           >
             <ApiLogoCard name={m.name} logo={m.logo} />
           </button>
@@ -349,7 +349,7 @@ export function PaymentMethodsRow({ methods }: { methods: any[] }) {
             key={m.id}
             type="button"
             onClick={handleClick}
-            className="flex items-center justify-center rounded-md border border-slate-200 bg-white px-3 py-2.5 min-h-13 shadow-sm shadow-white/10 cursor-pointer select-none transition-all duration-150 active:scale-95 active:brightness-90 hover:border-slate-300 hover:shadow-md hover:shadow-black/20"
+            className="flex items-center justify-center rounded-md border border-slate-200 bg-white px-3 py-2.5 min-h-13 shadow-sm cursor-pointer select-none transition-all duration-150 active:scale-95 active:brightness-90 hover:border-slate-300 hover:shadow-md dark:shadow-white/10 dark:hover:shadow-black/20"
           >
             {m.logo}
           </button>

@@ -9,7 +9,6 @@ import {
   Send,
   Bot,
   Headphones,
-  X,
   ChevronLeft,
   Loader2,
   Wifi,
@@ -50,7 +49,12 @@ interface Message {
   voiceUrl?: string | null;
   createdAt?: string;
   isLoading?: boolean;
+  mode?: SupportMode;
+  thread?: SupportMode;
 }
+
+type SupportMode = "AI" | "AGENT";
+type ThreadMessage = Message & { thread: SupportMode; originalIndex: number };
 
 const hasRecentDuplicate = (
   list: Message[],
@@ -76,6 +80,108 @@ const getDisplayMessage = (message?: string | null) => {
   return message;
 };
 
+const createAiGreeting = (): Message => ({
+  role: "AI",
+  message: "Hello! I'm your AI assistant. How can I help you today?",
+  thread: "AI",
+  createdAt: new Date().toISOString(),
+});
+
+const ensureAiGreeting = (list: Message[]): Message[] => {
+  const hasAiThread = list.some(
+    (msg) => msg.thread === "AI" || msg.mode === "AI" || msg.role === "AI",
+  );
+  return hasAiThread ? list : [createAiGreeting(), ...list];
+};
+
+const getAiAutoReply = (message: string) => {
+  const normalized = message.toLowerCase();
+
+  if (normalized.includes("deposit")) {
+    return "To deposit, go to Deposit, choose your payment method, enter the amount, and submit the transaction details. Your balance will update after approval.";
+  }
+
+  if (normalized.includes("withdraw")) {
+    return "To withdraw, go to Withdraw, select your account, enter the amount, and submit the request. Please make sure your withdrawal details are correct.";
+  }
+
+  if (normalized.includes("account") || normalized.includes("register")) {
+    return "To create an account, open Register, fill in your details, verify if required, then login with your username and password.";
+  }
+
+  if (normalized.includes("referral")) {
+    return "Referral bonus details are available from the Referral page. Share your referral link/code and follow the bonus rules shown there.";
+  }
+
+  if (normalized.includes("play") || normalized.includes("game")) {
+    return "To play, open Games or your selected lottery page, choose the game type, enter your numbers and amount, then submit before the game closes.";
+  }
+
+  return "I got your message. Please choose a quick question below or type what you need help with, and I will guide you.";
+};
+
+const getResponderThread = (role: Message["role"]): SupportMode | null => {
+  if (role === "AI") return "AI";
+  if (role === "AGENT") return "AGENT";
+  return null;
+};
+
+const getMessageThread = (
+  list: Message[],
+  index: number,
+  fallback: SupportMode,
+): SupportMode => {
+  const msg = list[index];
+  const explicitThread = msg.thread ?? msg.mode;
+  if (explicitThread === "AI" || explicitThread === "AGENT") return explicitThread;
+
+  const ownResponderThread = getResponderThread(msg.role);
+  if (ownResponderThread) return ownResponderThread;
+
+  for (let i = index + 1; i < list.length; i += 1) {
+    const nextThread = list[i].thread ?? list[i].mode ?? getResponderThread(list[i].role);
+    if (nextThread === "AI" || nextThread === "AGENT") return nextThread;
+  }
+
+  for (let i = index - 1; i >= 0; i -= 1) {
+    const prevThread = list[i].thread ?? list[i].mode ?? getResponderThread(list[i].role);
+    if (prevThread === "AI" || prevThread === "AGENT") return prevThread;
+  }
+
+  return fallback;
+};
+
+const getThreadMessages = (
+  list: Message[],
+  thread: SupportMode,
+  fallback: SupportMode,
+): ThreadMessage[] =>
+  list
+    .map((msg, index) => ({
+      ...msg,
+      thread: getMessageThread(list, index, fallback),
+      originalIndex: index,
+    }))
+    .filter((msg) => msg.thread === thread);
+
+const applyThreadHints = (
+  incoming: Message[],
+  previous: Message[],
+  fallback: SupportMode,
+): Message[] =>
+  incoming.map((msg, index) => {
+    if (msg.thread || msg.mode || msg.role !== "USER") return msg;
+    const previousMatch = previous.find(
+      (old) =>
+        old.role === msg.role &&
+        old.message === msg.message &&
+        (old.createdAt ?? "") === (msg.createdAt ?? "") &&
+        (old.thread === "AI" || old.thread === "AGENT"),
+    );
+    if (previousMatch?.thread) return { ...msg, thread: previousMatch.thread };
+    return { ...msg, thread: getMessageThread(incoming, index, fallback) };
+  });
+
 export default function ChatPage() {
   const router = useRouter();
   const user = useAuthStore((s) => s.user);
@@ -83,12 +189,14 @@ export default function ChatPage() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputMessage, setInputMessage] = useState("");
   const [isSending, setIsSending] = useState(false);
-  const [showAgentDialog, setShowAgentDialog] = useState(false);
-  const [agentIdentifier, setAgentIdentifier] = useState("");
   const [sessionStatus, setSessionStatus] = useState("AI_HANDLING");
+  const [supportMode, setSupportMode] = useState<SupportMode>("AI");
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [showMicDeniedDialog, setShowMicDeniedDialog] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesViewportRef = useRef<HTMLDivElement>(null);
+  const shouldAutoScrollRef = useRef(true);
+  const scrollBehaviorRef = useRef<ScrollBehavior>("smooth");
   const imageInputRef = useRef<HTMLInputElement>(null);
   const { isConnected, joinSession, onNewMessage, onAgentJoined } = useSocket();
   const { isRecording, micPermission, startRecording, stopRecording } = useVoiceRecorder();
@@ -98,12 +206,14 @@ export default function ChatPage() {
     mutationFn: ChatService.startSession,
     onSuccess: (data) => {
       const session = data.data;
+      shouldAutoScrollRef.current = true;
+      scrollBehaviorRef.current = "auto";
       setSessionId(session.id);
       setSessionStatus(session.status);
       localStorage.setItem(CHAT_SESSION_KEY, session.id);
 
       if (session.messages?.length > 0) {
-        setMessages(session.messages);
+        setMessages(ensureAiGreeting(session.messages));
       } else {
         setMessages([
           {
@@ -130,21 +240,12 @@ export default function ChatPage() {
     mutationFn: ({ sessionId, identifier }: { sessionId: string; identifier: string }) =>
       ChatService.requestAgent(sessionId, identifier),
     onSuccess: () => {
-      setShowAgentDialog(false);
       setSessionStatus("WAITING_AGENT");
+      setSupportMode("AGENT");
       toast.success("Agent request sent. Please wait.");
     },
     onError: (error: any) => {
       toast.error(error.response?.data?.message || "Failed to request agent");
-    },
-  });
-
-  // Close session
-  const { mutate: closeSession } = useMutation({
-    mutationFn: () => ChatService.closeSession(sessionId!),
-    onSuccess: () => {
-      setSessionStatus("CLOSED");
-      toast.success("Chat session closed");
     },
   });
 
@@ -160,6 +261,9 @@ export default function ChatPage() {
     const session = sessionData?.data;
     if (!session) return;
     setSessionStatus(session.status);
+    if (session.status === "AI_HANDLING" || session.status === "CLOSED") {
+      setSupportMode("AI");
+    }
 
     // Track how many agent messages user has seen — popup uses this as baseline
     const agentCount = (session.messages ?? []).filter((m: Message) => m.role === "AGENT").length;
@@ -182,15 +286,42 @@ export default function ChatPage() {
 
         if (!hasLoading && sameLength && lastLocalMessage?.message) return prev;
 
+        const privateAiMessages = prev.filter(
+          (msg) =>
+            (msg.thread === "AI" || msg.mode === "AI") &&
+            !dedupedMessages.some(
+              (serverMsg: Message) =>
+                serverMsg.role === msg.role &&
+                serverMsg.message === msg.message &&
+                (serverMsg.createdAt ?? "") === (msg.createdAt ?? ""),
+            ),
+        );
+
         setIsSending(false);
-        return dedupedMessages;
+        return ensureAiGreeting([
+          ...privateAiMessages,
+          ...applyThreadHints(dedupedMessages, prev, supportMode),
+        ]);
       });
     }
-  }, [sessionData]);
+  }, [sessionData, supportMode]);
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+    if (!shouldAutoScrollRef.current) return;
+    messagesEndRef.current?.scrollIntoView({
+      behavior: scrollBehaviorRef.current,
+      block: "end",
+    });
+    scrollBehaviorRef.current = "smooth";
+  }, [messages, supportMode]);
+
+  const handleMessagesScroll = () => {
+    const viewport = messagesViewportRef.current;
+    if (!viewport) return;
+    const distanceFromBottom =
+      viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight;
+    shouldAutoScrollRef.current = distanceFromBottom < 120;
+  };
 
   useEffect(() => {
     startSession();
@@ -210,15 +341,25 @@ export default function ChatPage() {
       setMessages((prev) => {
         const filtered = prev.filter((m) => !m.isLoading);
         if (hasRecentDuplicate(filtered, data)) return filtered;
-        return [...filtered, { ...data, createdAt: new Date().toISOString() }];
+        const thread = data.thread ?? data.mode ?? getResponderThread(data.role) ?? supportMode;
+        return [
+          ...filtered,
+          { ...data, thread, createdAt: data.createdAt ?? new Date().toISOString() },
+        ];
       });
     });
 
     const unsubAgent = onAgentJoined((data: any) => {
       setSessionStatus("AGENT_HANDLING");
+      setSupportMode("AGENT");
       setMessages((prev) => [
         ...prev,
-        { role: "AGENT", message: data.message, createdAt: new Date().toISOString() },
+        {
+          role: "AGENT",
+          message: data.message,
+          thread: "AGENT",
+          createdAt: new Date().toISOString(),
+        },
       ]);
       toast.success("An agent has joined the chat!");
     });
@@ -227,7 +368,7 @@ export default function ChatPage() {
       unsubMessage();
       unsubAgent();
     };
-  }, [sessionId, onAgentJoined, onNewMessage]);
+  }, [sessionId, onAgentJoined, onNewMessage, supportMode]);
 
   const handleSend = async () => {
     if (!inputMessage.trim() || !sessionId || isSending) return;
@@ -235,28 +376,50 @@ export default function ChatPage() {
     const userMessage: Message = {
       role: "USER",
       message: messageText,
+      thread: supportMode,
       createdAt: new Date().toISOString(),
     };
 
-    setMessages((prev) => [...prev, userMessage]);
+    shouldAutoScrollRef.current = true;
+    if (supportMode === "AI") {
+      const loadingMessage: Message = {
+        role: "AI",
+        message: "",
+        thread: "AI",
+        isLoading: true,
+        createdAt: new Date().toISOString(),
+      };
 
-    if (sessionStatus === "AI_HANDLING") {
-      setMessages((prev) => [
-        ...prev,
-        { role: "AI", message: "", isLoading: true, createdAt: new Date().toISOString() },
-      ]);
+      setMessages((prev) => [...prev, userMessage, loadingMessage]);
+      setInputMessage("");
+      setIsSending(true);
+
+      window.setTimeout(() => {
+        setMessages((prev) => [
+          ...prev.filter((msg) => msg !== loadingMessage),
+          {
+            role: "AI",
+            message: getAiAutoReply(messageText),
+            thread: "AI",
+            createdAt: new Date().toISOString(),
+          },
+        ]);
+        setIsSending(false);
+      }, 500);
+      return;
     }
 
+    setMessages((prev) => [...prev, userMessage]);
     setIsSending(true);
     try {
-      await ChatService.sendMessage(sessionId, messageText);
+      await ChatService.sendMessage(sessionId, messageText, "AGENT");
       setInputMessage("");
       setTimeout(() => { void refetchSession(); }, 600);
     } catch (error: any) {
       setIsSending(false);
-      setMessages((prev) =>
-        prev.filter((m) => !m.isLoading && m.createdAt !== userMessage.createdAt),
-      );
+      setMessages((prev) => [
+        ...prev.filter((m) => !m.isLoading && m.createdAt !== userMessage.createdAt),
+      ]);
       toast.error(error?.response?.data?.message || "Failed to send message");
     }
   };
@@ -271,8 +434,14 @@ export default function ChatPage() {
   const handleImageFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !sessionId) return;
+    if (supportMode === "AI") {
+      toast.info("Images are available in live agent chat.");
+      e.target.value = "";
+      return;
+    }
     const fd = new FormData();
     fd.append("file", file);
+    fd.append("mode", supportMode);
     sendMedia({ sid: sessionId, fd });
     e.target.value = "";
   };
@@ -283,11 +452,15 @@ export default function ChatPage() {
         setShowMicDeniedDialog(true);
         return;
       }
+      if (supportMode === "AI") {
+        toast.info("Voice messages are available in live agent chat.");
+        return;
+      }
       e.currentTarget.setPointerCapture(e.pointerId);
       const ok = await startRecording();
       if (!ok) setShowMicDeniedDialog(true);
     },
-    [startRecording, micPermission],
+    [startRecording, micPermission, supportMode],
   );
 
   const handleMicPointerUp = useCallback(async () => {
@@ -295,15 +468,24 @@ export default function ChatPage() {
     if (!blob || !sessionId) return;
     const fd = new FormData();
     fd.append("file", blob, "voice.webm");
+    fd.append("mode", supportMode);
     sendMedia({ sid: sessionId, fd });
-  }, [stopRecording, sessionId, sendMedia]);
+  }, [stopRecording, sessionId, sendMedia, supportMode]);
 
   const handleRequestAgent = () => {
-    if (!agentIdentifier.trim()) {
-      toast.error("Please enter your email or username");
+    if (!sessionId) {
+      toast.error("Chat session is starting. Please try again.");
       return;
     }
-    requestAgent({ sessionId: sessionId!, identifier: agentIdentifier });
+
+    const identifier = user?.username || user?.email || user?.name;
+    if (!identifier) {
+      toast.error("Please login again to request a live agent.");
+      router.push("/login");
+      return;
+    }
+
+    requestAgent({ sessionId, identifier });
   };
 
   const getRoleBadge = (role: string) => {
@@ -318,9 +500,17 @@ export default function ChatPage() {
   };
 
   const getStatusInfo = () => {
+    if (supportMode === "AI") {
+      return { label: "Live AI", color: "bg-blue-500/20 text-blue-400" };
+    }
+
+    if (sessionStatus === "WAITING_AGENT") {
+      return { label: "Waiting for Agent", color: "bg-yellow-500/20 text-yellow-400" };
+    }
+
     switch (sessionStatus) {
       case "AI_HANDLING":
-        return { label: "AI Support", color: "bg-blue-500/20 text-blue-400" };
+        return { label: "Live Agent", color: "bg-green-500/20 text-green-400" };
       case "WAITING_AGENT":
         return { label: "Waiting for Agent", color: "bg-yellow-500/20 text-yellow-400" };
       case "AGENT_HANDLING":
@@ -333,6 +523,10 @@ export default function ChatPage() {
   };
 
   const statusInfo = getStatusInfo();
+  const hasLiveAgentThread =
+    sessionStatus === "WAITING_AGENT" || sessionStatus === "AGENT_HANDLING";
+  const activeTitle = supportMode === "AGENT" ? "Live Agent" : "AI Assistant";
+  const displayedMessages = getThreadMessages(messages, supportMode, supportMode);
 
   const handleBack = () => {
     if (typeof window !== "undefined" && window.history.length > 1) {
@@ -365,7 +559,7 @@ export default function ChatPage() {
           variant="ghost"
           size="sm"
           onClick={handleBack}
-          className="h-8 px-1.5 text-slate-300 hover:text-white"
+          className="h-8 px-1.5 text-slate-600 hover:text-slate-950 dark:text-slate-300 dark:hover:text-white"
           aria-label="Go back"
         >
           <ChevronLeft className="mr-1 h-4 w-4" />
@@ -374,12 +568,12 @@ export default function ChatPage() {
       </div>
 
       {/* Chat Header */}
-      <Card className="bg-slate-800/50 border-slate-700 rounded-b-none">
+      <Card className="rounded-b-none border-slate-200/90 bg-white/95 shadow-sm dark:border-slate-700 dark:bg-slate-800/50 dark:shadow-none">
         <CardContent className="p-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="relative">
-                <Avatar className="h-9 w-9 border border-slate-600">
+                <Avatar className="h-9 w-9 border border-slate-200 dark:border-slate-600">
                   <AvatarFallback
                     className={cn("text-sm", {
                       "bg-blue-600/20": sessionStatus === "AI_HANDLING",
@@ -387,7 +581,7 @@ export default function ChatPage() {
                       "bg-yellow-600/20": sessionStatus === "WAITING_AGENT",
                     })}
                   >
-                    {sessionStatus === "AGENT_HANDLING" ? (
+                    {supportMode === "AGENT" ? (
                       <Headphones className="h-4 w-4 text-green-400" />
                     ) : (
                       <Bot className="h-4 w-4 text-blue-400" />
@@ -396,14 +590,14 @@ export default function ChatPage() {
                 </Avatar>
                 <div
                   className={cn(
-                    "absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-slate-800",
+                    "absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-white dark:border-slate-800",
                     isConnected ? "bg-green-500" : "bg-red-500",
                   )}
                 />
               </div>
               <div>
-                <p className="text-white text-sm font-medium">
-                  {sessionStatus === "AGENT_HANDLING" ? "Live Agent" : "AI Assistant"}
+                <p className="text-sm font-medium text-slate-950 dark:text-white">
+                  {activeTitle}
                 </p>
                 <div className="flex items-center gap-1.5">
                   <Badge className={cn("text-[10px]", statusInfo.color)}>
@@ -419,25 +613,47 @@ export default function ChatPage() {
             </div>
 
             <div className="flex items-center gap-1">
+              {hasLiveAgentThread && (
+                <div className="flex rounded-full border border-slate-200 bg-slate-100 p-0.5 dark:border-slate-700 dark:bg-slate-900/60">
+                  <button
+                    type="button"
+                    onClick={() => setSupportMode("AI")}
+                    className={cn(
+                      "flex h-7 w-7 items-center justify-center rounded-full text-slate-500 transition-colors dark:text-slate-400",
+                      supportMode === "AI" && "bg-blue-500/20 text-blue-300",
+                    )}
+                    aria-label="Use AI support"
+                  >
+                    <Bot className="h-3.5 w-3.5" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSupportMode("AGENT")}
+                    className={cn(
+                      "flex h-7 w-7 items-center justify-center rounded-full text-slate-500 transition-colors dark:text-slate-400",
+                      supportMode === "AGENT" && "bg-green-500/20 text-green-300",
+                    )}
+                    aria-label="Use live agent"
+                  >
+                    <Headphones className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              )}
+
               {sessionStatus === "AI_HANDLING" && (
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => setShowAgentDialog(true)}
-                  className="text-purple-400 hover:text-purple-300 text-xs h-8"
+                  onClick={handleRequestAgent}
+                  disabled={isRequestingAgent || !sessionId}
+                  className="h-8 text-xs text-violet-600 hover:text-violet-700 dark:text-purple-400 dark:hover:text-purple-300"
                 >
-                  <Headphones className="mr-1 h-3.5 w-3.5" />
-                  Live Agent
-                </Button>
-              )}
-              {sessionStatus !== "CLOSED" && (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => closeSession()}
-                  className="h-8 w-8 text-slate-400 hover:text-red-400"
-                >
-                  <X className="h-4 w-4" />
+                  {isRequestingAgent ? (
+                    <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <Headphones className="mr-1 h-3.5 w-3.5" />
+                  )}
+                  {isRequestingAgent ? "Requesting..." : "Live Agent"}
                 </Button>
               )}
             </div>
@@ -446,17 +662,35 @@ export default function ChatPage() {
       </Card>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto bg-slate-900/50 px-4 py-4 space-y-4">
+      <div
+        ref={messagesViewportRef}
+        onScroll={handleMessagesScroll}
+        className="hide-scrollbar flex-1 space-y-4 overflow-y-auto bg-gradient-to-b from-slate-50 via-white to-slate-100/70 px-4 py-4 dark:from-slate-900/80 dark:via-slate-900/60 dark:to-slate-950/90"
+      >
         {isStarting ? (
           <div className="flex items-center justify-center h-full">
             <Loader2 className="h-8 w-8 animate-spin text-purple-400" />
           </div>
         ) : (
           <>
-            {messages.map((msg, index) => (
+            {displayedMessages.length === 0 && supportMode === "AGENT" && (
+              <div className="flex h-full items-center justify-center text-center">
+                <div className="space-y-2 text-slate-500 dark:text-slate-400">
+                  <Headphones className="mx-auto h-8 w-8 text-green-400/70" />
+                  <p className="text-sm font-medium text-slate-800 dark:text-slate-200">
+                    Live agent chat is separate
+                  </p>
+                  <p className="max-w-56 text-xs">
+                    Messages you send here will stay in the agent conversation.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {displayedMessages.map((msg) => (
               <div
-                key={index}
-                className={cn("flex gap-2", {
+                key={msg.id ?? `${msg.originalIndex}-${msg.createdAt ?? ""}`}
+                className={cn("flex items-end gap-2", {
                   "justify-end": msg.role === "USER",
                   "justify-start": msg.role !== "USER",
                 })}
@@ -491,12 +725,13 @@ export default function ChatPage() {
 
                   <div
                     className={cn("rounded-2xl px-4 py-2.5", {
-                      "bg-purple-600 text-white rounded-tr-sm": msg.role === "USER",
-                      "bg-slate-700 text-slate-100 rounded-tl-sm":
+                      "rounded-tr-sm bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white shadow-[0_10px_24px_rgba(139,92,246,0.26)] dark:from-violet-600 dark:to-purple-600 dark:shadow-none":
+                        msg.role === "USER",
+                      "rounded-tl-sm border border-slate-200 bg-white text-slate-700 shadow-sm dark:border-transparent dark:bg-slate-700 dark:text-slate-100 dark:shadow-none":
                         msg.role === "AI" && !isUnavailableAiMessage(msg.message),
-                      "rounded-tl-sm border border-amber-500/30 bg-amber-500/10 text-amber-100":
+                      "rounded-tl-sm border border-amber-300/70 bg-amber-50 text-amber-900 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-100":
                         msg.role === "AI" && isUnavailableAiMessage(msg.message),
-                      "bg-green-600/20 text-white border border-green-500/30 rounded-tl-sm":
+                      "rounded-tl-sm border border-emerald-200 bg-emerald-50 text-emerald-900 shadow-sm dark:border-green-500/30 dark:bg-green-600/20 dark:text-white dark:shadow-none":
                         msg.role === "AGENT",
                     })}
                   >
@@ -513,11 +748,20 @@ export default function ChatPage() {
                     ) : (
                       <div className="space-y-2">
                         {msg.role === "AI" && isUnavailableAiMessage(msg.message) && (
-                          <div className="inline-flex items-center rounded-full border border-amber-400/25 bg-amber-400/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-amber-300">
+                          <div className="inline-flex items-center rounded-full border border-amber-300 bg-amber-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-amber-700 dark:border-amber-400/25 dark:bg-amber-400/10 dark:text-amber-300">
                             AI Unavailable
                           </div>
                         )}
-                        <p className="text-sm leading-relaxed whitespace-pre-wrap">
+                        <p
+                          className={cn("whitespace-pre-wrap text-sm leading-relaxed", {
+                            "text-white": msg.role === "USER",
+                            "text-slate-700 dark:text-slate-100":
+                              msg.role === "AI" && !isUnavailableAiMessage(msg.message),
+                            "text-amber-900 dark:text-amber-100":
+                              msg.role === "AI" && isUnavailableAiMessage(msg.message),
+                            "text-emerald-900 dark:text-white": msg.role === "AGENT",
+                          })}
+                        >
                           {getDisplayMessage(msg.message)}
                         </p>
                         {msg.role === "AI" &&
@@ -527,11 +771,16 @@ export default function ChatPage() {
                           sessionStatus !== "CLOSED" && (
                             <button
                               type="button"
-                              onClick={() => setShowAgentDialog(true)}
-                              className="inline-flex items-center gap-1.5 rounded-full border border-amber-400/30 bg-amber-400/10 px-3 py-1 text-[11px] font-semibold text-amber-200 transition-colors hover:bg-amber-400/15"
+                              onClick={handleRequestAgent}
+                              disabled={isRequestingAgent || !sessionId}
+                              className="inline-flex items-center gap-1.5 rounded-full border border-amber-300 bg-amber-100 px-3 py-1 text-[11px] font-semibold text-amber-800 transition-colors hover:bg-amber-200 dark:border-amber-400/30 dark:bg-amber-400/10 dark:text-amber-200 dark:hover:bg-amber-400/15"
                             >
-                              <Headphones className="h-3.5 w-3.5" />
-                              Request Live Agent
+                              {isRequestingAgent ? (
+                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                              ) : (
+                                <Headphones className="h-3.5 w-3.5" />
+                              )}
+                              {isRequestingAgent ? "Requesting..." : "Request Live Agent"}
                             </button>
                           )}
                       </div>
@@ -540,8 +789,8 @@ export default function ChatPage() {
 
                   {msg.createdAt && !msg.isLoading && (
                     <p
-                      className={cn("text-[10px] text-slate-500 px-1", {
-                        "text-right": msg.role === "USER",
+                      className={cn("px-1 text-[10px] text-slate-500", {
+                        "pr-0 text-right": msg.role === "USER",
                       })}
                     >
                       {new Date(msg.createdAt).toLocaleTimeString([], {
@@ -553,8 +802,8 @@ export default function ChatPage() {
                 </div>
 
                 {msg.role === "USER" && (
-                  <Avatar className="h-7 w-7 shrink-0 mt-1">
-                    <AvatarFallback className="bg-purple-600/20 text-xs text-purple-400">
+                  <Avatar className="mt-1 h-6 w-6 shrink-0 ring-1 ring-violet-100 dark:ring-purple-500/20">
+                    <AvatarFallback className="bg-violet-50 text-[10px] font-semibold text-violet-500 dark:bg-purple-600/20 dark:text-purple-300">
                       {user?.name?.charAt(0)?.toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
@@ -562,18 +811,11 @@ export default function ChatPage() {
               </div>
             ))}
 
-            {sessionStatus === "WAITING_AGENT" && (
+            {supportMode === "AGENT" && sessionStatus === "WAITING_AGENT" && (
               <div className="flex justify-center">
-                <Badge className="bg-yellow-500/20 text-yellow-400 animate-pulse">
-                  <Loader2 className="mr-1 h-3 w-3 animate-spin" />
-                  Waiting for agent...
+                <Badge className="bg-green-500/15 text-green-400">
+                  Agent request is open
                 </Badge>
-              </div>
-            )}
-
-            {sessionStatus === "CLOSED" && (
-              <div className="flex justify-center">
-                <Badge className="bg-slate-500/20 text-slate-400">Session ended</Badge>
               </div>
             )}
 
@@ -583,48 +825,34 @@ export default function ChatPage() {
       </div>
 
       {/* Input */}
-      <div className="bg-slate-800/50 border-t border-slate-700 p-3">
+      <div className="border-t border-slate-200/90 bg-white/95 p-3 dark:border-slate-700 dark:bg-slate-800/50">
         {/* Recording indicator */}
         {isRecording && (
-          <div className="mb-2 flex items-center gap-2 rounded-full bg-red-500/15 px-3 py-1.5">
+          <div className="mb-2 flex items-center gap-2 rounded-full bg-red-50 px-3 py-1.5 dark:bg-red-500/15">
             <span className="h-2 w-2 animate-pulse rounded-full bg-red-500" />
-            <span className="flex-1 text-xs font-medium text-red-400">
+            <span className="flex-1 text-xs font-medium text-red-600 dark:text-red-400">
               Recording… release to send
             </span>
-            <Square className="h-3 w-3 text-red-400" />
+            <Square className="h-3 w-3 text-red-600 dark:text-red-400" />
           </div>
         )}
 
-        {sessionStatus === "CLOSED" ? (
-          <Button
-            onClick={() => startSession()}
-            className="w-full bg-purple-600 hover:bg-purple-700"
-          >
-            Start New Chat
-          </Button>
-        ) : (
-          <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2">
             <Input
               value={inputMessage}
               onChange={(e) => setInputMessage(e.target.value)}
               onKeyDown={handleKeyPress}
-              placeholder={
-                sessionStatus === "WAITING_AGENT"
-                  ? "Waiting for agent..."
-                  : isRecording
-                  ? "Recording…"
-                  : "Type a message..."
-              }
-              disabled={isBusy || sessionStatus === "WAITING_AGENT"}
-              className="flex-1 bg-slate-700/50 border-slate-600 text-white placeholder:text-slate-500"
+              placeholder={isRecording ? "Recording..." : "Type a message..."}
+              disabled={isBusy}
+              className="flex-1 border-slate-200 bg-white text-slate-900 placeholder:text-slate-400 dark:border-slate-600 dark:bg-slate-700/50 dark:text-white dark:placeholder:text-slate-500"
             />
 
             {/* Image button */}
             <button
               type="button"
               onClick={() => imageInputRef.current?.click()}
-              disabled={isBusy || sessionStatus === "WAITING_AGENT" || !sessionId}
-              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-slate-700 text-slate-300 transition-colors hover:bg-slate-600 hover:text-white disabled:opacity-40"
+              disabled={isBusy || !sessionId || supportMode === "AI"}
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-slate-100 text-slate-600 transition-colors hover:bg-slate-200 hover:text-slate-950 disabled:opacity-40 dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-slate-600 dark:hover:text-white"
               aria-label="Send image"
             >
               {isSendingMedia ? (
@@ -640,14 +868,19 @@ export default function ChatPage() {
               onPointerDown={handleMicPointerDown}
               onPointerUp={handleMicPointerUp}
               onPointerCancel={handleMicPointerUp}
-              disabled={sessionStatus === "WAITING_AGENT" || !sessionId || isSendingMedia || micPermission === "unsupported"}
+              disabled={
+                !sessionId ||
+                isSendingMedia ||
+                micPermission === "unsupported" ||
+                supportMode === "AI"
+              }
               className={cn(
                 "flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition-colors disabled:opacity-40",
                 isRecording
                   ? "bg-red-500 text-white shadow-[0_0_12px_rgba(239,68,68,0.6)]"
                   : micPermission === "denied"
-                  ? "bg-slate-700 text-red-400 hover:bg-red-500/20"
-                  : "bg-slate-700 text-slate-300 hover:bg-slate-600 hover:text-white",
+                  ? "bg-red-50 text-red-500 hover:bg-red-100 dark:bg-slate-700 dark:text-red-400 dark:hover:bg-red-500/20"
+                  : "bg-slate-100 text-slate-600 hover:bg-slate-200 hover:text-slate-950 dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-slate-600 dark:hover:text-white",
               )}
               aria-label="Record voice message"
             >
@@ -663,11 +896,10 @@ export default function ChatPage() {
               onClick={handleSend}
               disabled={
                 !inputMessage.trim() ||
-                isBusy ||
-                sessionStatus === "WAITING_AGENT"
+                isBusy
               }
               size="icon"
-              className="bg-purple-600 hover:bg-purple-700 shrink-0"
+              className="shrink-0 bg-violet-600 text-white hover:bg-violet-700 dark:bg-purple-600 dark:hover:bg-purple-700"
             >
               {isSending ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
@@ -676,9 +908,8 @@ export default function ChatPage() {
               )}
             </Button>
           </div>
-        )}
 
-        {sessionStatus === "AI_HANDLING" && !isRecording && (
+        {supportMode === "AI" && !isRecording && (
           <div className="mt-2 flex flex-wrap gap-2">
             {[
               "How to deposit?",
@@ -690,7 +921,7 @@ export default function ChatPage() {
               <button
                 key={quick}
                 onClick={() => setInputMessage(quick)}
-                className="text-xs text-purple-400 border border-purple-500/30 rounded-full px-3 py-1 hover:bg-purple-500/10 transition-colors"
+                className="rounded-full border border-violet-200 bg-white px-3 py-1 text-xs text-violet-700 transition-colors hover:bg-violet-50 dark:border-purple-500/30 dark:bg-transparent dark:text-purple-400 dark:hover:bg-purple-500/10"
               >
                 {quick}
               </button>
@@ -701,19 +932,19 @@ export default function ChatPage() {
 
       {/* Microphone Permission Denied Dialog */}
       <Dialog open={showMicDeniedDialog} onOpenChange={setShowMicDeniedDialog}>
-        <DialogContent className="bg-slate-800 border-slate-700 text-white max-w-sm">
+        <DialogContent className="max-w-sm border-slate-200 bg-white text-slate-900 dark:border-slate-700 dark:bg-slate-800 dark:text-white">
           <DialogHeader>
-            <DialogTitle className="text-white flex items-center gap-2">
+            <DialogTitle className="flex items-center gap-2 text-slate-950 dark:text-white">
               <MicOff className="h-5 w-5 text-red-400" />
               Microphone Access Blocked
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
-            <p className="text-slate-300 text-sm">
+            <p className="text-sm text-slate-600 dark:text-slate-300">
               Voice messages need microphone access. Please allow it in your browser settings.
             </p>
-            <div className="rounded-lg bg-slate-700/50 p-3 space-y-2 text-xs text-slate-400">
-              <p className="font-semibold text-slate-300">How to allow microphone:</p>
+            <div className="space-y-2 rounded-lg bg-slate-50 p-3 text-xs text-slate-500 dark:bg-slate-700/50 dark:text-slate-400">
+              <p className="font-semibold text-slate-700 dark:text-slate-300">How to allow microphone:</p>
               <ol className="list-decimal list-inside space-y-1">
                 <li>Click the <span className="text-white font-medium">🔒 lock icon</span> in the browser address bar</li>
                 <li>Find <span className="text-white font-medium">Microphone</span> and set it to <span className="text-green-400 font-medium">Allow</span></li>
@@ -722,59 +953,10 @@ export default function ChatPage() {
             </div>
             <Button
               onClick={() => setShowMicDeniedDialog(false)}
-              className="w-full bg-purple-600 hover:bg-purple-700"
+              className="w-full bg-violet-600 text-white hover:bg-violet-700 dark:bg-purple-600 dark:hover:bg-purple-700"
             >
               Got it
             </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Agent Request Dialog */}
-      <Dialog open={showAgentDialog} onOpenChange={setShowAgentDialog}>
-        <DialogContent className="bg-slate-800 border-slate-700 text-white">
-          <DialogHeader>
-            <DialogTitle className="text-white flex items-center gap-2">
-              <Headphones className="h-5 w-5 text-purple-400" />
-              Talk to Live Agent
-            </DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <p className="text-slate-400 text-sm">
-              Please provide your email or username so the agent can identify you.
-            </p>
-            <div className="space-y-2">
-              <label className="text-slate-300 text-sm">Email or Username</label>
-              <Input
-                value={agentIdentifier}
-                onChange={(e) => setAgentIdentifier(e.target.value)}
-                placeholder="your@email.com or your_username"
-                className="bg-slate-700/50 border-slate-600 text-white"
-              />
-            </div>
-            <div className="flex gap-2">
-              <Button
-                variant="ghost"
-                onClick={() => setShowAgentDialog(false)}
-                className="flex-1 border border-slate-600"
-              >
-                Cancel
-              </Button>
-              <Button
-                onClick={handleRequestAgent}
-                disabled={isRequestingAgent}
-                className="flex-1 bg-purple-600 hover:bg-purple-700"
-              >
-                {isRequestingAgent ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Requesting...
-                  </>
-                ) : (
-                  "Request Agent"
-                )}
-              </Button>
-            </div>
           </div>
         </DialogContent>
       </Dialog>

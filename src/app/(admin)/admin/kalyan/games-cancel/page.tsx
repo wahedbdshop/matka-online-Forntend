@@ -426,12 +426,12 @@ export default function KalyanGamesCancelPage() {
   return (
     <div className="space-y-5">
       <div className="flex items-center gap-3">
-        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-red-500/15">
+        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-red-100 dark:bg-red-500/15">
           <XCircle className="h-5 w-5 text-red-400" />
         </div>
         <div>
-          <h1 className="text-xl font-bold text-white">Games Cancel</h1>
-          <p className="text-xs text-slate-400">Cancelable played rounds with auto refund support.</p>
+          <h1 className="text-xl font-bold text-slate-950 dark:text-white">Games Cancel</h1>
+          <p className="text-xs text-slate-500 dark:text-slate-400">Cancelable played rounds with auto refund support.</p>
         </div>
       </div>
 
@@ -443,7 +443,7 @@ export default function KalyanGamesCancelPage() {
             setDateFilter(event.target.value || todayISO());
             setPage(1);
           }}
-          className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-xs text-white outline-none focus:border-red-500"
+          className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-900 outline-none focus:border-red-400 dark:border-slate-600 dark:bg-slate-800 dark:text-white dark:focus:border-red-500"
         />
         <button
           type="button"
@@ -453,23 +453,23 @@ export default function KalyanGamesCancelPage() {
           }}
           className={`rounded-lg border px-3 py-2 text-xs font-semibold transition-colors ${
             dateFilter === todayISO()
-              ? "border-red-500/50 bg-red-500/15 text-red-300"
-              : "border-slate-600 bg-slate-800 text-slate-300 hover:bg-slate-700"
+              ? "border-red-200 bg-red-50 text-red-700 dark:border-red-500/50 dark:bg-red-500/15 dark:text-red-300"
+              : "border-slate-200 bg-white text-slate-600 hover:bg-slate-100 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
           }`}
         >
           Today&apos;s Games
         </button>
       </div>
 
-      <div className="overflow-hidden rounded-2xl border border-slate-700/80 bg-slate-900/45 shadow-[0_18px_40px_rgba(15,23,42,0.24)]">
+      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-700/80 dark:bg-slate-900/45 dark:shadow-[0_18px_40px_rgba(15,23,42,0.24)]">
         <div className="overflow-x-auto">
           <table className="w-full min-w-190 text-sm">
             <thead>
-              <tr className="bg-slate-800/95 text-left">
+              <tr className="bg-slate-50 text-left dark:bg-slate-800/95">
                 {["SI", "Games Name", "Date", "Actions"].map((heading) => (
                   <th
                     key={heading}
-                    className="border-r border-slate-700/70 px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.08em] text-slate-200 last:border-r-0"
+                    className="border-r border-slate-200 px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.08em] text-slate-500 last:border-r-0 dark:border-slate-700/70 dark:text-slate-200"
                   >
                     {heading}
                   </th>
@@ -480,15 +480,15 @@ export default function KalyanGamesCancelPage() {
               {isLoading || isEntriesLoading ? (
                 <>
                   <tr>
-                    <td colSpan={4} className="border-b border-slate-700/50 px-4 py-2 text-center text-[11px] text-slate-500">
+                    <td colSpan={4} className="border-b border-slate-200 px-4 py-2 text-center text-[11px] text-slate-500 dark:border-slate-700/50">
                       Loading {dateFilter === todayISO() ? "today's" : formatDateLabel(dateFilter)} cancelable games...
                     </td>
                   </tr>
                   {Array.from({ length: 5 }).map((_, rowIndex) => (
-                    <tr key={rowIndex} className="border-b border-slate-700/50">
+                    <tr key={rowIndex} className="border-b border-slate-200 dark:border-slate-700/50">
                       {Array.from({ length: 4 }).map((__, cellIndex) => (
-                        <td key={cellIndex} className="border-r border-slate-700/40 px-4 py-4 last:border-r-0">
-                          <div className="h-4 w-20 animate-pulse rounded bg-slate-700" />
+                        <td key={cellIndex} className="border-r border-slate-200 px-4 py-4 last:border-r-0 dark:border-slate-700/40">
+                          <div className="h-4 w-20 animate-pulse rounded bg-slate-200 dark:bg-slate-700" />
                         </td>
                       ))}
                     </tr>
@@ -511,26 +511,26 @@ export default function KalyanGamesCancelPage() {
                 displayRounds.map((round: any, index: number) => (
                   <tr
                     key={`${round.marketId}-${round.sessionType ?? "NA"}-${round.resultDate}`}
-                    className="border-b border-slate-700/50 bg-slate-900/20 transition-colors hover:bg-slate-800/45"
+                    className="border-b border-slate-200 bg-white transition-colors hover:bg-slate-50 dark:border-slate-700/50 dark:bg-slate-900/20 dark:hover:bg-slate-800/45"
                   >
-                    <td className="border-r border-slate-700/40 px-4 py-4 text-xs font-semibold text-slate-400 last:border-r-0">
+                    <td className="border-r border-slate-200 px-4 py-4 text-xs font-semibold text-slate-500 last:border-r-0 dark:border-slate-700/40 dark:text-slate-400">
                       {(page - 1) * LIMIT + index + 1}
                     </td>
-                    <td className="border-r border-slate-700/40 px-4 py-4 font-semibold text-white last:border-r-0">
+                    <td className="border-r border-slate-200 px-4 py-4 font-semibold text-slate-900 last:border-r-0 dark:border-slate-700/40 dark:text-white">
                       <div className="space-y-1">
                         <p>{getDisplayGameName(round)}</p>
-                        <p className="text-[11px] text-slate-400">Played slips: {round.entryCount ?? 0}</p>
+                        <p className="text-[11px] text-slate-500 dark:text-slate-400">Played slips: {round.entryCount ?? 0}</p>
                       </div>
                     </td>
-                    <td className="border-r border-slate-700/40 px-4 py-4 text-sm text-slate-300 last:border-r-0">
+                    <td className="border-r border-slate-200 px-4 py-4 text-sm text-slate-600 last:border-r-0 dark:border-slate-700/40 dark:text-slate-300">
                       {formatDateLabel(round.resultDate)}
                     </td>
-                    <td className="border-r border-slate-700/40 px-4 py-4 last:border-r-0">
+                    <td className="border-r border-slate-200 px-4 py-4 last:border-r-0 dark:border-slate-700/40">
                       <button
                         type="button"
                         onClick={() => setConfirmTarget(round)}
                         disabled={!round.canCancel}
-                        className="inline-flex items-center gap-1 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-1.5 text-[11px] font-semibold text-red-300 transition-colors hover:bg-red-500/20 disabled:cursor-not-allowed disabled:opacity-30"
+                        className="inline-flex items-center gap-1 rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-[11px] font-semibold text-red-700 transition-colors hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-30 dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-300 dark:hover:bg-red-500/20"
                       >
                         <XCircle className="h-3.5 w-3.5" />
                         Cancel
@@ -550,7 +550,7 @@ export default function KalyanGamesCancelPage() {
             type="button"
             disabled={page <= 1}
             onClick={() => setPage((current) => current - 1)}
-            className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-1.5 text-xs text-slate-300 transition-colors hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-40"
+            className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-600 transition-colors hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-40 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
           >
             Prev
           </button>
@@ -561,7 +561,7 @@ export default function KalyanGamesCancelPage() {
             type="button"
             disabled={page >= totalPages}
             onClick={() => setPage((current) => current + 1)}
-            className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-1.5 text-xs text-slate-300 transition-colors hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-40"
+            className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-600 transition-colors hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-40 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
           >
             Next
           </button>
@@ -570,15 +570,15 @@ export default function KalyanGamesCancelPage() {
 
       {confirmTarget ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4">
-          <div className="w-full max-w-sm rounded-2xl border border-slate-700 bg-slate-900 p-6 space-y-4 shadow-[0_20px_60px_rgba(0,0,0,0.45)]">
-            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-red-500/15">
+          <div className="w-full max-w-sm rounded-2xl border border-slate-200 bg-white p-6 space-y-4 shadow-[0_20px_60px_rgba(15,23,42,0.16)] dark:border-slate-700 dark:bg-slate-900 dark:shadow-[0_20px_60px_rgba(0,0,0,0.45)]">
+            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-red-100 dark:bg-red-500/15">
               <XCircle className="h-6 w-6 text-red-400" />
             </div>
             <div className="text-center">
-              <h2 className="text-sm font-bold text-white">Confirm Cancel</h2>
-              <p className="mt-1 text-xs text-slate-400">
+              <h2 className="text-sm font-bold text-slate-950 dark:text-white">Confirm Cancel</h2>
+              <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
                 Cancel game{" "}
-                <span className="font-semibold text-white">
+                <span className="font-semibold text-slate-900 dark:text-white">
                   {normalizeGameName(confirmTarget.baseGameName ?? confirmTarget.gameName)}
                 </span>{" "}
                 on {formatDateLabel(confirmTarget.resultDate)}?
@@ -591,7 +591,7 @@ export default function KalyanGamesCancelPage() {
               <button
                 type="button"
                 onClick={() => setConfirmTarget(null)}
-                className="flex-1 rounded-lg border border-slate-600 bg-slate-800 py-2 text-sm text-slate-300 transition-colors hover:bg-slate-700"
+                className="flex-1 rounded-lg border border-slate-200 bg-white py-2 text-sm text-slate-600 transition-colors hover:bg-slate-100 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
               >
                 No, Keep It
               </button>

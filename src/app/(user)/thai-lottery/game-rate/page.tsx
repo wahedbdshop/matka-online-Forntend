@@ -36,7 +36,28 @@ export default function GameRatePage() {
   );
 
   return (
-    <div className="min-h-screen bg-[#020810] text-white">
+    <>
+      <style>{`
+        .light .thai-rate-shell { background: linear-gradient(180deg, #f8fbff 0%, #fffaf0 100%); color: #0f172a; }
+        .light .thai-rate-back,
+        .light .thai-rate-table,
+        .light .thai-rate-info,
+        .light .thai-rate-highlight,
+        .light .thai-rate-row {
+          background: rgba(255,255,255,0.96);
+          border-color: rgba(148,163,184,0.35);
+          color: #0f172a;
+        }
+        .light .thai-rate-head { background: rgba(245,158,11,0.1); border-color: rgba(245,158,11,0.2); }
+        .light .thai-rate-muted { color: #64748b; }
+        .light .thai-rate-soft { color: #94a3b8; }
+        .light .thai-rate-row { box-shadow: inset 0 -1px 0 rgba(226,232,240,0.9); }
+        .light .thai-rate-highlight { background: linear-gradient(135deg, rgba(255,251,235,0.98), rgba(255,255,255,0.98)); }
+        .light .thai-rate-title {
+          background-image: linear-gradient(135deg, #2563eb 0%, #7c3aed 55%, #d97706 100%);
+        }
+      `}</style>
+    <div className="thai-rate-shell min-h-screen bg-[#020810] text-white">
       {/* Background blobs */}
       <div className="pointer-events-none fixed inset-0 overflow-hidden">
         <div className="absolute -top-24 -right-16 h-80 w-80 rounded-full bg-blue-700/10 blur-[80px]" />
@@ -48,7 +69,7 @@ export default function GameRatePage() {
         <button
           type="button"
           onClick={() => router.back()}
-          className="mb-0.5 inline-flex items-center gap-1.5 rounded-full border border-[#295487] bg-gradient-to-r from-[#0b1730] to-[#10203a] px-3 py-1.5 text-white/90 shadow-[0_10px_24px_rgba(0,0,0,0.22)] transition-all duration-200 hover:-translate-y-0.5 hover:border-[#4f8fcc] hover:text-white"
+          className="thai-rate-back mb-0.5 inline-flex items-center gap-1.5 rounded-full border border-[#295487] bg-gradient-to-r from-[#0b1730] to-[#10203a] px-3 py-1.5 text-white/90 shadow-[0_10px_24px_rgba(0,0,0,0.22)] transition-all duration-200 hover:-translate-y-0.5 hover:border-[#4f8fcc] hover:text-white"
           aria-label="Go back"
         >
           <ChevronLeft className="h-3.5 w-3.5" />
@@ -69,22 +90,22 @@ export default function GameRatePage() {
             </span>
           </div>
           <h1 className="text-[28px] font-black tracking-tight">
-            <span className="bg-gradient-to-br from-white via-blue-100 to-yellow-300 bg-clip-text text-transparent">
+            <span className="thai-rate-title bg-gradient-to-br from-white via-blue-100 to-yellow-300 bg-clip-text text-transparent">
               Game Rates
             </span>
           </h1>
           <div className="mx-auto mt-1.5 h-px w-32 bg-gradient-to-r from-transparent via-yellow-500/60 to-transparent" />
-          <p className="mt-1.5 text-[11px] text-white/35 tracking-wide">
+          <p className="thai-rate-muted mt-1.5 text-[11px] text-white/35 tracking-wide">
             Thai Lottery · Official payout multipliers
           </p>
         </div>
 
         {/* RATE TABLE */}
-        <div className="overflow-hidden rounded-2xl border border-[#0f2244] bg-[#060f22] shadow-2xl">
+        <div className="thai-rate-table overflow-hidden rounded-2xl border border-[#0f2244] bg-[#060f22] shadow-2xl">
           <div className="h-px bg-gradient-to-r from-transparent via-blue-600/50 to-yellow-600/30" />
 
           {/* Header */}
-          <div className="grid grid-cols-[36px_1fr_76px_80px] items-center gap-2 border-b-2 border-yellow-500/40 bg-yellow-500/[0.12] px-4 py-3">
+          <div className="thai-rate-head grid grid-cols-[36px_1fr_76px_80px] items-center gap-2 border-b-2 border-yellow-500/40 bg-yellow-500/[0.12] px-4 py-3">
             {[
               { label: "Sl.No", align: "" },
               { label: "Name", align: "" },
@@ -111,7 +132,7 @@ export default function GameRatePage() {
 
           {/* Empty */}
           {!isLoading && rates.length === 0 && (
-            <div className="py-10 text-center text-slate-500 text-sm">
+            <div className="thai-rate-muted py-10 text-center text-slate-500 text-sm">
               No rates found
             </div>
           )}
@@ -130,7 +151,7 @@ export default function GameRatePage() {
               return (
                 <div
                   key={item.id ?? idx}
-                  className={`grid grid-cols-[36px_1fr_76px_80px] items-center gap-2 border-b border-[#0a1a38]/60 px-4 py-3.5 transition-colors last:border-0 hover:bg-white/[0.02] ${
+                  className={`thai-rate-row grid grid-cols-[36px_1fr_76px_80px] items-center gap-2 border-b border-[#0a1a38]/60 px-4 py-3.5 transition-colors last:border-0 hover:bg-white/[0.02] ${
                     !item.isActive
                       ? "opacity-40"
                       : isGold
@@ -141,7 +162,7 @@ export default function GameRatePage() {
                   }`}
                 >
                   {/* Sl. No */}
-                  <span className="font-mono text-xs font-bold text-white/25">
+                  <span className="thai-rate-soft font-mono text-xs font-bold text-white/25">
                     {String(idx + 1).padStart(2, "0")}
                   </span>
 
@@ -155,7 +176,7 @@ export default function GameRatePage() {
                     <div className="min-w-0">
                       <p
                         className={`truncate text-[13px] font-semibold leading-snug ${
-                          isGold ? "text-yellow-100" : "text-white/80"
+                          isGold ? "text-yellow-700 dark:text-yellow-100" : "text-slate-700 dark:text-white/80"
                         }`}
                       >
                         {label}
@@ -197,7 +218,7 @@ export default function GameRatePage() {
         </div>
 
         {/* INFO CARD */}
-        <div className="mt-4 overflow-hidden rounded-2xl border border-[#0f2244] bg-[#060f22]">
+        <div className="thai-rate-info mt-4 overflow-hidden rounded-2xl border border-[#0f2244] bg-[#060f22]">
           <div className="h-px bg-gradient-to-r from-transparent via-blue-600/40 to-transparent" />
           <div className="p-4">
             <div className="flex items-start gap-3">
@@ -208,7 +229,7 @@ export default function GameRatePage() {
                 <p className="text-[11px] font-bold uppercase tracking-widest text-blue-400">
                   How Payouts Work
                 </p>
-                <p className="mt-1.5 text-xs leading-relaxed text-white/40">
+                <p className="thai-rate-muted mt-1.5 text-xs leading-relaxed text-white/40">
                   Rate = return per $1 bet. Discount shows the live admin-set
                   value for that game type. e.g.{" "}
                   <span className="font-semibold text-yellow-400">
@@ -224,7 +245,7 @@ export default function GameRatePage() {
 
         {/* HIGHLIGHT BAR */}
         {highest && (
-          <div className="mt-3 overflow-hidden rounded-2xl border border-yellow-500/20 bg-gradient-to-br from-[#0f0e04] to-[#060f22]">
+          <div className="thai-rate-highlight mt-3 overflow-hidden rounded-2xl border border-yellow-500/20 bg-gradient-to-br from-[#0f0e04] to-[#060f22]">
             <div className="h-px bg-gradient-to-r from-transparent via-yellow-500/50 to-transparent" />
             <div className="flex items-center justify-between px-4 py-3">
               <div className="flex items-center gap-2">
@@ -234,7 +255,7 @@ export default function GameRatePage() {
                 </p>
               </div>
               <div className="flex items-center gap-3">
-                <span className="text-[11px] text-white/40">
+                <span className="thai-rate-muted text-[11px] text-white/40">
                   {PLAY_TYPE_LABELS[highest.playType] ??
                     highest.label ??
                     highest.playType}
@@ -248,5 +269,6 @@ export default function GameRatePage() {
         )}
       </div>
     </div>
+    </>
   );
 }

@@ -14,7 +14,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
 import { ChevronDown, CircleDot, Plus, Search, X } from "lucide-react";
-import { getBangladeshDateISO, getCurrentUtcMinutes } from "@/lib/timezone";
+import { getBangladeshDateISO, hasUtcScheduleTimePassed } from "@/lib/timezone";
 import { getKalyanMarketSessionLabel } from "@/lib/kalyan-market-display";
 import { KalyanAdminService } from "@/services/kalyanAdmin.service";
 
@@ -73,7 +73,7 @@ function isSessionTimeOver(
     return false;
   }
 
-  return getCurrentUtcMinutes() >= endMinutes;
+  return hasUtcScheduleTimePassed(sessionEndTime);
 }
 
 function isActiveEntity(value: unknown) {
@@ -500,9 +500,7 @@ export default function KalyanAddResultsPage() {
             },
             sessionType,
           );
-          const sessionEndTime =
-            timing?.closeTime ??
-            (sessionType === "OPEN" ? market?.openTime : market?.closeTime);
+          const sessionEndTime = timing?.closeTime ?? market?.closeTime;
 
           if (
             !isActiveEntity(timing?.status ?? market?.status) ||
@@ -530,14 +528,13 @@ export default function KalyanAddResultsPage() {
         market.id,
         "CLOSE",
       );
-      const openTime = getMinutesFromTime(market.openTime);
       const closeTime = getMinutesFromTime(market.closeTime);
       const options: GameOption[] = [];
 
       if (
         market.openName &&
-        openTime !== null &&
-        isSessionTimeOver(selectedDate, market.openTime) &&
+        closeTime !== null &&
+        isSessionTimeOver(selectedDate, market.closeTime) &&
         !isSessionPublished(openResult, "OPEN")
       ) {
         options.push({
@@ -590,6 +587,9 @@ export default function KalyanAddResultsPage() {
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: ["kalyan-results-for-add"] }),
       queryClient.invalidateQueries({ queryKey: ["kalyan-results-update"] }),
+      queryClient.invalidateQueries({ queryKey: ["kalyan-win-history"] }),
+      queryClient.invalidateQueries({ queryKey: ["kalyan-win-history-all-markets"] }),
+      queryClient.invalidateQueries({ queryKey: ["kalyan-win-history-all-markets-base"] }),
     ]);
     toast.success(`Result added for ${values.resultDate}`);
     const params = new URLSearchParams();
@@ -597,7 +597,11 @@ export default function KalyanAddResultsPage() {
     if (sessionType === "OPEN" || sessionType === "CLOSE") {
       params.set("sessionType", sessionType);
     }
+    if (sessionType === "CLOSE") {
+      params.set("settlementView", "close-final");
+    }
     if (values.resultDate) params.set("date", values.resultDate);
+    params.set("resultAddedAt", String(Date.now()));
     router.push(`${winHistoryPath}?${params.toString()}`);
   };
 

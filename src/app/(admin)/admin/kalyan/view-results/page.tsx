@@ -296,15 +296,15 @@ export default function KalyanViewResultsPage() {
     <div className="space-y-5">
       <div className="flex items-center justify-between gap-4">
         <div className="flex items-center gap-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-green-500/15">
+          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-green-100 dark:bg-green-500/15">
             <Trophy className="h-5 w-5 text-green-400" />
           </div>
           <div>
-            <h1 className="text-xl font-bold text-white">View Results</h1>
-            <p className="text-xs text-slate-400">Public result board in table format</p>
+            <h1 className="text-xl font-bold text-slate-950 dark:text-white">View Results</h1>
+            <p className="text-xs text-slate-500 dark:text-slate-400">Public result board in table format</p>
           </div>
         </div>
-        <span className="rounded-full border border-green-500/30 bg-green-500/10 px-3 py-1 text-xs font-semibold text-green-400">
+        <span className="rounded-full border border-green-200 bg-green-50 px-3 py-1 text-xs font-semibold text-green-700 dark:border-green-500/30 dark:bg-green-500/10 dark:text-green-400">
           {total} Records
         </span>
       </div>
@@ -316,7 +316,7 @@ export default function KalyanViewResultsPage() {
             setMarketFilter(event.target.value);
             setPage(1);
           }}
-          className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-xs text-white outline-none focus:border-green-500"
+          className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-900 outline-none focus:border-green-400 dark:border-slate-600 dark:bg-slate-800 dark:text-white dark:focus:border-green-500"
         >
           <option value="">All Games</option>
           {markets.map((market: any) => (
@@ -332,7 +332,7 @@ export default function KalyanViewResultsPage() {
             setStatusFilter(event.target.value);
             setPage(1);
           }}
-          className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-xs text-white outline-none focus:border-green-500"
+          className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-900 outline-none focus:border-green-400 dark:border-slate-600 dark:bg-slate-800 dark:text-white dark:focus:border-green-500"
         >
           <option value="">All Status</option>
           <option value="PENDING">Pending</option>
@@ -347,19 +347,19 @@ export default function KalyanViewResultsPage() {
             setDateFilter(event.target.value);
             setPage(1);
           }}
-          className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-xs text-white outline-none focus:border-green-500"
+          className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-900 outline-none focus:border-green-400 dark:border-slate-600 dark:bg-slate-800 dark:text-white dark:focus:border-green-500"
         />
       </div>
 
-      <div className="overflow-hidden rounded-2xl border border-slate-700/80 bg-slate-900/45 shadow-[0_18px_40px_rgba(15,23,42,0.24)]">
+      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-700/80 dark:bg-slate-900/45 dark:shadow-[0_18px_40px_rgba(15,23,42,0.24)]">
         <div className="overflow-x-auto">
           <table className="w-full min-w-[1120px] text-sm">
             <thead>
-              <tr className="bg-slate-800/95 text-left">
+              <tr className="bg-slate-50 text-left dark:bg-slate-800/95">
                 {["SI", "Date", "Games Name", "Patti", "Result", "Jori", "Total", "Open/Close", "Status", "Actions"].map((heading) => (
                   <th
                     key={heading}
-                    className="border-r border-slate-700/70 px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.08em] text-slate-200 last:border-r-0"
+                    className="border-r border-slate-200 px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.08em] text-slate-500 last:border-r-0 dark:border-slate-700/70 dark:text-slate-200"
                   >
                     {heading}
                   </th>
@@ -369,10 +369,10 @@ export default function KalyanViewResultsPage() {
             <tbody>
               {isLoading ? (
                 Array.from({ length: 6 }).map((_, rowIndex) => (
-                  <tr key={rowIndex} className="border-b border-slate-700/50">
+                  <tr key={rowIndex} className="border-b border-slate-200 dark:border-slate-700/50">
                     {Array.from({ length: 10 }).map((__, cellIndex) => (
-                      <td key={cellIndex} className="border-r border-slate-700/40 px-4 py-4 last:border-r-0">
-                        <div className="h-4 w-20 animate-pulse rounded bg-slate-700" />
+                      <td key={cellIndex} className="border-r border-slate-200 px-4 py-4 last:border-r-0 dark:border-slate-700/40">
+                        <div className="h-4 w-20 animate-pulse rounded bg-slate-200 dark:bg-slate-700" />
                       </td>
                     ))}
                   </tr>
@@ -394,69 +394,69 @@ export default function KalyanViewResultsPage() {
                   return (
                     <tr
                       key={`${result.resultDate}-${getGameName(result)}-${index}`}
-                      className="border-b border-slate-700/50 bg-slate-900/20 transition-colors hover:bg-slate-800/45"
+                      className="border-b border-slate-200 bg-white transition-colors hover:bg-slate-50 dark:border-slate-700/50 dark:bg-slate-900/20 dark:hover:bg-slate-800/45"
                     >
-                      <td className="border-r border-slate-700/40 px-4 py-4 text-xs font-semibold text-slate-400 last:border-r-0">
+                      <td className="border-r border-slate-200 px-4 py-4 text-xs font-semibold text-slate-500 last:border-r-0 dark:border-slate-700/40 dark:text-slate-400">
                         {(page - 1) * LIMIT + index + 1}
                       </td>
-                      <td className="border-r border-slate-700/40 px-4 py-4 last:border-r-0">
+                      <td className="border-r border-slate-200 px-4 py-4 last:border-r-0 dark:border-slate-700/40">
                         <div className="space-y-1">
-                          <p className="text-sm font-semibold text-white">
+                          <p className="text-sm font-semibold text-slate-900 dark:text-white">
                             {formatDateLabel(result.resultDate)}
                           </p>
-                          <p className="text-[11px] text-slate-400">
+                          <p className="text-[11px] text-slate-500 dark:text-slate-400">
                             {formatDateTime(result.createdAt)}
                           </p>
                         </div>
                       </td>
-                      <td className="border-r border-slate-700/40 px-4 py-4 last:border-r-0">
+                      <td className="border-r border-slate-200 px-4 py-4 last:border-r-0 dark:border-slate-700/40">
                         <p className="bg-gradient-to-r from-sky-200 via-white to-emerald-200 bg-clip-text text-sm font-black uppercase italic tracking-[0.04em] text-transparent">
                           {getGameName(result)}
                         </p>
                       </td>
                       <td className="border-r border-slate-700/40 px-4 py-4 last:border-r-0">
-                        <span className="inline-flex rounded-full border border-cyan-500/25 bg-cyan-500/10 px-2.5 py-1 text-[11px] font-semibold text-cyan-300">
+                        <span className="inline-flex rounded-full border border-cyan-200 bg-cyan-50 px-2.5 py-1 text-[11px] font-semibold text-cyan-700 dark:border-cyan-500/25 dark:bg-cyan-500/10 dark:text-cyan-300">
                           {pattiLabel}
                         </span>
                       </td>
-                      <td className="border-r border-slate-700/40 px-4 py-4 last:border-r-0">
-                        <p className="font-mono text-base font-black tracking-[0.03em] text-amber-300">
+                      <td className="border-r border-slate-200 px-4 py-4 last:border-r-0 dark:border-slate-700/40">
+                        <p className="font-mono text-base font-black tracking-[0.03em] text-amber-700 dark:text-amber-300">
                           {resultText}
                         </p>
                       </td>
-                      <td className="border-r border-slate-700/40 px-4 py-4 last:border-r-0">
-                        <span className="inline-flex min-w-[92px] justify-center rounded-xl border border-slate-700/70 bg-slate-800/80 px-3 py-2 text-xs font-bold uppercase tracking-[0.14em] text-slate-200">
+                      <td className="border-r border-slate-200 px-4 py-4 last:border-r-0 dark:border-slate-700/40">
+                        <span className="inline-flex min-w-[92px] justify-center rounded-xl border border-slate-200 bg-slate-100 px-3 py-2 text-xs font-bold uppercase tracking-[0.14em] text-slate-700 dark:border-slate-700/70 dark:bg-slate-800/80 dark:text-slate-200">
                           {joriLabel}
                         </span>
                       </td>
-                      <td className="border-r border-slate-700/40 px-4 py-4 last:border-r-0">
-                        <span className="inline-flex min-w-[78px] justify-center rounded-xl border border-amber-500/20 bg-amber-500/10 px-3 py-2 text-xs font-bold uppercase tracking-[0.14em] text-amber-200">
+                      <td className="border-r border-slate-200 px-4 py-4 last:border-r-0 dark:border-slate-700/40">
+                        <span className="inline-flex min-w-[78px] justify-center rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-bold uppercase tracking-[0.14em] text-amber-700 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-200">
                           {totalLabel}
                         </span>
                       </td>
-                      <td className="border-r border-slate-700/40 px-4 py-4 last:border-r-0">
-                        <span className="inline-flex min-w-[130px] justify-center rounded-xl border border-violet-500/20 bg-violet-500/10 px-3 py-2 font-mono text-xs font-bold tracking-[0.08em] text-violet-200">
+                      <td className="border-r border-slate-200 px-4 py-4 last:border-r-0 dark:border-slate-700/40">
+                        <span className="inline-flex min-w-[130px] justify-center rounded-xl border border-violet-200 bg-violet-50 px-3 py-2 font-mono text-xs font-bold tracking-[0.08em] text-violet-700 dark:border-violet-500/20 dark:bg-violet-500/10 dark:text-violet-200">
                           {ghorLabel}
                         </span>
                       </td>
-                      <td className="border-r border-slate-700/40 px-4 py-4 last:border-r-0">
+                      <td className="border-r border-slate-200 px-4 py-4 last:border-r-0 dark:border-slate-700/40">
                         <span
                           className={`inline-flex rounded-full border px-2.5 py-1 text-[11px] font-semibold ${
                             result.status === "PUBLISHED"
-                              ? "border-green-500/30 bg-green-500/10 text-green-300"
+                              ? "border-green-200 bg-green-50 text-green-700 dark:border-green-500/30 dark:bg-green-500/10 dark:text-green-300"
                               : result.status === "CANCELLED"
-                                ? "border-red-500/30 bg-red-500/10 text-red-300"
-                                : "border-yellow-500/30 bg-yellow-500/10 text-yellow-300"
+                                ? "border-red-200 bg-red-50 text-red-700 dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-300"
+                                : "border-yellow-200 bg-yellow-50 text-yellow-700 dark:border-yellow-500/30 dark:bg-yellow-500/10 dark:text-yellow-300"
                           }`}
                         >
                           {result.status ?? "PENDING"}
                         </span>
                       </td>
-                      <td className="border-r border-slate-700/40 px-4 py-4 last:border-r-0">
+                      <td className="border-r border-slate-200 px-4 py-4 last:border-r-0 dark:border-slate-700/40">
                         <button
                           type="button"
                           onClick={() => setDetailResult(result)}
-                          className="inline-flex items-center gap-1 rounded-lg border border-green-500/25 bg-green-500/10 px-3 py-1.5 text-[11px] font-semibold text-green-300 transition-colors hover:bg-green-500/20"
+                          className="inline-flex items-center gap-1 rounded-lg border border-green-200 bg-green-50 px-3 py-1.5 text-[11px] font-semibold text-green-700 transition-colors hover:bg-green-100 dark:border-green-500/25 dark:bg-green-500/10 dark:text-green-300 dark:hover:bg-green-500/20"
                         >
                           <Eye className="h-3.5 w-3.5" />
                           View
@@ -477,7 +477,7 @@ export default function KalyanViewResultsPage() {
             type="button"
             disabled={page <= 1}
             onClick={() => setPage((current) => current - 1)}
-            className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-1.5 text-xs text-slate-300 transition-colors hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-40"
+            className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-600 transition-colors hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-40 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
           >
             Prev
           </button>
@@ -488,7 +488,7 @@ export default function KalyanViewResultsPage() {
             type="button"
             disabled={page >= totalPages}
             onClick={() => setPage((current) => current + 1)}
-            className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-1.5 text-xs text-slate-300 transition-colors hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-40"
+            className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-600 transition-colors hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-40 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
           >
             Next
           </button>
@@ -504,19 +504,19 @@ export default function KalyanViewResultsPage() {
             }
           }}
         >
-          <div className="w-full max-w-md rounded-2xl border border-slate-700 bg-slate-900 p-6 shadow-[0_20px_60px_rgba(0,0,0,0.45)]">
+          <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-[0_20px_60px_rgba(15,23,42,0.16)] dark:border-slate-700 dark:bg-slate-900 dark:shadow-[0_20px_60px_rgba(0,0,0,0.45)]">
             <div className="flex items-center justify-between">
-              <h2 className="text-base font-bold text-white">Result Details</h2>
+              <h2 className="text-base font-bold text-slate-950 dark:text-white">Result Details</h2>
               <button
                 type="button"
                 onClick={() => setDetailResult(null)}
-                className="text-sm text-slate-400 transition-colors hover:text-white"
+                className="text-sm text-slate-500 transition-colors hover:text-slate-900 dark:text-slate-400 dark:hover:text-white"
               >
                 x
               </button>
             </div>
 
-            <div className="mt-4 space-y-3 rounded-xl border border-slate-700 bg-slate-800/70 p-4">
+            <div className="mt-4 space-y-3 rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800/70">
               {[
                 ["Games Name", getGameName(detailResult)],
                 ["Result Date", formatDateLabel(detailResult.resultDate)],
@@ -531,8 +531,8 @@ export default function KalyanViewResultsPage() {
                 ["Status", detailResult.status ?? "PENDING"],
               ].map(([label, value]) => (
                 <div key={label} className="flex items-center justify-between gap-4 text-xs">
-                  <span className="text-slate-400">{label}</span>
-                  <span className="text-right font-semibold text-white">{value}</span>
+                  <span className="text-slate-500 dark:text-slate-400">{label}</span>
+                  <span className="text-right font-semibold text-slate-900 dark:text-white">{value}</span>
                 </div>
               ))}
             </div>

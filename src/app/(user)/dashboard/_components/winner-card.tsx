@@ -138,42 +138,42 @@ export function WinnerCard({
     theme === "kalyan"
       ? {
           wrapper:
-            "border-[#4f4672] bg-[linear-gradient(180deg,#2a3155_0%,#212946_100%)]",
-          headerBorder: "border-[#4e5783]",
+            "border-slate-200 bg-white dark:border-[#4f4672] dark:bg-[linear-gradient(180deg,#2a3155_0%,#212946_100%)]",
+          headerBorder: "border-amber-300 dark:border-[#4e5783]",
           headerBg: "bg-[linear-gradient(90deg,#f0bf38_0%,#e4a900_100%)]",
           headerIcon: "bg-[#202743] text-[#f5c548]",
           headerText: "text-[#1b2037]",
           liveBg: "bg-[#1d2645]/12",
           liveText: "text-[#1b2037]",
-          divider: "divide-[#40496f]",
+          divider: "divide-slate-200 dark:divide-[#40496f]",
           avatarBorder: "border-[#65511a]",
           avatarBg: "bg-[#2a2437]",
           avatarText: "text-[#f5c548]",
           amountBorder: "border-emerald-500/20",
           amountBg: "bg-emerald-500/10",
-          amountText: "text-emerald-300",
+          amountText: "text-emerald-700 dark:text-emerald-300",
         }
       : {
           wrapper:
-            "border-[#4f4672] bg-[linear-gradient(180deg,#2a3155_0%,#212946_100%)]",
-          headerBorder: "border-[#4e5783]",
+            "border-slate-200 bg-white dark:border-[#4f4672] dark:bg-[linear-gradient(180deg,#2a3155_0%,#212946_100%)]",
+          headerBorder: "border-amber-300 dark:border-[#4e5783]",
           headerBg: "bg-[linear-gradient(90deg,#f0bf38_0%,#e4a900_100%)]",
           headerIcon: "bg-[#202743] text-[#f5c548]",
           headerText: "text-[#1b2037]",
           liveBg: "bg-[#1d2645]/12",
           liveText: "text-[#1b2037]",
-          divider: "divide-[#40496f]",
+          divider: "divide-slate-200 dark:divide-[#40496f]",
           avatarBorder: "border-[#65511a]",
           avatarBg: "bg-[#2a2437]",
           avatarText: "text-[#f5c548]",
           amountBorder: "border-emerald-500/20",
           amountBg: "bg-emerald-500/10",
-          amountText: "text-emerald-300",
+          amountText: "text-emerald-700 dark:text-emerald-300",
         };
 
   return (
     <div
-      className={`overflow-hidden rounded-xl border shadow-[0_18px_40px_rgba(8,12,26,0.35)] ${styles.wrapper}`}
+      className={`overflow-hidden rounded-xl border shadow-sm dark:shadow-[0_18px_40px_rgba(8,12,26,0.35)] ${styles.wrapper}`}
     >
       <div
         className={`flex items-center gap-2 border-b px-3 py-1.5 ${styles.headerBorder} ${styles.headerBg}`}
@@ -201,7 +201,7 @@ export function WinnerCard({
       {cachedBets?.length ? (
         <div
           ref={scrollRef}
-          className="h-[224px] overflow-hidden bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.04),transparent_48%)]"
+          className="h-[224px] overflow-hidden bg-[radial-gradient(circle_at_top,rgba(15,23,42,0.04),transparent_48%)] dark:bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.04),transparent_48%)]"
           style={{ scrollBehavior: "auto" }}
         >
           <div className={`divide-y ${styles.divider}`}>
@@ -215,7 +215,7 @@ export function WinnerCard({
               return (
                 <div
                   key={`${b.id ?? i}-${i}`}
-                  className="flex items-center justify-between gap-2 px-3 py-2 transition-colors hover:bg-white/[0.03]"
+                  className="flex items-center justify-between gap-2 px-3 py-2 transition-colors hover:bg-slate-50 dark:hover:bg-white/[0.03]"
                 >
                   <div className="flex items-center gap-2">
                     <div
@@ -224,12 +224,12 @@ export function WinnerCard({
                       {getAvatarLabel(b)}
                     </div>
                     <div>
-                      <p className="text-xs font-bold text-white">{username}</p>
-                      <p className="max-w-[190px] truncate text-[10px] font-semibold text-slate-300">
+                      <p className="text-xs font-bold text-slate-950 dark:text-white">{username}</p>
+                      <p className="max-w-[190px] truncate text-[10px] font-semibold text-slate-700 dark:text-slate-300">
                         {mainLabel}
                       </p>
                       {meta ? (
-                        <p className="max-w-[190px] truncate text-[10px] text-slate-400">
+                        <p className="max-w-[190px] truncate text-[10px] text-slate-600 dark:text-slate-400">
                           {meta}
                         </p>
                       ) : null}
@@ -249,10 +249,10 @@ export function WinnerCard({
           </div>
         </div>
       ) : (
-        <div className="flex h-[180px] items-center justify-center bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.04),transparent_48%)] px-4 text-center">
+        <div className="flex h-[180px] items-center justify-center bg-[radial-gradient(circle_at_top,rgba(15,23,42,0.04),transparent_48%)] px-4 text-center dark:bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.04),transparent_48%)]">
           <div className="space-y-2">
-            <p className="text-sm font-bold text-white">No live winners yet</p>
-            <p className="text-xs text-slate-400">
+            <p className="text-sm font-bold text-slate-950 dark:text-white">No live winners yet</p>
+            <p className="text-xs text-slate-600 dark:text-slate-400">
               Latest winner updates will appear here automatically.
             </p>
           </div>

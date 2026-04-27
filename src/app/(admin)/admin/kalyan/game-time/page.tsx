@@ -45,8 +45,8 @@ type EditTarget = {
 };
 
 const SESSION_STYLES: Record<string, string> = {
-  OPEN: "border-green-500/30 bg-green-500/15 text-green-400",
-  CLOSE: "border-red-500/30 bg-red-500/15 text-red-400",
+  OPEN: "border-green-200 bg-green-50 text-green-700 dark:border-green-500/30 dark:bg-green-500/15 dark:text-green-400",
+  CLOSE: "border-red-200 bg-red-50 text-red-700 dark:border-red-500/30 dark:bg-red-500/15 dark:text-red-400",
 };
 const FIXED_OPEN_TIME = convertBangladeshScheduleToUtc("00:00");
 const FIXED_OPEN_TIME_LABEL = formatTimeLabel(FIXED_OPEN_TIME);
@@ -297,12 +297,12 @@ export default function KalyanGameTimePage() {
     <div className="space-y-5">
       <div className="flex items-center justify-between gap-4">
         <div className="flex items-center gap-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-orange-500/15">
+          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-orange-100 dark:bg-orange-500/15">
             <Clock3 className="h-5 w-5 text-orange-400" />
           </div>
           <div>
-            <h1 className="text-xl font-bold text-white">Game Time</h1>
-            <p className="text-xs text-slate-400">Manage open and close times for each Kalyan game</p>
+            <h1 className="text-xl font-bold text-slate-950 dark:text-white">Game Time</h1>
+            <p className="text-xs text-slate-500 dark:text-slate-400">Manage open and close times for each Kalyan game</p>
           </div>
         </div>
         <button
@@ -319,7 +319,7 @@ export default function KalyanGameTimePage() {
         <select
           value={marketFilter}
           onChange={(event) => setMarketFilter(event.target.value)}
-          className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-xs text-white outline-none focus:border-orange-500"
+          className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-900 outline-none focus:border-orange-400 dark:border-slate-600 dark:bg-slate-800 dark:text-white dark:focus:border-orange-500"
         >
           <option value="">All Games</option>
           {markets.map((market: any) => (
@@ -330,12 +330,12 @@ export default function KalyanGameTimePage() {
         </select>
       </div>
 
-      <div className="overflow-x-auto rounded-xl border border-slate-700/80 bg-slate-800/55 shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]">
+      <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-700/80 dark:bg-slate-800/55 dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]">
         <table className="w-full min-w-[860px] text-sm">
           <thead>
-            <tr className="border-b border-slate-700/80 text-center">
+            <tr className="border-b border-slate-200 bg-slate-50 text-center dark:border-slate-700/80 dark:bg-transparent">
               {["SI No.", "Game Name", "Open Time", "Close Time", "Status", "Action"].map((heading) => (
-                <th key={heading} className="border-r border-slate-700/50 px-4 py-3 text-center text-xs font-medium text-slate-400 last:border-r-0">
+                <th key={heading} className="border-r border-slate-200 px-4 py-3 text-center text-xs font-medium text-slate-500 last:border-r-0 dark:border-slate-700/50 dark:text-slate-400">
                   {heading}
                 </th>
               ))}
@@ -344,10 +344,10 @@ export default function KalyanGameTimePage() {
           <tbody>
             {loadingMarkets ? (
               Array.from({ length: 6 }).map((_, rowIndex) => (
-                <tr key={rowIndex} className="border-b border-slate-700/50">
+                <tr key={rowIndex} className="border-b border-slate-200 dark:border-slate-700/50">
                   {Array.from({ length: 6 }).map((__, cellIndex) => (
-                    <td key={cellIndex} className="border-r border-slate-700/40 px-4 py-3 text-center last:border-r-0">
-                      <div className="h-4 w-20 animate-pulse rounded bg-slate-700" />
+                    <td key={cellIndex} className="border-r border-slate-200 px-4 py-3 text-center last:border-r-0 dark:border-slate-700/40">
+                      <div className="h-4 w-20 animate-pulse rounded bg-slate-200 dark:bg-slate-700" />
                     </td>
                   ))}
                 </tr>
@@ -376,36 +376,36 @@ export default function KalyanGameTimePage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4" onClick={(event) => {
           if (event.currentTarget === event.target) closeCreate();
         }}>
-          <div className="w-full max-w-lg rounded-2xl border border-slate-700 bg-slate-900 p-6 shadow-[0_20px_60px_rgba(0,0,0,0.45)]">
+          <div className="w-full max-w-lg rounded-2xl border border-slate-200 bg-white p-6 shadow-[0_20px_60px_rgba(15,23,42,0.16)] dark:border-slate-700 dark:bg-slate-900 dark:shadow-[0_20px_60px_rgba(0,0,0,0.45)]">
             <div className="mb-5 flex items-start justify-between gap-4">
               <div>
-                <h2 className="text-base font-bold text-white">Add New Game</h2>
-                <p className="mt-1 text-xs text-slate-400">Create a new market and set its initial timing.</p>
+                <h2 className="text-base font-bold text-slate-950 dark:text-white">Add New Game</h2>
+                <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Create a new market and set its initial timing.</p>
               </div>
-              <button type="button" onClick={closeCreate} className="rounded-lg border border-slate-700 p-2 text-slate-400 transition-colors hover:bg-slate-800 hover:text-white">
+              <button type="button" onClick={closeCreate} className="rounded-lg border border-slate-200 p-2 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-950 dark:border-slate-700 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-white">
                 <X className="h-4 w-4" />
               </button>
             </div>
 
             <form onSubmit={handleCreateSubmit((values) => createMarket(values))} className="space-y-4">
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-slate-400">Games Name</label>
-                <input {...registerCreate("gameName")} className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2.5 text-sm text-white outline-none focus:border-orange-500" />
+                <label className="text-xs font-medium text-slate-500 dark:text-slate-400">Games Name</label>
+                <input {...registerCreate("gameName")} className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none focus:border-orange-400 dark:border-slate-600 dark:bg-slate-800 dark:text-white dark:focus:border-orange-500" />
                 {createErrors.gameName ? <p className="text-[10px] text-red-400">{createErrors.gameName.message}</p> : null}
               </div>
 
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-slate-400">Session Type</label>
+                  <label className="text-xs font-medium text-slate-500 dark:text-slate-400">Session Type</label>
                   <select
                     {...registerCreate("sessionType")}
                     disabled={!!detectedSession}
                     className={`w-full rounded-lg border px-3 py-2.5 text-sm font-semibold outline-none ${
                       detectedSession === "CLOSE"
-                        ? "border-red-500/40 bg-red-500/10 text-red-400"
+                        ? "border-red-200 bg-red-50 text-red-700 dark:border-red-500/40 dark:bg-red-500/10 dark:text-red-400"
                         : detectedSession === "OPEN"
-                          ? "border-green-500/40 bg-green-500/10 text-green-400"
-                          : "border-slate-600 bg-slate-800 text-white focus:border-orange-500"
+                          ? "border-green-200 bg-green-50 text-green-700 dark:border-green-500/40 dark:bg-green-500/10 dark:text-green-400"
+                          : "border-slate-200 bg-white text-slate-900 focus:border-orange-400 dark:border-slate-600 dark:bg-slate-800 dark:text-white dark:focus:border-orange-500"
                     }`}
                   >
                     <option value="OPEN">Open</option>
@@ -413,8 +413,8 @@ export default function KalyanGameTimePage() {
                   </select>
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-slate-400">Status</label>
-                  <select {...registerCreate("status")} className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2.5 text-sm text-white outline-none focus:border-orange-500">
+                  <label className="text-xs font-medium text-slate-500 dark:text-slate-400">Status</label>
+                  <select {...registerCreate("status")} className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none focus:border-orange-400 dark:border-slate-600 dark:bg-slate-800 dark:text-white dark:focus:border-orange-500">
                     <option value="ACTIVE">Active</option>
                     <option value="INACTIVE">Inactive</option>
                   </select>
@@ -423,20 +423,20 @@ export default function KalyanGameTimePage() {
 
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-slate-400">Open Time</label>
-                  <div className="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2.5 text-sm font-medium text-slate-300">
+                  <label className="text-xs font-medium text-slate-500 dark:text-slate-400">Open Time</label>
+                  <div className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm font-medium text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">
                     {FIXED_OPEN_TIME_LABEL}
                   </div>
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-slate-400">Close Time</label>
-                  <input type="time" {...registerCreate("closeTime")} className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2.5 text-sm text-white outline-none focus:border-orange-500" />
+                  <label className="text-xs font-medium text-slate-500 dark:text-slate-400">Close Time</label>
+                  <input type="time" {...registerCreate("closeTime")} className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none focus:border-orange-400 dark:border-slate-600 dark:bg-slate-800 dark:text-white dark:focus:border-orange-500" />
                   {createErrors.closeTime ? <p className="text-[10px] text-red-400">{createErrors.closeTime.message}</p> : null}
                 </div>
               </div>
 
               <div className="flex gap-2 pt-2">
-                <button type="button" onClick={closeCreate} className="flex-1 rounded-lg border border-slate-600 bg-slate-800 py-2.5 text-sm font-medium text-slate-300 transition-colors hover:bg-slate-700">Cancel</button>
+                <button type="button" onClick={closeCreate} className="flex-1 rounded-lg border border-slate-200 bg-white py-2.5 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-100 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700">Cancel</button>
                 <button type="submit" disabled={creating} className="flex-1 rounded-lg bg-orange-600 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-orange-700 disabled:opacity-50">
                   {creating ? "Creating..." : "Create Game"}
                 </button>
@@ -450,13 +450,13 @@ export default function KalyanGameTimePage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4" onClick={(event) => {
           if (event.currentTarget === event.target) closeEdit();
         }}>
-          <div className="w-full max-w-lg rounded-2xl border border-slate-700 bg-slate-900 p-6 shadow-[0_20px_60px_rgba(0,0,0,0.45)]">
+          <div className="w-full max-w-lg rounded-2xl border border-slate-200 bg-white p-6 shadow-[0_20px_60px_rgba(15,23,42,0.16)] dark:border-slate-700 dark:bg-slate-900 dark:shadow-[0_20px_60px_rgba(0,0,0,0.45)]">
             <div className="mb-5 flex items-start justify-between gap-4">
               <div>
-                <h2 className="text-base font-bold text-white">Edit Game Time</h2>
-                <p className="mt-1 text-xs text-slate-400">Update the selected game timing and status.</p>
+                <h2 className="text-base font-bold text-slate-950 dark:text-white">Edit Game Time</h2>
+                <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Update the selected game timing and status.</p>
               </div>
-              <button type="button" onClick={closeEdit} className="rounded-lg border border-slate-700 p-2 text-slate-400 transition-colors hover:bg-slate-800 hover:text-white">
+              <button type="button" onClick={closeEdit} className="rounded-lg border border-slate-200 p-2 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-950 dark:border-slate-700 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-white">
                 <X className="h-4 w-4" />
               </button>
             </div>
@@ -474,10 +474,10 @@ export default function KalyanGameTimePage() {
               className="space-y-4"
             >
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-slate-400">Game Name</label>
+                <label className="text-xs font-medium text-slate-500 dark:text-slate-400">Game Name</label>
                 <input
                   {...register("gameName")}
-                  className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2.5 text-sm text-white outline-none focus:border-orange-500"
+                  className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none focus:border-orange-400 dark:border-slate-600 dark:bg-slate-800 dark:text-white dark:focus:border-orange-500"
                   placeholder="Enter game name"
                 />
                 {errors.gameName ? <p className="text-[10px] text-red-400">{errors.gameName.message}</p> : null}
@@ -485,14 +485,14 @@ export default function KalyanGameTimePage() {
 
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-slate-400">Session Type</label>
-                  <div className="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2.5 text-sm font-medium text-slate-300">
+                  <label className="text-xs font-medium text-slate-500 dark:text-slate-400">Session Type</label>
+                  <div className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm font-medium text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">
                     {editTarget?.timing?.sessionType ?? "-"}
                   </div>
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-slate-400">Status</label>
-                  <select {...register("status")} className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2.5 text-sm text-white outline-none focus:border-orange-500">
+                  <label className="text-xs font-medium text-slate-500 dark:text-slate-400">Status</label>
+                  <select {...register("status")} className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none focus:border-orange-400 dark:border-slate-600 dark:bg-slate-800 dark:text-white dark:focus:border-orange-500">
                     <option value="ACTIVE">Active</option>
                     <option value="INACTIVE">Inactive</option>
                   </select>
@@ -502,20 +502,20 @@ export default function KalyanGameTimePage() {
 
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-slate-400">Open Time</label>
-                  <div className="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2.5 text-sm font-medium text-slate-300">
+                  <label className="text-xs font-medium text-slate-500 dark:text-slate-400">Open Time</label>
+                  <div className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm font-medium text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">
                     {FIXED_OPEN_TIME_LABEL}
                   </div>
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-slate-400">Close Time</label>
-                  <input type="time" {...register("closeTime")} className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2.5 text-sm text-white outline-none focus:border-orange-500" />
+                  <label className="text-xs font-medium text-slate-500 dark:text-slate-400">Close Time</label>
+                  <input type="time" {...register("closeTime")} className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none focus:border-orange-400 dark:border-slate-600 dark:bg-slate-800 dark:text-white dark:focus:border-orange-500" />
                   {errors.closeTime ? <p className="text-[10px] text-red-400">{errors.closeTime.message}</p> : null}
                 </div>
               </div>
 
               <div className="flex gap-2 pt-2">
-                <button type="button" onClick={closeEdit} className="flex-1 rounded-lg border border-slate-600 bg-slate-800 py-2.5 text-sm font-medium text-slate-300 transition-colors hover:bg-slate-700">Cancel</button>
+                <button type="button" onClick={closeEdit} className="flex-1 rounded-lg border border-slate-200 bg-white py-2.5 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-100 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700">Cancel</button>
                 <button type="submit" disabled={saving} className="flex-1 rounded-lg bg-orange-600 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-orange-700 disabled:opacity-50">
                   {saving ? "Saving..." : "Save Changes"}
                 </button>
@@ -547,10 +547,10 @@ function MarketTimingRow({
 
   if (isLoading) {
     return (
-      <tr className="border-b border-slate-700/50">
+      <tr className="border-b border-slate-200 dark:border-slate-700/50">
         {Array.from({ length: 6 }).map((_, cellIndex) => (
-          <td key={cellIndex} className="border-r border-slate-700/40 px-4 py-3 text-center last:border-r-0">
-            <div className="h-4 w-20 animate-pulse rounded bg-slate-700" />
+          <td key={cellIndex} className="border-r border-slate-200 px-4 py-3 text-center last:border-r-0 dark:border-slate-700/40">
+            <div className="h-4 w-20 animate-pulse rounded bg-slate-200 dark:bg-slate-700" />
           </td>
         ))}
       </tr>
@@ -562,11 +562,11 @@ function MarketTimingRow({
   }
 
   return (
-    <tr className="border-b border-slate-700/50 transition-colors hover:bg-slate-700/20">
-      <td className="border-r border-slate-700/40 px-4 py-3 text-center text-xs text-slate-500 last:border-r-0">{index + 1}</td>
-      <td className="border-r border-slate-700/40 px-4 py-3 text-center last:border-r-0">
+    <tr className="border-b border-slate-200 transition-colors hover:bg-slate-50 dark:border-slate-700/50 dark:hover:bg-slate-700/20">
+      <td className="border-r border-slate-200 px-4 py-3 text-center text-xs text-slate-500 last:border-r-0 dark:border-slate-700/40">{index + 1}</td>
+      <td className="border-r border-slate-200 px-4 py-3 text-center last:border-r-0 dark:border-slate-700/40">
         <div className="flex items-center justify-center gap-2">
-          <span className="font-medium text-white">
+          <span className="font-medium text-slate-900 dark:text-white">
             {getKalyanMarketSessionLabel(
               {
                 ...market,
@@ -581,16 +581,16 @@ function MarketTimingRow({
           </span>
         </div>
       </td>
-      <td className="border-r border-slate-700/40 px-4 py-3 text-center text-sm text-slate-300 last:border-r-0">{FIXED_OPEN_TIME_LABEL}</td>
-      <td className="border-r border-slate-700/40 px-4 py-3 text-center text-sm text-slate-300 last:border-r-0">{formatTimeLabel(timing.closeTime)}</td>
-      <td className="border-r border-slate-700/40 px-4 py-3 text-center last:border-r-0">
-        <span className={`inline-flex rounded-full border px-2.5 py-1 text-[10px] font-medium ${timing.status === "ACTIVE" ? "border-green-500/30 bg-green-500/15 text-green-400" : "border-slate-500/30 bg-slate-500/15 text-slate-300"}`}>
+      <td className="border-r border-slate-200 px-4 py-3 text-center text-sm text-slate-600 last:border-r-0 dark:border-slate-700/40 dark:text-slate-300">{FIXED_OPEN_TIME_LABEL}</td>
+      <td className="border-r border-slate-200 px-4 py-3 text-center text-sm text-slate-600 last:border-r-0 dark:border-slate-700/40 dark:text-slate-300">{formatTimeLabel(timing.closeTime)}</td>
+      <td className="border-r border-slate-200 px-4 py-3 text-center last:border-r-0 dark:border-slate-700/40">
+        <span className={`inline-flex rounded-full border px-2.5 py-1 text-[10px] font-medium ${timing.status === "ACTIVE" ? "border-green-200 bg-green-50 text-green-700 dark:border-green-500/30 dark:bg-green-500/15 dark:text-green-400" : "border-slate-200 bg-slate-100 text-slate-600 dark:border-slate-500/30 dark:bg-slate-500/15 dark:text-slate-300"}`}>
           {timing.status}
         </span>
       </td>
-      <td className="border-r border-slate-700/40 px-4 py-3 text-center last:border-r-0">
+      <td className="border-r border-slate-200 px-4 py-3 text-center last:border-r-0 dark:border-slate-700/40">
         <div className="flex flex-wrap justify-center gap-2">
-          <button type="button" onClick={() => onEdit(market.id, timing)} className="inline-flex items-center gap-1 rounded-lg border border-orange-500/30 bg-orange-500/10 px-3 py-1.5 text-[11px] font-medium text-orange-400 transition-colors hover:bg-orange-500/20">
+          <button type="button" onClick={() => onEdit(market.id, timing)} className="inline-flex items-center gap-1 rounded-lg border border-orange-200 bg-orange-50 px-3 py-1.5 text-[11px] font-medium text-orange-700 transition-colors hover:bg-orange-100 dark:border-orange-500/30 dark:bg-orange-500/10 dark:text-orange-400 dark:hover:bg-orange-500/20">
             <Pencil className="h-3.5 w-3.5" />
             Edit
           </button>

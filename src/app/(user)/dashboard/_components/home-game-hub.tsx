@@ -245,11 +245,11 @@ const sectionGames: Record<HubTabId, HubGame[]> = {
 
 function GameTile({ game }: { game: HubGame }) {
   const tile = (
-    <div className="group relative overflow-hidden rounded-lg border border-slate-700 bg-[#222a4a] p-2 transition-all hover:-translate-y-0.5 hover:border-[#f0bf38]/40 hover:bg-[#2a3358]">
+    <div className="group relative overflow-hidden rounded-lg border border-slate-200 bg-white p-2 shadow-sm transition-all hover:-translate-y-0.5 hover:border-[#f0bf38]/60 hover:bg-amber-50 dark:border-slate-700 dark:bg-[#222a4a] dark:shadow-none dark:hover:border-[#f0bf38]/40 dark:hover:bg-[#2a3358]">
       <div className="absolute right-0 top-0 h-5 w-5 bg-gradient-to-bl from-[#f0bf38] to-transparent opacity-90" />
       <div className="relative flex flex-col gap-2">
         <div className="flex items-start justify-between gap-1.5">
-          <div className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-lg border border-slate-600 bg-slate-900/70">
+          <div className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-lg border border-slate-200 bg-slate-50 dark:border-slate-600 dark:bg-slate-900/70">
             {game.logoSrc ? (
               <Image
                 src={game.logoSrc}
@@ -259,14 +259,14 @@ function GameTile({ game }: { game: HubGame }) {
                 className="h-full w-full object-cover"
               />
             ) : (
-              <span className="text-sm font-black text-[#f0bf38]">
+              <span className="text-sm font-black text-[#b77905] dark:text-[#f0bf38]">
                 {game.name.slice(0, 2).toUpperCase()}
               </span>
             )}
           </div>
         </div>
         <div>
-          <p className="truncate text-[11px] font-bold leading-4 text-white">
+          <p className="truncate text-[11px] font-bold leading-4 text-slate-950 dark:text-white">
             {game.name}
           </p>
         </div>
@@ -314,7 +314,7 @@ export function HomeGameHub({ popularGames }: { popularGames: any[] }) {
   const meta = sectionMeta[activeTab];
 
   return (
-    <section className="overflow-hidden rounded-xl border border-[#414a73] bg-[#2e355c] shadow-[0_18px_45px_rgba(6,12,27,0.45)]">
+    <section className="overflow-hidden rounded-xl border border-amber-200 bg-white shadow-sm dark:border-[#414a73] dark:bg-[#2e355c] dark:shadow-[0_18px_45px_rgba(6,12,27,0.45)]">
       <div className="border-b border-[#8e6d20] bg-[linear-gradient(90deg,#f7d154_0%,#f0bf38_45%,#dd9e1b_100%)] px-4 py-3 text-[11px] font-semibold text-[#11162b] shadow-[inset_0_1px_0_rgba(255,255,255,0.2)]">
         Latest links, banners, and featured games update area
       </div>
@@ -337,8 +337,8 @@ export function HomeGameHub({ popularGames }: { popularGames: any[] }) {
                   className={cn(
                     "flex min-w-[76px] shrink-0 flex-col items-center rounded-lg border px-3 py-3 text-center transition-all duration-200",
                     isActive
-                      ? "border-[#f0bf38]/70 bg-[linear-gradient(180deg,#445186_0%,#37406c_55%,#2d355b_100%)] text-white shadow-[0_10px_24px_rgba(240,191,56,0.18),inset_0_1px_0_rgba(255,255,255,0.14)]"
-                      : "border-[#485483] bg-[#36406b] text-[#d5b969] hover:border-[#7b6a2f] hover:bg-[#3b4774] hover:text-white",
+                      ? "border-[#f0bf38]/80 bg-amber-50 text-slate-950 shadow-[0_10px_24px_rgba(240,191,56,0.18),inset_0_1px_0_rgba(255,255,255,0.5)] dark:bg-[linear-gradient(180deg,#445186_0%,#37406c_55%,#2d355b_100%)] dark:text-white dark:shadow-[0_10px_24px_rgba(240,191,56,0.18),inset_0_1px_0_rgba(255,255,255,0.14)]"
+                      : "border-slate-200 bg-slate-50 text-slate-700 hover:border-[#d69d18] hover:bg-amber-50 hover:text-slate-950 dark:border-[#485483] dark:bg-[#36406b] dark:text-[#d5b969] dark:hover:border-[#7b6a2f] dark:hover:bg-[#3b4774] dark:hover:text-white",
                   )}
                 >
                   {tab.logoSrc ? (
@@ -346,8 +346,8 @@ export function HomeGameHub({ popularGames }: { popularGames: any[] }) {
                       className={cn(
                         "mb-1.5 flex h-6 w-6 items-center justify-center overflow-hidden rounded-full border transition-all",
                         isActive
-                          ? "border-[#f0bf38]/60 bg-white/10 shadow-[0_0_12px_rgba(240,191,56,0.35)]"
-                          : "border-white/5 bg-white/5",
+                          ? "border-[#f0bf38]/60 bg-white shadow-[0_0_12px_rgba(240,191,56,0.25)] dark:bg-white/10 dark:shadow-[0_0_12px_rgba(240,191,56,0.35)]"
+                          : "border-slate-200 bg-white dark:border-white/5 dark:bg-white/5",
                       )}
                     >
                       <Image
@@ -369,7 +369,7 @@ export function HomeGameHub({ popularGames }: { popularGames: any[] }) {
                   <span
                     className={cn(
                       "text-[11px] font-semibold",
-                      isActive && "text-[#fff4cc]",
+                      isActive && "text-slate-950 dark:text-[#fff4cc]",
                     )}
                   >
                     {tab.label}
@@ -383,11 +383,11 @@ export function HomeGameHub({ popularGames }: { popularGames: any[] }) {
           </div>
         </div>
 
-        <div className="rounded-xl border border-[#495482] bg-[#2a3153] p-4">
+        <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-[#495482] dark:bg-[#2a3153]">
           <div className="mb-4 flex items-center justify-between gap-3">
             <div>
-              <p className="text-lg font-black text-white">{meta.title}</p>
-              <p className="text-xs text-slate-300">{meta.subtitle}</p>
+              <p className="text-lg font-black text-slate-950 dark:text-white">{meta.title}</p>
+              <p className="text-xs text-slate-600 dark:text-slate-300">{meta.subtitle}</p>
             </div>
             <div
               className={cn(
@@ -407,9 +407,9 @@ export function HomeGameHub({ popularGames }: { popularGames: any[] }) {
             activeTab === "kalyan" ||
             activeTab === "ludo" ||
             activeTab === "pcso") && (
-            <div className="mt-4 rounded-lg border border-[#3e4772] bg-[#2d355a] p-3">
+            <div className="mt-4 rounded-lg border border-slate-200 bg-white p-3 dark:border-[#3e4772] dark:bg-[#2d355a]">
               <div className="flex items-center gap-3">
-                <div className="flex h-14 w-14 items-center justify-center overflow-hidden rounded-xl border border-slate-600 bg-slate-900/60">
+                <div className="flex h-14 w-14 items-center justify-center overflow-hidden rounded-xl border border-slate-200 bg-slate-50 dark:border-slate-600 dark:bg-slate-900/60">
                   <Image
                     src={
                       activeTab === "thai"
@@ -427,7 +427,7 @@ export function HomeGameHub({ popularGames }: { popularGames: any[] }) {
                   />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm font-bold text-white">
+                  <p className="text-sm font-bold text-slate-950 dark:text-white">
                     {activeTab === "thai"
                       ? "Thai Lottery Board"
                       : activeTab === "kalyan"
@@ -436,7 +436,7 @@ export function HomeGameHub({ popularGames }: { popularGames: any[] }) {
                           ? "Ludo 1 vs 1 Lobby"
                           : "PCSO Board"}
                   </p>
-                  <p className="text-[11px] text-slate-400">
+                  <p className="text-[11px] text-slate-600 dark:text-slate-400">
                     {activeTab === "pcso"
                       ? "This section will show as coming soon for now."
                       : activeTab === "ludo"
@@ -454,7 +454,7 @@ export function HomeGameHub({ popularGames }: { popularGames: any[] }) {
                         description: "PCSO section is under preparation.",
                       })
                     }
-                    className="rounded-full bg-white/8 px-3 py-2 text-xs font-bold text-slate-200"
+                    className="rounded-full bg-slate-100 px-3 py-2 text-xs font-bold text-slate-700 dark:bg-white/8 dark:text-slate-200"
                   >
                     Soon
                   </button>

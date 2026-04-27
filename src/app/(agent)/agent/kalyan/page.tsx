@@ -73,15 +73,15 @@ function StatCard({
   const inner = (
     <div
       className={cn(
-        "relative overflow-hidden rounded-2xl border bg-slate-800/50 p-4 transition-all duration-200",
-        href ? "hover:border-slate-500 hover:bg-slate-800 cursor-pointer" : "",
+        "relative overflow-hidden rounded-2xl border bg-white p-4 shadow-sm transition-all duration-200 dark:bg-slate-800/50 dark:shadow-none",
+        href ? "cursor-pointer hover:border-slate-300 hover:bg-slate-50 dark:hover:border-slate-500 dark:hover:bg-slate-800" : "",
         colorMap[color],
       )}
     >
       <div className="flex items-start justify-between">
         <div>
-          <p className="text-xs text-slate-400">{label}</p>
-          <p className="mt-1.5 text-2xl font-bold text-white">{value}</p>
+          <p className="text-xs text-slate-500 dark:text-slate-400">{label}</p>
+          <p className="mt-1.5 text-2xl font-bold text-slate-950 dark:text-white">{value}</p>
         </div>
         <div className={cn("rounded-xl p-2.5", iconBg[color])}>
           <Icon className="h-5 w-5" />
@@ -147,8 +147,8 @@ export default function KalyanDashboardPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-xl font-bold text-white">Kalyan Lottery</h1>
-        <p className="text-xs text-slate-400 mt-0.5">
+        <h1 className="text-xl font-bold text-slate-950 dark:text-white">Kalyan Lottery</h1>
+        <p className="mt-0.5 text-xs text-slate-600 dark:text-slate-400">
           Agent overview & quick stats
         </p>
       </div>
@@ -159,7 +159,7 @@ export default function KalyanDashboardPage() {
           Array.from({ length: 6 }).map((_, i) => (
             <div
               key={i}
-              className="h-24 animate-pulse rounded-2xl bg-slate-800"
+              className="h-24 animate-pulse rounded-2xl bg-slate-200 dark:bg-slate-800"
             />
           ))
         ) : (
@@ -212,9 +212,9 @@ export default function KalyanDashboardPage() {
       {/* Recent Activity */}
       <div className="grid gap-4 lg:grid-cols-2">
         {/* Recent Results */}
-        <div className="rounded-xl border border-slate-700 bg-slate-800/50">
-          <div className="flex items-center justify-between border-b border-slate-700 px-4 py-3">
-            <p className="text-sm font-semibold text-white">Recent Results</p>
+        <div className="rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-800/50 dark:shadow-none">
+          <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3 dark:border-slate-700">
+            <p className="text-sm font-semibold text-slate-950 dark:text-white">Recent Results</p>
             <Link
               href="/agent/kalyan/view-results"
               className="flex items-center gap-1 text-[11px] text-purple-400 hover:text-purple-300"
@@ -222,12 +222,12 @@ export default function KalyanDashboardPage() {
               View all <ArrowRight className="h-3 w-3" />
             </Link>
           </div>
-          <div className="divide-y divide-slate-700/50">
+          <div className="divide-y divide-slate-200 dark:divide-slate-700/50">
             {loadingResults ? (
               Array.from({ length: 4 }).map((_, i) => (
                 <div key={i} className="flex items-center gap-3 px-4 py-3">
-                  <div className="h-4 w-32 animate-pulse rounded bg-slate-700" />
-                  <div className="ml-auto h-4 w-16 animate-pulse rounded bg-slate-700" />
+                  <div className="h-4 w-32 animate-pulse rounded bg-slate-200 dark:bg-slate-700" />
+                  <div className="ml-auto h-4 w-16 animate-pulse rounded bg-slate-200 dark:bg-slate-700" />
                 </div>
               ))
             ) : recentResults.length === 0 ? (
@@ -241,7 +241,7 @@ export default function KalyanDashboardPage() {
                   className="flex items-center justify-between px-4 py-2.5"
                 >
                   <div>
-                    <p className="text-xs font-medium text-white">
+                    <p className="text-xs font-medium text-slate-950 dark:text-white">
                       {r.market ? getKalyanMarketOptionLabel(r.market) : r.marketId}
                     </p>
                     <p className="text-[10px] text-slate-500">
@@ -271,9 +271,9 @@ export default function KalyanDashboardPage() {
         </div>
 
         {/* Recent Entries */}
-        <div className="rounded-xl border border-slate-700 bg-slate-800/50">
-          <div className="flex items-center justify-between border-b border-slate-700 px-4 py-3">
-            <p className="text-sm font-semibold text-white">Recent Entries</p>
+        <div className="rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-800/50 dark:shadow-none">
+          <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3 dark:border-slate-700">
+            <p className="text-sm font-semibold text-slate-950 dark:text-white">Recent Entries</p>
             <Link
               href="/agent/kalyan/play-history"
               className="flex items-center gap-1 text-[11px] text-yellow-400 hover:text-yellow-300"
@@ -281,12 +281,12 @@ export default function KalyanDashboardPage() {
               View all <ArrowRight className="h-3 w-3" />
             </Link>
           </div>
-          <div className="divide-y divide-slate-700/50">
+          <div className="divide-y divide-slate-200 dark:divide-slate-700/50">
             {loadingEntries ? (
               Array.from({ length: 4 }).map((_, i) => (
                 <div key={i} className="flex items-center gap-3 px-4 py-3">
-                  <div className="h-4 w-24 animate-pulse rounded bg-slate-700" />
-                  <div className="ml-auto h-4 w-16 animate-pulse rounded bg-slate-700" />
+                  <div className="h-4 w-24 animate-pulse rounded bg-slate-200 dark:bg-slate-700" />
+                  <div className="ml-auto h-4 w-16 animate-pulse rounded bg-slate-200 dark:bg-slate-700" />
                 </div>
               ))
             ) : recentEntries.length === 0 ? (
@@ -300,7 +300,7 @@ export default function KalyanDashboardPage() {
                   className="flex items-center justify-between px-4 py-2.5"
                 >
                   <div>
-                    <p className="text-xs font-medium text-white">
+                    <p className="text-xs font-medium text-slate-950 dark:text-white">
                       {e.user?.name ?? e.userId}
                     </p>
                     <p className="text-[10px] text-slate-500">
@@ -308,7 +308,7 @@ export default function KalyanDashboardPage() {
                     </p>
                   </div>
                   <div className="text-right">
-                    <p className="text-xs font-semibold text-white">
+                    <p className="text-xs font-semibold text-slate-950 dark:text-white">
                       ৳{Number(e.totalAmount ?? 0).toLocaleString()}
                     </p>
                     <span

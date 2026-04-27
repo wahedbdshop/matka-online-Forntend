@@ -55,8 +55,8 @@ function StatCard({
   const content = (
     <>
       <p className="text-[11px] uppercase tracking-widest text-slate-500">{label}</p>
-      <p className="mt-2 text-2xl font-bold text-white">{value}</p>
-      <p className="mt-1 text-xs text-slate-400">{hint}</p>
+      <p className="mt-2 text-2xl font-bold text-slate-950 dark:text-white">{value}</p>
+      <p className="mt-1 text-xs text-slate-600 dark:text-slate-400">{hint}</p>
     </>
   );
 
@@ -64,7 +64,7 @@ function StatCard({
     return (
       <Link
         href={href}
-        className="block rounded-2xl border border-slate-700/50 bg-slate-800/40 p-4 transition-all hover:-translate-y-0.5 hover:border-cyan-500/30 hover:bg-slate-800/60"
+        className="block rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition-all hover:-translate-y-0.5 hover:border-cyan-300 hover:bg-cyan-50 dark:border-slate-700/50 dark:bg-slate-800/40 dark:shadow-none dark:hover:border-cyan-500/30 dark:hover:bg-slate-800/60"
       >
         {content}
       </Link>
@@ -72,7 +72,7 @@ function StatCard({
   }
 
   return (
-    <div className="rounded-2xl border border-slate-700/50 bg-slate-800/40 p-4">
+    <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700/50 dark:bg-slate-800/40 dark:shadow-none">
       {content}
     </div>
   );
@@ -117,19 +117,19 @@ export default function SupportAgentDashboardPage() {
 
   return (
     <div className="space-y-6">
-      <section className="overflow-hidden rounded-3xl border border-cyan-500/20 bg-[radial-gradient(circle_at_top_left,_rgba(34,211,238,0.18),_transparent_40%),linear-gradient(135deg,_rgba(15,23,42,0.96),_rgba(2,6,23,0.98))] p-6">
+      <section className="overflow-hidden rounded-3xl border border-cyan-200 bg-[radial-gradient(circle_at_top_left,_rgba(34,211,238,0.16),_transparent_42%),linear-gradient(135deg,_#f4fbff,_#ecfeff_45%,_#ffffff_100%)] p-6 shadow-sm dark:border-cyan-500/20 dark:bg-[radial-gradient(circle_at_top_left,_rgba(34,211,238,0.18),_transparent_40%),linear-gradient(135deg,_rgba(15,23,42,0.96),_rgba(2,6,23,0.98))] dark:shadow-none">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div className="max-w-2xl">
-            <p className="text-xs font-semibold uppercase tracking-[0.35em] text-cyan-300/80">
+            <p className="text-xs font-semibold uppercase tracking-[0.35em] text-cyan-700/80 dark:text-cyan-300/80">
               Support Agent Workspace
             </p>
-            <h2 className="mt-3 text-3xl font-black text-white">
+            <h2 className="mt-3 text-3xl font-black text-slate-950 dark:text-white">
               Welcome back, {user?.name ?? "Agent"}
             </h2>
           </div>
-          <div className="rounded-2xl border border-cyan-500/20 bg-slate-900/50 px-4 py-3">
+          <div className="rounded-2xl border border-cyan-200 bg-white/80 px-4 py-3 shadow-sm dark:border-cyan-500/20 dark:bg-slate-900/50 dark:shadow-none">
             <p className="text-[11px] uppercase tracking-widest text-slate-500">Shift Snapshot</p>
-            <p className="mt-1 text-lg font-bold text-white">
+            <p className="mt-1 text-lg font-bold text-slate-900 dark:text-white">
               {new Date().toLocaleString("en-BD", {
                 weekday: "long",
                 day: "2-digit",
@@ -152,48 +152,48 @@ export default function SupportAgentDashboardPage() {
       <section>
         <div className="mb-3 flex items-center gap-2">
           <Clock className="h-4 w-4 text-cyan-400" />
-          <h3 className="text-sm font-semibold text-white">Quick Access</h3>
+          <h3 className="text-sm font-semibold text-slate-900 dark:text-white">Quick Access</h3>
         </div>
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           {quickLinks.map((item) => (
             <Link
               key={item.href}
               href={item.href}
-              className="rounded-2xl border border-slate-700/50 bg-slate-800/35 p-4 transition-all hover:-translate-y-0.5 hover:border-cyan-500/30 hover:bg-slate-800/60"
+              className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition-all hover:-translate-y-0.5 hover:border-cyan-300 hover:bg-cyan-50 dark:border-slate-700/50 dark:bg-slate-800/35 dark:shadow-none dark:hover:border-cyan-500/30 dark:hover:bg-slate-800/60"
             >
               <item.icon className={`h-5 w-5 ${item.accent}`} />
-              <p className="mt-3 text-sm font-semibold text-white">{item.label}</p>
+              <p className="mt-3 text-sm font-semibold text-slate-900 dark:text-white">{item.label}</p>
             </Link>
           ))}
         </div>
       </section>
 
       <section className="grid gap-4 lg:grid-cols-2">
-        <div className="rounded-2xl border border-slate-700/50 bg-slate-800/35 p-5">
+        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700/50 dark:bg-slate-800/35 dark:shadow-none">
           <div className="flex items-center gap-2">
             <Headphones className="h-4 w-4 text-fuchsia-400" />
-            <h3 className="text-sm font-semibold text-white">Live Chat Focus</h3>
+            <h3 className="text-sm font-semibold text-slate-900 dark:text-white">Live Chat Focus</h3>
           </div>
-          <p className="mt-3 text-sm text-slate-300">
+          <p className="mt-3 text-sm text-slate-600 dark:text-slate-300">
             {waitingChats > 0
               ? `${waitingChats} customer conversation${waitingChats === 1 ? "" : "s"} waiting for pickup right now.`
               : "No waiting conversation right now."}
           </p>
           <Link
             href="/agent/chat"
-            className="mt-4 inline-flex items-center gap-2 rounded-xl bg-fuchsia-500/15 px-4 py-2 text-sm font-medium text-fuchsia-300"
+            className="mt-4 inline-flex items-center gap-2 rounded-xl bg-fuchsia-100 px-4 py-2 text-sm font-medium text-fuchsia-700 dark:bg-fuchsia-500/15 dark:text-fuchsia-300"
           >
             <MessageSquare className="h-4 w-4" />
             Open live chat
           </Link>
         </div>
 
-        <div className="rounded-2xl border border-slate-700/50 bg-slate-800/35 p-5">
+        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700/50 dark:bg-slate-800/35 dark:shadow-none">
           <div className="flex items-center gap-2">
             <ShieldCheck className="h-4 w-4 text-yellow-400" />
-            <h3 className="text-sm font-semibold text-white">Support Notes</h3>
+            <h3 className="text-sm font-semibold text-slate-900 dark:text-white">Support Notes</h3>
           </div>
-          <ul className="mt-3 space-y-2 text-sm text-slate-300">
+          <ul className="mt-3 space-y-2 text-sm text-slate-600 dark:text-slate-300">
             <li>Thai Lottery and Kalyan allowed tools are exposed in the sidebar.</li>
             <li>Restricted actions like result update, play edit, and delete flows are intentionally hidden.</li>
             <li>First login password reset continues to use the existing forced-password flow.</li>

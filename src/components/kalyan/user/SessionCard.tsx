@@ -65,8 +65,8 @@ const STATE_CONFIG: Record<
   }
 > = {
   OPEN: {
-    card: "cursor-pointer border-green-500/50 bg-gradient-to-br from-green-900/60 via-green-950/50 to-slate-900/80 shadow-[0_4px_24px_rgba(34,197,94,0.18)] hover:-translate-y-0.5 hover:border-green-400/70 hover:shadow-[0_14px_36px_rgba(34,197,94,0.28)]",
-    clockColor: "text-green-300",
+    card: "cursor-pointer border-emerald-200 bg-gradient-to-br from-white via-emerald-50 to-green-100 shadow-[0_12px_30px_rgba(16,185,129,0.16)] hover:-translate-y-0.5 hover:border-emerald-400 hover:shadow-[0_18px_42px_rgba(16,185,129,0.24)] dark:border-green-500/50 dark:from-green-900/60 dark:via-green-950/50 dark:to-slate-900/80 dark:shadow-[0_4px_24px_rgba(34,197,94,0.18)] dark:hover:border-green-400/70 dark:hover:shadow-[0_14px_36px_rgba(34,197,94,0.28)]",
+    clockColor: "text-emerald-600 dark:text-green-300",
     actionNode: ({ onClick }) => (
       <button
         onClick={(e) => {
@@ -81,36 +81,36 @@ const STATE_CONFIG: Record<
     ),
   },
   CANCELLED: {
-    card: "cursor-not-allowed border-rose-500/30 bg-gradient-to-br from-slate-900/90 via-slate-800/70 to-slate-900/90 opacity-70",
-    clockColor: "text-rose-400/60",
+    card: "cursor-not-allowed border-rose-200 bg-gradient-to-br from-white via-rose-50 to-slate-100 opacity-80 shadow-[0_10px_26px_rgba(244,63,94,0.10)] dark:border-rose-500/30 dark:from-slate-900/90 dark:via-slate-800/70 dark:to-slate-900/90",
+    clockColor: "text-rose-500/80 dark:text-rose-400/60",
     badge: (
-      <span className="inline-flex items-center gap-1 rounded-full border border-rose-500/40 bg-rose-500/15 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-widest text-rose-300">
+      <span className="inline-flex items-center gap-1 rounded-full border border-rose-300 bg-rose-100 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-widest text-rose-700 dark:border-rose-500/40 dark:bg-rose-500/15 dark:text-rose-300">
         <Ban className="h-3 w-3" />
         Cancelled
       </span>
     ),
     actionNode: () => (
-      <div className="mt-auto flex w-full cursor-not-allowed items-center justify-center gap-1.5 rounded-xl border border-rose-500/30 bg-slate-800/60 py-2 text-[11px] font-semibold text-rose-300/70">
+      <div className="mt-auto flex w-full cursor-not-allowed items-center justify-center gap-1.5 rounded-xl border border-rose-200 bg-rose-50 py-2 text-[11px] font-semibold text-rose-700 dark:border-rose-500/30 dark:bg-slate-800/60 dark:text-rose-300/70">
         <Ban className="h-3.5 w-3.5" />
         CANCELLED
       </div>
     ),
   },
   DAY_OFF: {
-    card: "cursor-not-allowed border-red-500/40 bg-gradient-to-br from-red-900/55 via-red-950/45 to-slate-900/80 shadow-[0_4px_18px_rgba(239,68,68,0.18)]",
-    clockColor: "text-red-300",
+    card: "cursor-not-allowed border-red-200 bg-gradient-to-br from-white via-red-50 to-orange-50 shadow-[0_10px_26px_rgba(239,68,68,0.10)] dark:border-red-500/40 dark:from-red-900/55 dark:via-red-950/45 dark:to-slate-900/80 dark:shadow-[0_4px_18px_rgba(239,68,68,0.18)]",
+    clockColor: "text-red-600 dark:text-red-300",
     actionNode: () => (
-      <div className="mt-auto flex w-full cursor-not-allowed items-center justify-center gap-1.5 rounded-xl border border-red-500/40 bg-red-500/20 py-2 text-[11px] font-semibold text-red-200">
+      <div className="mt-auto flex w-full cursor-not-allowed items-center justify-center gap-1.5 rounded-xl border border-red-200 bg-red-100 py-2 text-[11px] font-semibold text-red-700 dark:border-red-500/40 dark:bg-red-500/20 dark:text-red-200">
         <CircleSlash className="h-3.5 w-3.5" />
         DAY OFF
       </div>
     ),
   },
   TIME_OVER: {
-    card: "cursor-not-allowed border-red-500/40 bg-gradient-to-br from-red-900/55 via-red-950/45 to-slate-900/80 shadow-[0_4px_18px_rgba(239,68,68,0.18)]",
-    clockColor: "text-red-300",
+    card: "cursor-not-allowed border-red-200 bg-gradient-to-br from-white via-red-50 to-orange-50 shadow-[0_10px_26px_rgba(239,68,68,0.10)] dark:border-red-500/40 dark:from-red-900/55 dark:via-red-950/45 dark:to-slate-900/80 dark:shadow-[0_4px_18px_rgba(239,68,68,0.18)]",
+    clockColor: "text-red-600 dark:text-red-300",
     actionNode: () => (
-      <div className="mt-auto flex w-full cursor-not-allowed items-center justify-center gap-1.5 rounded-xl border border-red-500/40 bg-red-500/20 py-2 text-[11px] font-semibold text-red-200">
+      <div className="mt-auto flex w-full cursor-not-allowed items-center justify-center gap-1.5 rounded-xl border border-red-200 bg-red-100 py-2 text-[11px] font-semibold text-red-700 dark:border-red-500/40 dark:bg-red-500/20 dark:text-red-200">
         <TimerOff className="h-3.5 w-3.5" />
         TIME OVER
       </div>
@@ -139,8 +139,8 @@ export function SessionCard({
 
   const sessionBadgeClass =
     sessionType === "OPEN"
-      ? "border-green-500/50 bg-green-500/20 text-green-300"
-      : "border-red-500/50 bg-red-500/20 text-red-300";
+      ? "border-emerald-300 bg-emerald-100 text-emerald-700 dark:border-green-500/50 dark:bg-green-500/20 dark:text-green-300"
+      : "border-rose-300 bg-rose-100 text-rose-700 dark:border-red-500/50 dark:bg-red-500/20 dark:text-red-300";
 
   return (
     <div
@@ -157,7 +157,7 @@ export function SessionCard({
       className={`flex flex-col gap-3 rounded-2xl border p-3.5 transition-all duration-300 ${config.card}`}
     >
       <div className="flex flex-col items-center gap-1.5">
-        <p className="text-center text-[16px] font-extrabold leading-snug tracking-[0.01em] text-white">
+        <p className="text-center text-[16px] font-extrabold leading-snug tracking-[0.01em] text-slate-950 dark:text-white">
           {title}
         </p>
 
@@ -173,11 +173,11 @@ export function SessionCard({
       <div className="flex items-center justify-center gap-2">
         <Clock className={`h-3.5 w-3.5 shrink-0 ${config.clockColor}`} />
         {timing?.closeTime ? (
-          <span className="text-base font-black text-white">
+          <span className="text-base font-black text-slate-950 dark:text-white">
             {formatLocalTime(timing.closeTime, currentDate)}
           </span>
         ) : (
-          <span className="text-slate-400">-</span>
+          <span className="text-slate-500 dark:text-slate-400">-</span>
         )}
       </div>
 

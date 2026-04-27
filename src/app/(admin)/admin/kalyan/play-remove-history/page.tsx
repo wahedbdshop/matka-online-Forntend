@@ -99,7 +99,9 @@ export default function KalyanPlayRemoveHistoryPage() {
 
     const sessionLabel = sessionType === "CLOSE" ? "Close" : "Open";
     const sessionClassName =
-      sessionType === "CLOSE" ? "text-rose-400" : "text-emerald-400";
+      sessionType === "CLOSE"
+        ? "text-rose-700 dark:text-rose-400"
+        : "text-emerald-700 dark:text-emerald-400";
 
     return (
       <>
@@ -196,28 +198,28 @@ export default function KalyanPlayRemoveHistoryPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-rose-500/15">
-            <Trash2 className="h-5 w-5 text-rose-400" />
+          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-rose-100 dark:bg-rose-500/15">
+            <Trash2 className="h-5 w-5 text-rose-600 dark:text-rose-400" />
           </div>
           <div>
-            <h1 className="text-xl font-bold text-white">
+            <h1 className="text-xl font-bold text-slate-950 dark:text-white">
               Play Remove History
             </h1>
-            <p className="text-xs text-slate-400">
+            <p className="text-xs text-slate-500 dark:text-slate-400">
               Log of removed entry slips
             </p>
           </div>
         </div>
-        <span className="rounded-full border border-rose-500/30 bg-rose-500/10 px-3 py-1 text-xs font-semibold text-rose-400">
+        <span className="rounded-full border border-rose-200 bg-rose-50 px-3 py-1 text-xs font-semibold text-rose-700 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-400">
           {total} Records
         </span>
       </div>
 
       {/* Table */}
-      <div className="rounded-xl border border-slate-700/80 bg-slate-800/55 overflow-x-auto shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]">
+      <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-700/80 dark:bg-slate-800/55 dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-slate-700/80 text-center">
+            <tr className="border-b border-slate-200 bg-slate-50 text-center dark:border-slate-700/80 dark:bg-transparent">
               {[
                 "SI",
                 "User Name",
@@ -228,7 +230,7 @@ export default function KalyanPlayRemoveHistoryPage() {
               ].map((h) => (
                 <th
                   key={h}
-                  className="border-r border-slate-700/50 px-4 py-3 text-center text-xs font-medium text-slate-400 last:border-r-0"
+                  className="border-r border-slate-200 px-4 py-3 text-center text-xs font-medium uppercase tracking-[0.16em] text-slate-500 last:border-r-0 dark:border-slate-700/50 dark:text-slate-400"
                 >
                   {h}
                 </th>
@@ -238,10 +240,10 @@ export default function KalyanPlayRemoveHistoryPage() {
           <tbody>
             {isLoading ? (
               Array.from({ length: 6 }).map((_, i) => (
-                <tr key={i} className="border-b border-slate-700/50">
+                <tr key={i} className="border-b border-slate-200 dark:border-slate-700/50">
                   {Array.from({ length: 6 }).map((_, j) => (
-                    <td key={j} className="border-r border-slate-700/40 px-4 py-3 text-center last:border-r-0">
-                      <div className="h-4 w-20 animate-pulse rounded bg-slate-700" />
+                    <td key={j} className="border-r border-slate-200 px-4 py-3 text-center last:border-r-0 dark:border-slate-700/40">
+                      <div className="h-4 w-20 animate-pulse rounded bg-slate-200 dark:bg-slate-700" />
                     </td>
                   ))}
                 </tr>
@@ -250,10 +252,10 @@ export default function KalyanPlayRemoveHistoryPage() {
               <tr>
                 <td
                   colSpan={6}
-                  className="px-4 py-10 text-center text-slate-500"
+                  className="px-4 py-10 text-center text-slate-500 dark:text-slate-500"
                 >
                   <div className="flex flex-col items-center gap-2">
-                    <Trash2 className="h-8 w-8 text-slate-600" />
+                    <Trash2 className="h-8 w-8 text-slate-300 dark:text-slate-600" />
                     <p>No remove history found</p>
                   </div>
                 </td>
@@ -262,29 +264,29 @@ export default function KalyanPlayRemoveHistoryPage() {
               rows.map((row: any, idx: number) => (
                 <tr
                   key={row.id ?? idx}
-                  className="border-b border-slate-700/50 hover:bg-slate-700/20 transition-colors"
+                  className="border-b border-slate-200 transition-colors hover:bg-slate-50 dark:border-slate-700/50 dark:hover:bg-slate-700/20"
                 >
-                  <td className="border-r border-slate-700/40 px-4 py-3 text-center text-xs text-slate-500 last:border-r-0">
+                  <td className="border-r border-slate-200 px-4 py-3 text-center text-xs text-slate-500 last:border-r-0 dark:border-slate-700/40 dark:text-slate-500">
                     {(page - 1) * LIMIT + idx + 1}
                   </td>
-                  <td className="border-r border-slate-700/40 px-4 py-3 text-center last:border-r-0">
-                    <p className="text-xs font-medium text-white">
+                  <td className="border-r border-slate-200 px-4 py-3 text-center last:border-r-0 dark:border-slate-700/40">
+                    <p className="text-xs font-medium text-slate-900 dark:text-white">
                       {row.user?.name ?? row.userId ?? "-"}
                     </p>
-                    <p className="text-[10px] text-slate-500">
+                    <p className="text-[10px] text-slate-500 dark:text-slate-500">
                       @{row.user?.username ?? "-"}
                     </p>
                   </td>
-                  <td className="border-r border-slate-700/40 px-4 py-3 text-center text-xs font-medium text-white last:border-r-0">
+                  <td className="border-r border-slate-200 px-4 py-3 text-center text-xs font-medium text-slate-900 last:border-r-0 dark:border-slate-700/40 dark:text-white">
                     {renderGameName(row)}
                   </td>
-                  <td className="border-r border-slate-700/40 px-4 py-3 text-center font-mono text-xs text-rose-300 last:border-r-0">
+                  <td className="border-r border-slate-200 px-4 py-3 text-center font-mono text-xs text-rose-700 last:border-r-0 dark:border-slate-700/40 dark:text-rose-300">
                     {getRemovedGameLabel(row)}
                   </td>
-                  <td className="border-r border-slate-700/40 px-4 py-3 text-center text-xs font-semibold text-white last:border-r-0">
+                  <td className="border-r border-slate-200 px-4 py-3 text-center text-xs font-semibold text-slate-900 last:border-r-0 dark:border-slate-700/40 dark:text-white">
                     Rs. {getRemovedAmountLabel(row)}
                   </td>
-                  <td className="border-r border-slate-700/40 px-4 py-3 text-center text-xs text-slate-400 last:border-r-0">
+                  <td className="border-r border-slate-200 px-4 py-3 text-center text-xs text-slate-500 last:border-r-0 dark:border-slate-700/40 dark:text-slate-400">
                     {formatDate(row.createdAt)}
                   </td>
                 </tr>
@@ -300,17 +302,17 @@ export default function KalyanPlayRemoveHistoryPage() {
           <button
             disabled={page <= 1}
             onClick={() => setPage((p) => p - 1)}
-            className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-1.5 text-xs text-slate-300 disabled:opacity-40"
+            className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-600 shadow-sm disabled:opacity-40 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300"
           >
             Prev
           </button>
-          <p className="text-xs text-slate-500">
+          <p className="text-xs text-slate-500 dark:text-slate-500">
             {page} / {totalPages}
           </p>
           <button
             disabled={page >= totalPages}
             onClick={() => setPage((p) => p + 1)}
-            className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-1.5 text-xs text-slate-300 disabled:opacity-40"
+            className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-600 shadow-sm disabled:opacity-40 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300"
           >
             Next
           </button>

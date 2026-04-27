@@ -133,7 +133,9 @@ export default function KalyanPlayCancelHistoryPage() {
 
     const sessionLabel = sessionType === "CLOSE" ? "Close" : "Open";
     const sessionClassName =
-      sessionType === "CLOSE" ? "text-rose-400" : "text-emerald-400";
+      sessionType === "CLOSE"
+        ? "text-rose-700 dark:text-rose-400"
+        : "text-emerald-700 dark:text-emerald-400";
 
     return (
       <>
@@ -179,30 +181,32 @@ export default function KalyanPlayCancelHistoryPage() {
     <div className="space-y-5">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-red-500/15">
-            <XCircle className="h-5 w-5 text-red-400" />
+          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-red-100 dark:bg-red-500/15">
+            <XCircle className="h-5 w-5 text-red-600 dark:text-red-400" />
           </div>
           <div>
-            <h1 className="text-xl font-bold text-white">Play Cancel History</h1>
-            <p className="text-xs text-slate-400">
+            <h1 className="text-xl font-bold text-slate-950 dark:text-white">
+              Play Cancel History
+            </h1>
+            <p className="text-xs text-slate-500 dark:text-slate-400">
               Log of cancelled entry slips
             </p>
           </div>
         </div>
-        <span className="rounded-full border border-red-500/30 bg-red-500/10 px-3 py-1 text-xs font-semibold text-red-400">
+        <span className="rounded-full border border-red-200 bg-red-50 px-3 py-1 text-xs font-semibold text-red-700 dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-400">
           {total} Records
         </span>
       </div>
 
-      <div className="overflow-x-auto rounded-xl border border-slate-700/80 bg-slate-800/55 shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]">
+      <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-700/80 dark:bg-slate-800/55 dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-slate-700/80 text-center">
+            <tr className="border-b border-slate-200 bg-slate-50 text-center dark:border-slate-700/80 dark:bg-transparent">
               {["SI", "User Name", "Games Name", "Cancel Games", "Amount", "Date"].map(
                 (header) => (
                   <th
                     key={header}
-                    className="border-r border-slate-700/50 px-4 py-3 text-center text-xs font-medium text-slate-400 last:border-r-0"
+                    className="border-r border-slate-200 px-4 py-3 text-center text-xs font-medium uppercase tracking-[0.16em] text-slate-500 last:border-r-0 dark:border-slate-700/50 dark:text-slate-400"
                   >
                     {header}
                   </th>
@@ -213,22 +217,22 @@ export default function KalyanPlayCancelHistoryPage() {
           <tbody>
             {isLoading ? (
               Array.from({ length: 6 }).map((_, rowIndex) => (
-                <tr key={rowIndex} className="border-b border-slate-700/50">
+                <tr key={rowIndex} className="border-b border-slate-200 dark:border-slate-700/50">
                   {Array.from({ length: 6 }).map((_, colIndex) => (
                     <td
                       key={colIndex}
-                      className="border-r border-slate-700/40 px-4 py-3 text-center last:border-r-0"
+                      className="border-r border-slate-200 px-4 py-3 text-center last:border-r-0 dark:border-slate-700/40"
                     >
-                      <div className="h-4 w-20 animate-pulse rounded bg-slate-700" />
+                      <div className="h-4 w-20 animate-pulse rounded bg-slate-200 dark:bg-slate-700" />
                     </td>
                   ))}
                 </tr>
               ))
             ) : rows.length === 0 ? (
               <tr>
-                <td colSpan={6} className="px-4 py-10 text-center text-slate-500">
+                <td colSpan={6} className="px-4 py-10 text-center text-slate-500 dark:text-slate-500">
                   <div className="flex flex-col items-center gap-2">
-                    <XCircle className="h-8 w-8 text-slate-600" />
+                    <XCircle className="h-8 w-8 text-slate-300 dark:text-slate-600" />
                     <p>No cancel history found</p>
                   </div>
                 </td>
@@ -237,29 +241,29 @@ export default function KalyanPlayCancelHistoryPage() {
               rows.map((row: any, idx: number) => (
                 <tr
                   key={row.id ?? idx}
-                  className="border-b border-slate-700/50 transition-colors hover:bg-slate-700/20"
+                  className="border-b border-slate-200 transition-colors hover:bg-slate-50 dark:border-slate-700/50 dark:hover:bg-slate-700/20"
                 >
-                  <td className="border-r border-slate-700/40 px-4 py-3 text-center text-xs text-slate-500 last:border-r-0">
+                  <td className="border-r border-slate-200 px-4 py-3 text-center text-xs text-slate-500 last:border-r-0 dark:border-slate-700/40 dark:text-slate-500">
                     {(page - 1) * LIMIT + idx + 1}
                   </td>
-                  <td className="border-r border-slate-700/40 px-4 py-3 text-center last:border-r-0">
-                    <p className="text-xs font-medium text-white">
+                  <td className="border-r border-slate-200 px-4 py-3 text-center last:border-r-0 dark:border-slate-700/40">
+                    <p className="text-xs font-medium text-slate-900 dark:text-white">
                       {row.user?.name ?? row.userId ?? "-"}
                     </p>
-                    <p className="text-[10px] text-slate-500">
+                    <p className="text-[10px] text-slate-500 dark:text-slate-500">
                       @{row.user?.username ?? "-"}
                     </p>
                   </td>
-                  <td className="border-r border-slate-700/40 px-4 py-3 text-center text-xs font-medium text-white last:border-r-0">
+                  <td className="border-r border-slate-200 px-4 py-3 text-center text-xs font-medium text-slate-900 last:border-r-0 dark:border-slate-700/40 dark:text-white">
                     {renderGameName(row)}
                   </td>
-                  <td className="border-r border-slate-700/40 px-4 py-3 text-center font-mono text-xs text-red-300 last:border-r-0">
+                  <td className="border-r border-slate-200 px-4 py-3 text-center font-mono text-xs text-red-700 last:border-r-0 dark:border-slate-700/40 dark:text-red-300">
                     {getCancelledGameLabel(row)}
                   </td>
-                  <td className="border-r border-slate-700/40 px-4 py-3 text-center text-xs font-semibold text-white last:border-r-0">
+                  <td className="border-r border-slate-200 px-4 py-3 text-center text-xs font-semibold text-slate-900 last:border-r-0 dark:border-slate-700/40 dark:text-white">
                     Rs. {getCancelledAmountLabel(row)}
                   </td>
-                  <td className="border-r border-slate-700/40 px-4 py-3 text-center text-xs text-slate-400 last:border-r-0">
+                  <td className="border-r border-slate-200 px-4 py-3 text-center text-xs text-slate-500 last:border-r-0 dark:border-slate-700/40 dark:text-slate-400">
                     {formatDate(row.createdAt)}
                   </td>
                 </tr>
@@ -274,17 +278,17 @@ export default function KalyanPlayCancelHistoryPage() {
           <button
             disabled={page <= 1}
             onClick={() => setPage((currentPage) => currentPage - 1)}
-            className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-1.5 text-xs text-slate-300 disabled:opacity-40"
+            className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-600 shadow-sm disabled:opacity-40 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300"
           >
             Prev
           </button>
-          <p className="text-xs text-slate-500">
+          <p className="text-xs text-slate-500 dark:text-slate-500">
             {page} / {totalPages}
           </p>
           <button
             disabled={page >= totalPages}
             onClick={() => setPage((currentPage) => currentPage + 1)}
-            className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-1.5 text-xs text-slate-300 disabled:opacity-40"
+            className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-600 shadow-sm disabled:opacity-40 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300"
           >
             Next
           </button>

@@ -25,6 +25,7 @@ import { AdminService } from "@/services/admin.service";
 import { UserService } from "@/services/user.service"; // profile fetch
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/store/auth.store";
+import { useLanguage } from "@/providers/language-provider";
 
 // ─── Types ────────────────────────────────────────────────────
 type Step = "method" | "amount" | "details";
@@ -251,8 +252,32 @@ function AccountCard({
 
 // ─── Main Component ───────────────────────────────────────────
 export default function WithdrawPage() {
+  const { language } = useLanguage();
   const queryClient = useQueryClient();
   const updateUser = useAuthStore((state) => state.updateUser);
+  const text = {
+    en: {
+      newWithdrawal: "New Withdrawal",
+      history: "History",
+      noWithdrawals: "No withdrawals yet",
+      detail: "Withdrawal Detail",
+      close: "Close",
+    },
+    bn: {
+      newWithdrawal: "নতুন উইথড্র",
+      history: "হিস্টোরি",
+      noWithdrawals: "এখনও কোনো উইথড্র নেই",
+      detail: "উইথড্র বিস্তারিত",
+      close: "বন্ধ করুন",
+    },
+    hi: {
+      newWithdrawal: "नया निकासी अनुरोध",
+      history: "हिस्ट्री",
+      noWithdrawals: "अभी कोई निकासी नहीं है",
+      detail: "निकासी विवरण",
+      close: "बंद करें",
+    },
+  }[language];
 
   // ── UI state ──────────────────────────────────────────────
   const [tab, setTab] = useState<"new" | "history">("new");
@@ -654,7 +679,7 @@ export default function WithdrawPage() {
                 : "text-slate-400 hover:text-white",
             )}
           >
-            {t === "new" ? "New Withdrawal" : "History"}
+            {t === "new" ? text.newWithdrawal : text.history}
           </button>
         ))}
       </div>
@@ -1420,7 +1445,7 @@ export default function WithdrawPage() {
               <div className="w-14 h-14 rounded-2xl bg-slate-700/50 border border-slate-700 flex items-center justify-center text-2xl">
                 📭
               </div>
-              <p className="text-slate-500 text-sm">No withdrawals yet</p>
+              <p className="text-slate-500 text-sm">{text.noWithdrawals}</p>
             </div>
           ) : (
             withdrawals.map((w: any) => {
@@ -1510,7 +1535,7 @@ export default function WithdrawPage() {
           <div className="w-full max-w-sm rounded-[24px] border border-slate-700 bg-slate-900 p-5 space-y-3 my-auto">
             <div className="flex items-center justify-between">
               <h2 className="text-sm font-bold text-white">
-                Withdrawal Detail
+                {text.detail}
               </h2>
               <button
                 onClick={() => setDetailItem(null)}
@@ -1573,7 +1598,7 @@ export default function WithdrawPage() {
               onClick={() => setDetailItem(null)}
               className="w-full rounded-xl border border-slate-600 bg-slate-800 py-2 text-sm text-slate-300 hover:bg-slate-700"
             >
-              Close
+              {text.close}
             </button>
           </div>
         </div>

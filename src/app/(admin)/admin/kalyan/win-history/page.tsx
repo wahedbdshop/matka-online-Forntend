@@ -1,16 +1,18 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import { Suspense, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Search, Trophy } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import { KalyanAdminService } from "@/services/kalyanAdmin.service";
 import { PLAY_TYPE_LABEL, ENTRY_STATUS_STYLE, type PlayType } from "@/types/kalyan";
 import {
+  getKalyanMarketBaseName,
   getKalyanMarketOptionLabel,
   getKalyanMarketSessionLabel,
 } from "@/lib/kalyan-market-display";
+import { getBangladeshDateISO } from "@/lib/timezone";
 
 const LIMIT = 20;
 const MARKET_LIST_LIMIT = 1000;
@@ -123,21 +125,73 @@ function sortEntriesByNewest(items: any[]) {
   });
 }
 
+function normalizeSearchTerm(value: unknown) {
+  return String(value ?? "").trim().toLowerCase();
+}
+
+function matchesDateFilter(value: unknown, dateFilter: string) {
+  if (!dateFilter) return true;
+  if (!value) return false;
+
+  const parsed = new Date(String(value));
+  if (Number.isNaN(parsed.getTime())) return false;
+
+  return getBangladeshDateISO(parsed) === dateFilter;
+}
+
+function matchesUserSearch(entry: any, searchTerm: string) {
+  if (!searchTerm) return true;
+
+  const candidates = [
+    entry?.user?.name,
+    entry?.user?.username,
+    entry?.userName,
+    entry?.username,
+    entry?.name,
+  ];
+
+  return candidates.some((candidate) =>
+    normalizeSearchTerm(candidate).includes(searchTerm),
+  );
+}
+
+function isCloseFinalSettlementRow(sessionType: "OPEN" | "CLOSE" | undefined, playType: unknown) {
+  const normalizedPlayType = String(playType ?? "").toUpperCase();
+  return sessionType === "CLOSE" || normalizedPlayType === "JORI";
+}
+
 function KalyanWinHistoryPageContent() {
   const searchParams = useSearchParams();
+  const settlementView = searchParams.get("settlementView") ?? "";
+  const resultAddedAt = searchParams.get("resultAddedAt") ?? "";
   const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState("");
   const [marketFilter, setMarketFilter] = useState(
     () => searchParams.get("marketId") ?? "",
   );
   const [sessionFilter, setSessionFilter] = useState<"" | "OPEN" | "CLOSE">(() => {
+    if (searchParams.get("settlementView") === "close-final") {
+      return "";
+    }
     const sessionType = String(searchParams.get("sessionType") ?? "").toUpperCase();
     return sessionType === "OPEN" || sessionType === "CLOSE" ? sessionType : "";
   });
   const [playTypeFilter, setPlayTypeFilter] = useState("");
-  const [dateFilter, setDateFilter] = useState(() => searchParams.get("date") ?? "");
+  const [dateFilter, setDateFilter] = useState(
+    () => searchParams.get("date") ?? getBangladeshDateISO(),
+  );
+  const [settlementRefreshActive, setSettlementRefreshActive] = useState(
+    () => !!searchParams.get("resultAddedAt"),
+  );
   const [page, setPage] = useState(1);
   const [detailEntry, setDetailEntry] = useState<any>(null);
+
+  useEffect(() => {
+    if (resultAddedAt) {
+      setSettlementRefreshActive(true);
+      setPage(1);
+    }
+  }, [resultAddedAt]);
 
   const { data: marketsData } = useQuery({
     queryKey: ["kalyan-markets-all"],
@@ -148,6 +202,34 @@ function KalyanWinHistoryPageContent() {
   const uniqueMarkets = Array.from(
     new Map(markets.map((market: any) => [String(market?.id ?? ""), market])).values(),
   ).filter((market: any) => String(market?.id ?? "").trim().length > 0);
+  const closeFinalMarketIds = useMemo(() => {
+    if (settlementView !== "close-final" || !marketFilter) {
+      return [];
+    }
+
+    const selectedMarket = uniqueMarkets.find(
+      (market: any) => String(market?.id ?? "") === marketFilter,
+    );
+    const selectedBaseName = getKalyanMarketBaseName(selectedMarket).toLowerCase();
+
+    if (!selectedBaseName) {
+      return marketFilter ? [marketFilter] : [];
+    }
+
+    const relatedMarketIds = uniqueMarkets
+      .filter(
+        (market: any) =>
+          getKalyanMarketBaseName(market).toLowerCase() === selectedBaseName,
+      )
+      .map((market: any) => String(market.id));
+
+    return relatedMarketIds.length > 0 ? relatedMarketIds : [marketFilter];
+  }, [marketFilter, settlementView, uniqueMarkets]);
+  const closeFinalMarketIdsKey = closeFinalMarketIds.join("|");
+  const usingRelatedMarketDataset =
+    settlementView === "close-final" &&
+    marketFilter &&
+    closeFinalMarketIds.length > 1;
   const marketOptions = markets.flatMap((market: any) => {
     const explicitSessionType = resolveMarketSessionType(market);
 
@@ -195,6 +277,7 @@ function KalyanWinHistoryPageContent() {
       playTypeFilter,
       dateFilter,
       page,
+      resultAddedAt,
     ],
     queryFn: () =>
       KalyanAdminService.getAdminEntries({
@@ -206,9 +289,11 @@ function KalyanWinHistoryPageContent() {
         page,
         limit: LIMIT,
       }),
-    enabled: !!marketFilter || marketOptions.length === 0,
+    enabled:
+      !usingRelatedMarketDataset && (!!marketFilter || marketOptions.length === 0),
     staleTime: 0,
     refetchOnMount: "always",
+    refetchInterval: settlementRefreshActive ? 1500 : false,
   });
 
   const { data: allMarketsData, isLoading: loadingAllMarkets } = useQuery({
@@ -217,15 +302,21 @@ function KalyanWinHistoryPageContent() {
       search,
       playTypeFilter,
       dateFilter,
-      uniqueMarkets.map((market: any) => market.id).join("|"),
+      resultAddedAt,
+      usingRelatedMarketDataset
+        ? closeFinalMarketIdsKey
+        : uniqueMarkets.map((market: any) => market.id).join("|"),
     ],
-    enabled: !marketFilter && uniqueMarkets.length > 0,
+    enabled:
+      usingRelatedMarketDataset ||
+      (!marketFilter && uniqueMarkets.length > 0),
+    refetchInterval: settlementRefreshActive ? 1500 : false,
     queryFn: async () => {
       const responses = await Promise.all(
-        uniqueMarkets.map((market: any) =>
+        (usingRelatedMarketDataset ? closeFinalMarketIds : uniqueMarkets.map((market: any) => market.id)).map((marketId: string) =>
           KalyanAdminService.getAdminEntries({
             search: search || undefined,
-            marketId: market.id,
+            marketId,
             playType: playTypeFilter || undefined,
             date: dateFilter || undefined,
             page: 1,
@@ -258,8 +349,10 @@ function KalyanWinHistoryPageContent() {
       search,
       playTypeFilter,
       dateFilter,
+      resultAddedAt,
     ],
     enabled: !marketFilter,
+    refetchInterval: settlementRefreshActive ? 1500 : false,
     queryFn: async () => {
       const response = await KalyanAdminService.getAdminEntries({
         search: search || undefined,
@@ -277,23 +370,27 @@ function KalyanWinHistoryPageContent() {
     },
   });
 
-  const usingAllMarketsDataset = !marketFilter;
+  const usingAllMarketsDataset = !marketFilter || usingRelatedMarketDataset;
   const entriesLoading = usingAllMarketsDataset
-    ? loadingAllMarkets || loadingAllMarketsBase
+    ? loadingAllMarkets || (!usingRelatedMarketDataset && loadingAllMarketsBase)
     : isLoading;
   const mergedAllMarketEntries = usingAllMarketsDataset
     ? sortEntriesByNewest([
-        ...(allMarketsBaseData?.entries ?? []),
+        ...(!usingRelatedMarketDataset ? (allMarketsBaseData?.entries ?? []) : []),
         ...(allMarketsData?.entries ?? []),
       ]).filter(
         (entry, index, allEntries) =>
           allEntries.findIndex((candidate) => String(candidate?.id ?? "") === String(entry?.id ?? "")) === index,
       )
     : [];
+  const normalizedSearch = normalizeSearchTerm(search);
   const rawEntries: any[] = usingAllMarketsDataset
     ? mergedAllMarketEntries
     : extractEntryList(data);
-  const entries = rawEntries.filter((entry) => {
+  const searchedEntries = rawEntries.filter((entry) =>
+    matchesUserSearch(entry, normalizedSearch),
+  );
+  const entries = searchedEntries.filter((entry) => {
     const entryStatus = getOutcomeStatus(entry);
     const itemStatuses = Array.isArray(entry?.items)
       ? entry.items.map((item: any) => getOutcomeStatus(item))
@@ -302,7 +399,7 @@ function KalyanWinHistoryPageContent() {
     return entryStatus === "WON" || itemStatuses.some((status: string) => status === "WON");
   });
   const total = usingAllMarketsDataset
-    ? mergedAllMarketEntries.length
+    ? entries.length
     : data?.data?.total ?? entries.length;
   const totalPages = Math.max(1, Math.ceil(total / LIMIT));
 
@@ -312,16 +409,36 @@ function KalyanWinHistoryPageContent() {
         ? entries.slice((page - 1) * LIMIT, page * LIMIT)
         : entries)
         .filter((entry: any) => {
-          if (!sessionFilter) return true;
           const st = resolveSessionType(entry);
+          if (settlementView === "close-final") {
+            const entryPlayType = resolvePlayType(entry);
+            const entryHasCloseFinalOutcome =
+              isCloseFinalSettlementRow(st, entryPlayType) ||
+              (Array.isArray(entry?.items) ? entry.items.some((item: any) =>
+                isCloseFinalSettlementRow(
+                  resolveSessionType({ ...entry, sessionType: item?.sessionType ?? item?.session }),
+                  item?.playType,
+                ),
+              ) : false);
+            if (!entryHasCloseFinalOutcome) return false;
+          }
+          if (!sessionFilter) return true;
           return st === sessionFilter;
         })
         .flatMap((entry: any) => {
           const sessionType = resolveSessionType(entry);
           const items = (Array.isArray(entry?.items) ? entry.items : []).filter((item: any) => {
             const itemStatus = getOutcomeStatus(item);
+            const itemSessionType = resolveSessionType({
+              ...entry,
+              sessionType: item?.sessionType ?? item?.session ?? entry?.sessionType,
+              items: [item],
+            });
             return (
               itemStatus === "WON" &&
+              matchesDateFilter(item?.resultDate ?? entry?.resultDate ?? item?.createdAt ?? entry?.createdAt, dateFilter) &&
+              (settlementView !== "close-final" ||
+                isCloseFinalSettlementRow(itemSessionType, item?.playType || entry?.playType)) &&
               !isRemovedStatus(item?.gameStatus) &&
               !isRemovedStatus(item?.status) &&
               !isCancelledStatus(item?.gameStatus) &&
@@ -332,6 +449,15 @@ function KalyanWinHistoryPageContent() {
           if (items.length === 0) {
             const betAmount = Number(entry.totalAmount ?? 0);
             const playType = resolvePlayType(entry);
+            if (
+              settlementView === "close-final" &&
+              !isCloseFinalSettlementRow(sessionType, playType)
+            ) {
+              return [];
+            }
+            if (!matchesDateFilter(entry?.resultDate ?? entry?.createdAt, dateFilter)) {
+              return [];
+            }
             return [
               {
                 key: `${entry.id}-empty`,
@@ -377,8 +503,24 @@ function KalyanWinHistoryPageContent() {
 
           return String(right?.gameName ?? "").localeCompare(String(left?.gameName ?? ""));
         }),
-    [entries, page, rates, sessionFilter, usingAllMarketsDataset],
+    [dateFilter, entries, page, rates, sessionFilter, settlementView, usingAllMarketsDataset],
   );
+
+  useEffect(() => {
+    if (settlementRefreshActive && !entriesLoading && rows.length > 0) {
+      setSettlementRefreshActive(false);
+    }
+  }, [entriesLoading, rows.length, settlementRefreshActive]);
+
+  useEffect(() => {
+    if (!settlementRefreshActive) return;
+
+    const timeoutId = window.setTimeout(() => {
+      setSettlementRefreshActive(false);
+    }, 15000);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [settlementRefreshActive]);
 
   const formatDate = (value?: string) => {
     if (!value) return "-";
@@ -395,15 +537,15 @@ function KalyanWinHistoryPageContent() {
     <div className="space-y-5">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-yellow-500/15">
+          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-yellow-100 dark:bg-yellow-500/15">
             <Trophy className="h-5 w-5 text-yellow-400" />
           </div>
           <div>
-            <h1 className="text-xl font-bold text-white">Win History</h1>
-            <p className="text-xs text-slate-400">All winning Kalyan bets</p>
+            <h1 className="text-xl font-bold text-slate-950 dark:text-white">Win History</h1>
+            <p className="text-xs text-slate-500 dark:text-slate-400">All winning Kalyan bets</p>
           </div>
         </div>
-        <span className="rounded-full border border-yellow-500/30 bg-yellow-500/10 px-3 py-1 text-xs font-semibold text-yellow-400">
+        <span className="rounded-full border border-yellow-200 bg-yellow-50 px-3 py-1 text-xs font-semibold text-yellow-700 dark:border-yellow-500/30 dark:bg-yellow-500/10 dark:text-yellow-400">
           {total} Records
         </span>
       </div>
@@ -421,16 +563,16 @@ function KalyanWinHistoryPageContent() {
                 setPage(1);
               }
             }}
-            className="w-44 rounded-lg border border-slate-600 bg-slate-800 px-3 py-1.5 text-xs text-white outline-none placeholder:text-slate-500 focus:border-yellow-500"
+            className="w-44 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-900 outline-none placeholder:text-slate-400 focus:border-yellow-400 dark:border-slate-600 dark:bg-slate-800 dark:text-white dark:placeholder:text-slate-500 dark:focus:border-yellow-500"
           />
           <button
             onClick={() => {
               setSearch(searchInput);
               setPage(1);
             }}
-            className="rounded-lg border border-slate-600 bg-slate-700 px-2.5 hover:bg-slate-600"
+            className="rounded-lg border border-slate-200 bg-white px-2.5 hover:bg-slate-100 dark:border-slate-600 dark:bg-slate-700 dark:hover:bg-slate-600"
           >
-            <Search className="h-3.5 w-3.5 text-slate-300" />
+            <Search className="h-3.5 w-3.5 text-slate-500 dark:text-slate-300" />
           </button>
         </div>
 
@@ -442,7 +584,7 @@ function KalyanWinHistoryPageContent() {
             setSessionFilter((session as "" | "OPEN" | "CLOSE") || "");
             setPage(1);
           }}
-          className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-1.5 text-xs text-white outline-none"
+          className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-900 outline-none dark:border-slate-600 dark:bg-slate-800 dark:text-white"
         >
           <option value="">All Markets</option>
           {marketOptions.map((option) => (
@@ -461,7 +603,7 @@ function KalyanWinHistoryPageContent() {
             setPlayTypeFilter(e.target.value);
             setPage(1);
           }}
-          className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-1.5 text-xs text-white outline-none"
+          className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-900 outline-none dark:border-slate-600 dark:bg-slate-800 dark:text-white"
         >
           <option value="">All Types</option>
           {Object.entries(PLAY_TYPE_LABEL).map(([value, label]) => (
@@ -478,14 +620,14 @@ function KalyanWinHistoryPageContent() {
             setDateFilter(e.target.value);
             setPage(1);
           }}
-          className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-1.5 text-xs text-white outline-none"
+          className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-900 outline-none dark:border-slate-600 dark:bg-slate-800 dark:text-white"
         />
       </div>
 
-      <div className="rounded-xl border border-slate-700/80 bg-slate-800/55 overflow-x-auto shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]">
+      <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-700/80 dark:bg-slate-800/55 dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-slate-700/80 text-center">
+            <tr className="border-b border-slate-200 bg-slate-50 text-center dark:border-slate-700/80 dark:bg-transparent">
               {[
                 "SI.No",
                 "User Name",
@@ -499,7 +641,7 @@ function KalyanWinHistoryPageContent() {
               ].map((heading) => (
                 <th
                   key={heading}
-                  className="border-r border-slate-700/50 px-4 py-3 text-center text-xs font-medium text-slate-400 last:border-r-0"
+                  className="border-r border-slate-200 px-4 py-3 text-center text-xs font-medium text-slate-500 last:border-r-0 dark:border-slate-700/50 dark:text-slate-400"
                 >
                   {heading}
                 </th>
@@ -509,13 +651,13 @@ function KalyanWinHistoryPageContent() {
           <tbody>
             {entriesLoading ? (
               Array.from({ length: 8 }).map((_, rowIndex) => (
-                <tr key={rowIndex} className="border-b border-slate-700/50">
+                <tr key={rowIndex} className="border-b border-slate-200 dark:border-slate-700/50">
                   {Array.from({ length: 9 }).map((_, colIndex) => (
                     <td
                       key={colIndex}
-                      className="border-r border-slate-700/40 px-4 py-3 text-center last:border-r-0"
+                      className="border-r border-slate-200 px-4 py-3 text-center last:border-r-0 dark:border-slate-700/40"
                     >
-                      <div className="h-4 w-20 animate-pulse rounded bg-slate-700" />
+                      <div className="h-4 w-20 animate-pulse rounded bg-slate-200 dark:bg-slate-700" />
                     </td>
                   ))}
                 </tr>
@@ -531,15 +673,15 @@ function KalyanWinHistoryPageContent() {
                 <tr
                   key={row.key}
                   onClick={() => setDetailEntry(row.entry)}
-                  className="cursor-pointer border-b border-slate-700/50 transition-colors hover:bg-slate-700/20"
+                  className="cursor-pointer border-b border-slate-200 transition-colors hover:bg-slate-50 dark:border-slate-700/50 dark:hover:bg-slate-700/20"
                 >
-                  <td className="border-r border-slate-700/40 px-4 py-3 text-center text-xs text-slate-500 last:border-r-0">
+                  <td className="border-r border-slate-200 px-4 py-3 text-center text-xs text-slate-500 last:border-r-0 dark:border-slate-700/40">
                     {(page - 1) * LIMIT + index + 1}
                   </td>
-                  <td className="border-r border-slate-700/40 px-4 py-3 text-center text-xs font-medium text-white last:border-r-0">
+                  <td className="border-r border-slate-200 px-4 py-3 text-center text-xs font-medium text-slate-950 last:border-r-0 dark:border-slate-700/40 dark:text-white">
                     {row.userName}
                   </td>
-                  <td className="border-r border-slate-700/40 px-4 py-3 text-center text-xs text-slate-300 last:border-r-0">
+                  <td className="border-r border-slate-200 px-4 py-3 text-center text-xs text-slate-700 last:border-r-0 dark:border-slate-700/40 dark:text-slate-300">
                     {row.gameName}
                     {row.sessionType && (
                       <span className={`mt-0.5 block text-[10px] font-semibold uppercase tracking-wide ${row.sessionType === "OPEN" ? "text-emerald-400" : "text-rose-400"}`}>
@@ -547,26 +689,26 @@ function KalyanWinHistoryPageContent() {
                       </span>
                     )}
                   </td>
-                  <td className="border-r border-slate-700/40 px-4 py-3 text-center text-xs text-slate-300 last:border-r-0">
+                  <td className="border-r border-slate-200 px-4 py-3 text-center text-xs text-slate-700 last:border-r-0 dark:border-slate-700/40 dark:text-slate-300">
                     {row.category}
                   </td>
-                  <td className="border-r border-slate-700/40 px-4 py-3 text-center text-xs font-medium text-cyan-300 last:border-r-0">
+                  <td className="border-r border-slate-200 px-4 py-3 text-center text-xs font-medium text-cyan-700 last:border-r-0 dark:border-slate-700/40 dark:text-cyan-300">
                     {row.betNumber}
                   </td>
-                  <td className="border-r border-slate-700/40 px-4 py-3 text-center text-xs font-semibold text-white last:border-r-0">
+                  <td className="border-r border-slate-200 px-4 py-3 text-center text-xs font-semibold text-slate-950 last:border-r-0 dark:border-slate-700/40 dark:text-white">
                     Rs. {Number(row.betAmount ?? 0).toLocaleString()}
                   </td>
-                  <td className="border-r border-slate-700/40 px-4 py-3 text-center text-xs font-semibold text-amber-300 last:border-r-0">
+                  <td className="border-r border-slate-200 px-4 py-3 text-center text-xs font-semibold text-amber-700 last:border-r-0 dark:border-slate-700/40 dark:text-amber-300">
                     Rs. {Number(row.winAmount ?? 0).toLocaleString()}
                   </td>
-                  <td className="border-r border-slate-700/40 px-4 py-3 text-center last:border-r-0">
+                  <td className="border-r border-slate-200 px-4 py-3 text-center last:border-r-0 dark:border-slate-700/40">
                     <span
                       className={`rounded-full border px-2 py-0.5 text-[10px] font-medium ${ENTRY_STATUS_STYLE[row.status] ?? ""}`}
                     >
                       {row.status}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-center text-xs text-slate-400 last:border-r-0">
+                  <td className="px-4 py-3 text-center text-xs text-slate-500 last:border-r-0 dark:text-slate-400">
                     {formatDate(row.dateTime)}
                   </td>
                 </tr>
@@ -581,7 +723,7 @@ function KalyanWinHistoryPageContent() {
           <button
             disabled={page <= 1}
             onClick={() => setPage((currentPage) => currentPage - 1)}
-            className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-1.5 text-xs text-slate-300 disabled:opacity-40"
+            className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-700 disabled:opacity-40 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300"
           >
             Prev
           </button>
@@ -591,7 +733,7 @@ function KalyanWinHistoryPageContent() {
           <button
             disabled={page >= totalPages}
             onClick={() => setPage((currentPage) => currentPage + 1)}
-            className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-1.5 text-xs text-slate-300 disabled:opacity-40"
+            className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-700 disabled:opacity-40 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300"
           >
             Next
           </button>
@@ -605,17 +747,17 @@ function KalyanWinHistoryPageContent() {
             if (e.target === e.currentTarget) setDetailEntry(null);
           }}
         >
-          <div className="w-full max-w-lg rounded-2xl border border-slate-700 bg-slate-900 p-6 space-y-4 max-h-[80vh] overflow-y-auto">
+          <div className="w-full max-w-lg rounded-2xl border border-slate-200 bg-white p-6 space-y-4 max-h-[80vh] overflow-y-auto dark:border-slate-700 dark:bg-slate-900">
             <div className="flex items-center justify-between">
-              <h2 className="text-sm font-bold text-white">Winning Entry Details</h2>
+              <h2 className="text-sm font-bold text-slate-950 dark:text-white">Winning Entry Details</h2>
               <button
                 onClick={() => setDetailEntry(null)}
-                className="text-slate-400 hover:text-white text-xs"
+                className="text-slate-500 hover:text-slate-950 text-xs dark:text-slate-400 dark:hover:text-white"
               >
                 x
               </button>
             </div>
-            <div className="rounded-xl border border-slate-700 bg-slate-800 p-4 space-y-2">
+            <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 space-y-2 dark:border-slate-700 dark:bg-slate-800">
               {[
                 ["User", `${detailEntry.user?.name ?? "-"} (@${detailEntry.user?.username ?? "-"})`],
                 ["Games Name", resolveGameName(detailEntry)],
@@ -628,31 +770,31 @@ function KalyanWinHistoryPageContent() {
               ].map(([label, value]) => (
                 <div key={label} className="flex justify-between gap-4 text-xs">
                   <span className="text-slate-500">{label}</span>
-                  <span className="text-right font-medium text-white">{value}</span>
+                  <span className="text-right font-medium text-slate-950 dark:text-white">{value}</span>
                 </div>
               ))}
             </div>
             {detailEntry.items?.length > 0 && (
               <div className="space-y-2">
-                <p className="text-xs font-semibold text-slate-300">Items</p>
+                <p className="text-xs font-semibold text-slate-700 dark:text-slate-300">Items</p>
                 <div className="space-y-1.5">
                   {detailEntry.items
                     .filter((item: any) => String(item?.gameStatus ?? item?.status ?? "").toUpperCase() === "WON")
                     .map((item: any, index: number) => (
                       <div
                         key={item.id ?? index}
-                        className="flex items-center justify-between rounded-lg border border-slate-700 bg-slate-800 px-3 py-2"
+                        className="flex items-center justify-between rounded-lg border border-slate-200 bg-white px-3 py-2 dark:border-slate-700 dark:bg-slate-800"
                       >
                         <div>
-                          <p className="text-xs text-slate-300">
+                          <p className="text-xs text-slate-700 dark:text-slate-300">
                             {getPlayTypeLabel(item.playType)}
                           </p>
-                          <p className="font-mono text-sm font-bold text-white">
+                          <p className="font-mono text-sm font-bold text-slate-950 dark:text-white">
                             {item.selectedNumber}
                           </p>
                         </div>
                         <div className="text-right">
-                          <p className="text-xs font-semibold text-white">
+                          <p className="text-xs font-semibold text-slate-950 dark:text-white">
                             Rs. {Number(item.amount ?? 0).toLocaleString()}
                           </p>
                           <span className="text-[10px] text-slate-400">{item.betStatus ?? item.status ?? "-"}</span>

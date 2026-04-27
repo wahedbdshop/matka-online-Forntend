@@ -22,6 +22,7 @@ import {
 import { TransferService } from "@/services/transfer.service";
 import { AdminService } from "@/services/admin.service";
 import { cn } from "@/lib/utils";
+import { useLanguage } from "@/providers/language-provider";
 
 type Step = "recipient" | "amount" | "confirm";
 
@@ -234,7 +235,46 @@ function SimpleRecipientCard({
 
 // ─── Main Page ────────────────────────────────────────────────
 export default function TransferPage() {
+  const { language } = useLanguage();
   const queryClient = useQueryClient();
+  const text = {
+    en: {
+      title: "Transfer",
+      newTransfer: "New Transfer",
+      history: "History",
+      noTransfers: "No transfers yet",
+      detail: "Transfer Detail",
+      close: "Close",
+      findRecipient: "Find Recipient",
+      recent: "Recent",
+      enterAmount: "Enter Amount",
+      confirmTransfer: "Confirm Transfer",
+    },
+    bn: {
+      title: "ট্রান্সফার",
+      newTransfer: "নতুন ট্রান্সফার",
+      history: "হিস্টোরি",
+      noTransfers: "এখনও কোনো ট্রান্সফার নেই",
+      detail: "ট্রান্সফার বিস্তারিত",
+      close: "বন্ধ করুন",
+      findRecipient: "প্রাপক খুঁজুন",
+      recent: "সাম্প্রতিক",
+      enterAmount: "পরিমাণ লিখুন",
+      confirmTransfer: "ট্রান্সফার নিশ্চিত করুন",
+    },
+    hi: {
+      title: "ट्रांसफर",
+      newTransfer: "नया ट्रांसफर",
+      history: "हिस्ट्री",
+      noTransfers: "अभी कोई ट्रांसफर नहीं है",
+      detail: "ट्रांसफर विवरण",
+      close: "बंद करें",
+      findRecipient: "प्राप्तकर्ता खोजें",
+      recent: "हाल के",
+      enterAmount: "राशि दर्ज करें",
+      confirmTransfer: "ट्रांसफर पुष्टि करें",
+    },
+  }[language];
 
   const [tab, setTab] = useState<"new" | "history">("new");
   const [step, setStep] = useState<Step>("recipient");
@@ -411,7 +451,7 @@ export default function TransferPage() {
         <div className="w-9 h-9 rounded-xl bg-blue-500/10 border border-blue-500/30 flex items-center justify-center">
           <ArrowLeftRight className="h-4 w-4 text-blue-400" />
         </div>
-        <h1 className="text-white text-xl font-bold">Transfer</h1>
+        <h1 className="text-white text-xl font-bold">{text.title}</h1>
       </div>
 
       {/* Tabs */}
@@ -430,7 +470,7 @@ export default function TransferPage() {
                 : "text-slate-400 hover:text-white",
             )}
           >
-            {t === "new" ? "New Transfer" : "History"}
+            {t === "new" ? text.newTransfer : text.history}
           </button>
         ))}
       </div>
@@ -513,7 +553,7 @@ export default function TransferPage() {
                 <div className="space-y-3">
                   <div className="rounded-2xl border border-slate-700/50 bg-slate-800/40 p-4 space-y-3">
                     <p className="text-xs font-medium text-slate-400 uppercase tracking-wider">
-                      Find Recipient
+                      {text.findRecipient}
                     </p>
                     <div className="relative">
                       <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
@@ -554,7 +594,7 @@ export default function TransferPage() {
                       <div className="flex items-center gap-2">
                         <Users className="h-3.5 w-3.5 text-slate-400" />
                         <p className="text-xs font-medium text-slate-400 uppercase tracking-wider">
-                          Recent
+                          {text.recent}
                         </p>
                       </div>
                       <div className="space-y-1.5">
@@ -583,7 +623,7 @@ export default function TransferPage() {
 
                   <div className="rounded-2xl border border-slate-700/50 bg-slate-800/40 p-4 space-y-4">
                     <p className="text-xs font-medium text-slate-400 uppercase tracking-wider">
-                      Enter Amount
+                      {text.enterAmount}
                     </p>
 
                     <div className="grid grid-cols-3 gap-2">
@@ -699,7 +739,7 @@ export default function TransferPage() {
                 <div className="space-y-3">
                   <div className="rounded-2xl border border-blue-500/20 bg-gradient-to-br from-blue-900/20 to-slate-800/60 p-5 space-y-4">
                     <p className="text-xs font-medium text-slate-400 uppercase tracking-wider text-center">
-                      Confirm Transfer
+                      {text.confirmTransfer}
                     </p>
                     <div className="text-center">
                       <p className="text-4xl font-black text-white">
@@ -771,7 +811,7 @@ export default function TransferPage() {
               <div className="w-14 h-14 rounded-2xl bg-slate-700/50 border border-slate-700 flex items-center justify-center text-2xl">
                 💸
               </div>
-              <p className="text-slate-500 text-sm">No transfers yet</p>
+              <p className="text-slate-500 text-sm">{text.noTransfers}</p>
             </div>
           ) : (
             allTransfers.map((t: any) => {
@@ -851,7 +891,7 @@ export default function TransferPage() {
         >
           <div className="w-full max-w-sm rounded-[24px] border border-slate-700 bg-slate-900 p-5 space-y-3 my-auto">
             <div className="flex items-center justify-between">
-              <h2 className="text-sm font-bold text-white">Transfer Detail</h2>
+              <h2 className="text-sm font-bold text-white">{text.detail}</h2>
               <button
                 onClick={() => setDetailItem(null)}
                 className="text-slate-400 hover:text-white"
@@ -889,7 +929,7 @@ export default function TransferPage() {
               onClick={() => setDetailItem(null)}
               className="w-full rounded-xl border border-slate-600 bg-slate-800 py-2 text-sm text-slate-300 hover:bg-slate-700"
             >
-              Close
+              {text.close}
             </button>
           </div>
         </div>

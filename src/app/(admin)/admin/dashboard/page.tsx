@@ -274,8 +274,8 @@ function StatCard({
   const inner = (
     <div
       className={cn(
-        "group relative overflow-hidden rounded-2xl border bg-slate-800/50 p-4 transition-all duration-200",
-        href ? "hover:border-slate-500 hover:bg-slate-800 cursor-pointer" : "",
+        "group relative overflow-hidden rounded-2xl border bg-white p-4 shadow-sm transition-all duration-200 dark:bg-slate-800/50 dark:shadow-none",
+        href ? "cursor-pointer hover:border-slate-300 hover:bg-slate-50 dark:hover:border-slate-500 dark:hover:bg-slate-800" : "",
         color === "blue" && "border-blue-500/20",
         color === "green" && "border-emerald-500/20",
         color === "yellow" && "border-yellow-500/20",
@@ -323,16 +323,16 @@ function StatCard({
           <Icon className="h-4 w-4" />
         </div>
         {href && (
-          <ArrowRight className="h-3.5 w-3.5 text-slate-600 group-hover:text-slate-400 transition-colors" />
+          <ArrowRight className="h-3.5 w-3.5 text-slate-400 transition-colors group-hover:text-slate-600 dark:text-slate-600 dark:group-hover:text-slate-400" />
         )}
       </div>
 
       <div className="mt-3">
-        <p className="text-2xl font-bold text-white font-mono">
+        <p className="font-mono text-2xl font-bold text-slate-900 dark:text-white">
           {showValues ? value : masked}
         </p>
-        <p className="text-xs text-slate-400 mt-0.5">{label}</p>
-        {sub && <p className="text-[10px] text-slate-600 mt-0.5">{sub}</p>}
+        <p className="mt-0.5 text-xs text-slate-600 dark:text-slate-400">{label}</p>
+        {sub && <p className="mt-0.5 text-[10px] text-slate-400 dark:text-slate-600">{sub}</p>}
       </div>
     </div>
   );
@@ -343,10 +343,10 @@ function StatCard({
 
 function SkeletonCard() {
   return (
-    <div className="rounded-2xl border border-slate-700/50 bg-slate-800/40 p-4 animate-pulse">
-      <div className="h-9 w-9 rounded-xl bg-slate-700 mb-3" />
-      <div className="h-6 w-20 rounded bg-slate-700 mb-1.5" />
-      <div className="h-3 w-24 rounded bg-slate-700" />
+    <div className="animate-pulse rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700/50 dark:bg-slate-800/40 dark:shadow-none">
+      <div className="mb-3 h-9 w-9 rounded-xl bg-slate-200 dark:bg-slate-700" />
+      <div className="mb-1.5 h-6 w-20 rounded bg-slate-200 dark:bg-slate-700" />
+      <div className="h-3 w-24 rounded bg-slate-200 dark:bg-slate-700" />
     </div>
   );
 }
@@ -601,8 +601,8 @@ export default function AdminDashboardPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-bold text-white">Dashboard</h1>
-          <p className="text-xs text-slate-400 mt-0.5">
+          <h1 className="text-xl font-bold text-slate-950 dark:text-white">Dashboard</h1>
+          <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
             {new Date().toLocaleString("en-BD", {
               weekday: "long",
               day: "2-digit",
@@ -618,8 +618,8 @@ export default function AdminDashboardPage() {
             className={cn(
               "flex h-9 w-9 items-center justify-center rounded-xl border transition-all",
               showValues
-                ? "border-purple-500/40 bg-purple-500/10 text-purple-400 hover:bg-purple-500/20"
-                : "border-slate-700 bg-slate-800 text-slate-400 hover:text-white hover:border-slate-600"
+                ? "border-violet-300 bg-violet-50 text-violet-600 hover:bg-violet-100 dark:border-purple-500/40 dark:bg-purple-500/10 dark:text-purple-400 dark:hover:bg-purple-500/20"
+                : "border-slate-200 bg-white text-slate-500 hover:border-slate-300 hover:text-slate-900 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400 dark:hover:border-slate-600 dark:hover:text-white"
             )}
           >
             {showValues ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -627,7 +627,7 @@ export default function AdminDashboardPage() {
           <button
             onClick={() => refetch()}
             disabled={isFetching}
-            className="flex items-center gap-2 rounded-xl border border-slate-700 bg-slate-800 px-3 py-2 text-xs text-slate-400 hover:text-white hover:border-slate-600 transition-all disabled:opacity-50"
+            className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-500 transition-all hover:border-slate-300 hover:text-slate-900 disabled:opacity-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400 dark:hover:border-slate-600 dark:hover:text-white"
           >
             <RefreshCw
               className={cn("h-3.5 w-3.5", isFetching && "animate-spin")}
@@ -639,7 +639,7 @@ export default function AdminDashboardPage() {
 
       {/* ── Overview ── */}
       <section>
-        <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-500 mb-3">
+        <p className="mb-3 text-[10px] font-semibold uppercase tracking-widest text-slate-500 dark:text-slate-500">
           Overview
         </p>
         <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-5 gap-3">
@@ -698,7 +698,7 @@ export default function AdminDashboardPage() {
 
       {/* ── Deposits ── */}
       <section>
-        <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-500 mb-3">
+        <p className="mb-3 text-[10px] font-semibold uppercase tracking-widest text-slate-500 dark:text-slate-500">
           Deposits
         </p>
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
@@ -716,7 +716,7 @@ export default function AdminDashboardPage() {
 
       {/* ── Withdrawals ── */}
       <section>
-        <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-500 mb-3">
+        <p className="mb-3 text-[10px] font-semibold uppercase tracking-widest text-slate-500 dark:text-slate-500">
           Withdrawals
         </p>
         <div className="grid grid-cols-2 gap-3">
@@ -733,7 +733,7 @@ export default function AdminDashboardPage() {
 
       {/* ── Bets ── */}
       <section>
-        <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-500 mb-3">
+        <p className="mb-3 text-[10px] font-semibold uppercase tracking-widest text-slate-500 dark:text-slate-500">
           Bets Today
         </p>
         <div className="grid grid-cols-2 gap-3">
@@ -756,7 +756,7 @@ export default function AdminDashboardPage() {
           </p>
           <button
             onClick={() => refetchSessions()}
-            className="flex items-center gap-1.5 text-[10px] text-slate-500 hover:text-slate-300 transition-colors"
+            className="flex items-center gap-1.5 text-[10px] text-slate-500 transition-colors hover:text-slate-700 dark:hover:text-slate-300"
           >
             <RefreshCw className="h-3 w-3" />
             Refresh
@@ -768,13 +768,13 @@ export default function AdminDashboardPage() {
             {Array.from({ length: 2 }).map((_, i) => (
               <div
                 key={i}
-                className="h-16 rounded-2xl bg-slate-800/40 animate-pulse border border-slate-700/50"
+                className="h-16 animate-pulse rounded-2xl border border-slate-200 bg-white dark:border-slate-700/50 dark:bg-slate-800/40"
               />
             ))}
           </div>
         ) : sessions.length === 0 ? (
-          <div className="rounded-2xl border border-slate-700/40 bg-slate-800/30 px-4 py-6 text-center">
-            <ShieldAlert className="h-6 w-6 text-slate-600 mx-auto mb-2" />
+          <div className="rounded-2xl border border-slate-200 bg-white px-4 py-6 text-center shadow-sm dark:border-slate-700/40 dark:bg-slate-800/30 dark:shadow-none">
+            <ShieldAlert className="mx-auto mb-2 h-6 w-6 text-slate-400 dark:text-slate-600" />
             <p className="text-xs text-slate-500">No active session data available</p>
           </div>
         ) : (
@@ -852,29 +852,29 @@ export default function AdminDashboardPage() {
               <div
                 key={sessionId}
                 className={cn(
-                  "flex items-center gap-3 rounded-2xl border bg-slate-800/50 px-4 py-3",
+                  "flex items-center gap-3 rounded-2xl border bg-white px-4 py-3 shadow-sm dark:bg-slate-800/50 dark:shadow-none",
                   isCurrent
-                    ? "border-purple-500/30"
-                    : "border-slate-700/40",
+                    ? "border-violet-200 dark:border-purple-500/30"
+                    : "border-slate-200 dark:border-slate-700/40",
                 )}
               >
                 <div
                   className={cn(
                     "flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border",
                     isCurrent
-                      ? "bg-purple-500/10 border-purple-500/30 text-purple-400"
-                      : "bg-slate-700/40 border-slate-600/30 text-slate-400",
+                      ? "border-violet-200 bg-violet-50 text-violet-600 dark:border-purple-500/30 dark:bg-purple-500/10 dark:text-purple-400"
+                      : "border-slate-200 bg-slate-50 text-slate-500 dark:border-slate-600/30 dark:bg-slate-700/40 dark:text-slate-400",
                   )}
                 >
                   <Monitor className="h-4 w-4" />
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
-                    <p className="text-xs font-semibold text-white truncate">
+                    <p className="truncate text-xs font-semibold text-slate-900 dark:text-white">
                       {deviceLabel}
                     </p>
                     {isCurrent && (
-                      <span className="shrink-0 rounded-full bg-green-500/15 border border-green-500/30 px-1.5 py-0.5 text-[9px] font-bold text-green-400">
+                      <span className="shrink-0 rounded-full border border-green-200 bg-green-50 px-1.5 py-0.5 text-[9px] font-bold text-green-600 dark:border-green-500/30 dark:bg-green-500/15 dark:text-green-400">
                         CURRENT
                       </span>
                     )}
@@ -896,7 +896,7 @@ export default function AdminDashboardPage() {
                     )}
                   </div>
                 </div>
-                <p className="shrink-0 text-[10px] text-slate-600">
+                <p className="shrink-0 text-[10px] text-slate-400 dark:text-slate-600">
                   {sessionLastActive
                     ? new Date(sessionLastActive).toLocaleString("en-BD", {
                         month: "short",
@@ -915,7 +915,7 @@ export default function AdminDashboardPage() {
 
       {/* ── Quick Actions ── */}
       <section>
-        <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-500 mb-3">
+        <p className="mb-3 text-[10px] font-semibold uppercase tracking-widest text-slate-500">
           Quick Actions
         </p>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">

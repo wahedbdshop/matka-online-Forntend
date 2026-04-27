@@ -53,8 +53,8 @@ export default function AgentThaiLotteryPage() {
     <div className="space-y-5">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-bold text-white">Thai Lottery</h1>
-          <p className="mt-0.5 text-xs text-slate-400">Manage all lottery rounds</p>
+          <h1 className="text-xl font-bold text-slate-950 dark:text-white">Thai Lottery</h1>
+          <p className="mt-0.5 text-xs text-slate-600 dark:text-slate-400">Manage all lottery rounds</p>
         </div>
         <button
           onClick={() => router.push("/agent/thai-lottery/rounds/create")}
@@ -75,8 +75,8 @@ export default function AgentThaiLotteryPage() {
             }}
             className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors ${
               statusFilter === s
-                ? "border-blue-500 bg-blue-500/20 text-blue-400"
-                : "border-slate-600 bg-slate-800 text-slate-400 hover:border-slate-500"
+                ? "border-blue-300 bg-blue-50 text-blue-700 dark:border-blue-500 dark:bg-blue-500/20 dark:text-blue-400"
+                : "border-slate-300 bg-white text-slate-600 hover:border-slate-400 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-400 dark:hover:border-slate-500"
             }`}
           >
             {s || "All"}
@@ -84,27 +84,27 @@ export default function AgentThaiLotteryPage() {
         ))}
       </div>
 
-      <div className="overflow-hidden rounded-xl border border-slate-700 bg-slate-800/50">
+      <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-800/50 dark:shadow-none">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-slate-700 text-left">
-              <th className="px-4 py-3 text-xs font-medium text-slate-400">Issue</th>
-              <th className="px-4 py-3 text-xs font-medium text-slate-400">Draw Date (BD Time)</th>
-              <th className="px-4 py-3 text-xs font-medium text-slate-400">Close Time (BD Time)</th>
-              <th className="px-4 py-3 text-xs font-medium text-slate-400">Created At (BD Time)</th>
-              <th className="px-4 py-3 text-xs font-medium text-slate-400">Resulted At (BD Time)</th>
-              <th className="px-4 py-3 text-xs font-medium text-slate-400">Status</th>
-              <th className="px-4 py-3 text-xs font-medium text-slate-400">Result</th>
-              <th className="px-4 py-3 text-xs font-medium text-slate-400">Action</th>
+            <tr className="border-b border-slate-200 text-left dark:border-slate-700">
+              <th className="px-4 py-3 text-xs font-medium text-slate-500 dark:text-slate-400">Issue</th>
+              <th className="px-4 py-3 text-xs font-medium text-slate-500 dark:text-slate-400">Draw Date (BD Time)</th>
+              <th className="px-4 py-3 text-xs font-medium text-slate-500 dark:text-slate-400">Close Time (BD Time)</th>
+              <th className="px-4 py-3 text-xs font-medium text-slate-500 dark:text-slate-400">Created At (BD Time)</th>
+              <th className="px-4 py-3 text-xs font-medium text-slate-500 dark:text-slate-400">Resulted At (BD Time)</th>
+              <th className="px-4 py-3 text-xs font-medium text-slate-500 dark:text-slate-400">Status</th>
+              <th className="px-4 py-3 text-xs font-medium text-slate-500 dark:text-slate-400">Result</th>
+              <th className="px-4 py-3 text-xs font-medium text-slate-500 dark:text-slate-400">Action</th>
             </tr>
           </thead>
           <tbody>
             {isLoading ? (
               Array.from({ length: 5 }).map((_, i) => (
-                <tr key={i} className="border-b border-slate-700/50">
+                <tr key={i} className="border-b border-slate-200/80 dark:border-slate-700/50">
                   {Array.from({ length: 8 }).map((_, j) => (
                     <td key={j} className="px-4 py-3">
-                      <div className="h-4 w-24 animate-pulse rounded bg-slate-700" />
+                      <div className="h-4 w-24 animate-pulse rounded bg-slate-200 dark:bg-slate-700" />
                     </td>
                   ))}
                 </tr>
@@ -119,15 +119,15 @@ export default function AgentThaiLotteryPage() {
               rounds.map((round: any) => (
                 <tr
                   key={round.id}
-                  className="border-b border-slate-700/50 transition-colors hover:bg-slate-700/30"
+                  className="border-b border-slate-200/80 transition-colors hover:bg-slate-50 dark:border-slate-700/50 dark:hover:bg-slate-700/30"
                 >
-                  <td className="px-4 py-3 font-semibold text-white">{round.issueNumber}</td>
-                  <td className="px-4 py-3 text-slate-300">
+                  <td className="px-4 py-3 font-semibold text-slate-950 dark:text-white">{round.issueNumber}</td>
+                  <td className="px-4 py-3 text-slate-700 dark:text-slate-300">
                     {formatBangladeshDateTime(round.drawDate, {
                       timeZone: round.scheduleTimeZone,
                     })}
                   </td>
-                  <td className="px-4 py-3 text-slate-300">
+                  <td className="px-4 py-3 text-slate-700 dark:text-slate-300">
                     {round.closeTime ? (
                       <span className="flex items-center gap-1">
                         <Clock className="h-3 w-3 text-yellow-400" />
@@ -139,12 +139,12 @@ export default function AgentThaiLotteryPage() {
                       <span className="text-slate-500">Not set</span>
                     )}
                   </td>
-                  <td className="px-4 py-3 text-slate-300">
+                  <td className="px-4 py-3 text-slate-700 dark:text-slate-300">
                     {formatBangladeshDateTime(round.createdAt, {
                       timeZone: round.scheduleTimeZone,
                     })}
                   </td>
-                  <td className="px-4 py-3 text-slate-300">
+                  <td className="px-4 py-3 text-slate-700 dark:text-slate-300">
                     {formatBangladeshDateTime(round.resultedAt, {
                       timeZone: round.scheduleTimeZone,
                     })}
@@ -156,7 +156,7 @@ export default function AgentThaiLotteryPage() {
                       {STATUS_LABEL[round.status] ?? round.status}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-slate-300">
+                  <td className="px-4 py-3 text-slate-700 dark:text-slate-300">
                     {round.resultThreeUpDirect ? (
                       <span className="font-mono text-[#d6b4ff]">
                         {round.resultThreeUpDirect} / {round.resultDownDirect}
@@ -181,7 +181,7 @@ export default function AgentThaiLotteryPage() {
                         onClick={() =>
                           router.push(`/agent/thai-lottery/rounds/${round.id}`)
                         }
-                        className="flex items-center gap-1 rounded-lg border border-slate-600 bg-slate-700 px-2.5 py-1 text-xs font-medium text-slate-300 hover:bg-slate-600"
+                        className="flex items-center gap-1 rounded-lg border border-slate-300 bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-700 hover:bg-slate-200 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-slate-600"
                       >
                         Manage
                         <ChevronRight className="h-3 w-3" />
@@ -200,7 +200,7 @@ export default function AgentThaiLotteryPage() {
           <button
             disabled={page <= 1}
             onClick={() => setPage((p) => p - 1)}
-            className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-1.5 text-xs text-slate-300 disabled:opacity-40"
+            className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs text-slate-700 disabled:opacity-40 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300"
           >
             Prev
           </button>
@@ -210,7 +210,7 @@ export default function AgentThaiLotteryPage() {
           <button
             disabled={page >= totalPages}
             onClick={() => setPage((p) => p + 1)}
-            className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-1.5 text-xs text-slate-300 disabled:opacity-40"
+            className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs text-slate-700 disabled:opacity-40 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300"
           >
             Next
           </button>

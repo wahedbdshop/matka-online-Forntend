@@ -2,7 +2,7 @@
 // thai-lottery/win-history/page.tsx
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Search, Trophy } from "lucide-react";
 import { AdminService } from "@/services/admin.service";
@@ -37,10 +37,23 @@ export default function ThaiWinHistoryPage() {
   const { data: roundsData } = useQuery({
     queryKey: ["admin-thai-rounds-all"],
     queryFn: () => AdminService.getThaiRounds(undefined, 1, 100),
+    refetchInterval: 15000,
   });
 
   const rounds = roundsData?.data?.rounds ?? [];
-  const activeRoundId = roundFilter || rounds[0]?.id;
+  const latestPublishedRound = useMemo(
+    () =>
+      rounds.find(
+        (round: any) => round?.status === "RESULTED" || Boolean(round?.resultedAt),
+      ) ?? null,
+    [rounds],
+  );
+  const activeRoundId =
+    roundFilter || latestPublishedRound?.id || rounds[0]?.id || "";
+
+  useEffect(() => {
+    setPage(1);
+  }, [activeRoundId]);
 
   const { data, isLoading } = useQuery({
     queryKey: [
@@ -59,6 +72,7 @@ export default function ThaiWinHistoryPage() {
         playType: playTypeFilter || undefined,
       }),
     enabled: !!activeRoundId,
+    refetchInterval: roundFilter ? false : 15000,
   });
 
   const bets = data?.data?.bets ?? [];
@@ -93,7 +107,9 @@ export default function ThaiWinHistoryPage() {
           }}
           className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-1.5 text-xs text-white outline-none"
         >
-          <option value="">Latest Round</option>
+          <option value="">
+            {latestPublishedRound ? "Last Published Result" : "Latest Round"}
+          </option>
           {rounds.map((r: any) => (
             <option key={r.id} value={r.id}>
               {r.issueNumber}

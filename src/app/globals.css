@@ -129,6 +129,265 @@
   }
 }
 
+@layer utilities {
+  .light main :where(.bg-slate-800\/40, .bg-slate-800\/50, .bg-slate-800\/60, .bg-slate-800\/80, .bg-slate-700\/30, .bg-slate-700\/40, .bg-slate-700\/50, .bg-slate-700\/60) {
+    background-color: rgb(255 255 255 / 0.92);
+  }
+
+  .light main :where(.bg-slate-800, .bg-slate-700, .bg-slate-600) {
+    background-color: rgb(255 255 255 / 0.96);
+  }
+
+  .light main :where(.bg-slate-900, .bg-slate-900\/40, .bg-slate-900\/60, .bg-slate-900\/70) {
+    background-color: rgb(248 250 252 / 0.96);
+  }
+
+  .light main :where(.border-slate-700, .border-slate-700\/50, .border-slate-700\/60, .border-slate-600) {
+    border-color: rgb(203 213 225 / 0.95);
+  }
+
+  .light main :where(.divide-slate-800, .divide-slate-700, .divide-slate-700\/50) > :not([hidden]) ~ :not([hidden]) {
+    border-color: rgb(226 232 240 / 0.95);
+  }
+
+  .light main :where(.text-white, .text-white\/80, .text-white\/90, .text-yellow-100, .text-amber-100\/80, .text-amber-200) {
+    color: rgb(15 23 42);
+  }
+
+  .light main :where(.text-white\/20, .text-white\/25) {
+    color: rgb(148 163 184);
+  }
+
+  .light main :where(.text-slate-200, .text-slate-300, .text-slate-300\/85, .text-slate-400) {
+    color: rgb(71 85 105);
+  }
+
+  .light main :where(.text-slate-500, .text-slate-600) {
+    color: rgb(100 116 139);
+  }
+
+  .light main :where(.text-blue-300, .text-blue-400) {
+    color: rgb(37 99 235);
+  }
+
+  .light main :where(.text-purple-300, .text-purple-400) {
+    color: rgb(147 51 234);
+  }
+
+  .light main :where(.text-pink-400, .text-rose-400) {
+    color: rgb(225 29 72);
+  }
+
+  .light main :where(.text-green-300, .text-green-400, .text-emerald-300, .text-emerald-400) {
+    color: rgb(5 150 105);
+  }
+
+  .light main :where(.text-orange-400, .text-amber-300, .text-amber-400, .text-yellow-400) {
+    color: rgb(217 119 6);
+  }
+
+  .light main :where(input, textarea, select).bg-slate-700\/50,
+  .light main :where(input, textarea, select).bg-slate-800\/40 {
+    background-color: rgb(255 255 255);
+    color: rgb(15 23 42);
+  }
+
+  .light main :where(input, textarea, select)::placeholder {
+    color: rgb(100 116 139);
+  }
+
+  .light main :where(.from-slate-800\/60, .to-slate-800\/60, .to-slate-900\/60, .to-slate-900\/70, .to-slate-900\/40) {
+    --tw-gradient-to: rgb(255 255 255 / 0.92) var(--tw-gradient-to-position);
+  }
+
+  .light main :where(.bg-blue-600, .bg-purple-600, .bg-rose-600, .bg-pink-600, .bg-green-600, .bg-emerald-600, .bg-orange-600, .bg-red-600) {
+    color: rgb(255 255 255);
+  }
+
+  .light main :where(.bg-blue-600, .bg-purple-600, .bg-rose-600, .bg-pink-600, .bg-green-600, .bg-emerald-600, .bg-orange-600, .bg-red-600) :where(.text-white) {
+    color: rgb(255 255 255);
+  }
+
+  .light main :where(
+    [class*="bg-[#0"],
+    [class*="bg-[#1"],
+    [class*="bg-[#2"],
+    [class*="bg-[#3"],
+    [class*="from-[#0"],
+    [class*="from-[#1"],
+    [class*="from-[#2"],
+    [class*="from-[#3"],
+    [class*="via-[#0"],
+    [class*="via-[#1"],
+    [class*="via-[#2"],
+    [class*="via-[#3"],
+    [class*="to-[#0"],
+    [class*="to-[#1"],
+    [class*="to-[#2"],
+    [class*="to-[#3"]
+  ) {
+    color: rgb(255 255 255);
+  }
+
+  .light main :where(
+    [class*="bg-[#0"],
+    [class*="bg-[#1"],
+    [class*="bg-[#2"],
+    [class*="bg-[#3"],
+    [class*="from-[#0"],
+    [class*="from-[#1"],
+    [class*="from-[#2"],
+    [class*="from-[#3"],
+    [class*="via-[#0"],
+    [class*="via-[#1"],
+    [class*="via-[#2"],
+    [class*="via-[#3"],
+    [class*="to-[#0"],
+    [class*="to-[#1"],
+    [class*="to-[#2"],
+    [class*="to-[#3"]
+  ) :where(.text-white, .text-slate-100, .text-slate-200, .text-slate-300, .text-slate-400) {
+    color: rgb(241 245 249);
+  }
+
+  .light main :where(.bg-white, .bg-slate-50, .bg-slate-100, .from-white, .to-white, .from-slate-50, .to-slate-50) :where(.text-white, .text-slate-100, .text-slate-200) {
+    color: rgb(15 23 42);
+  }
+
+  .light main :where(.bg-white, .bg-slate-50, .bg-slate-100, .from-white, .to-white, .from-slate-50, .to-slate-50) :where(.text-slate-300, .text-slate-400, .text-slate-500) {
+    color: rgb(71 85 105);
+  }
+
+  .light main :where(.bg-blue-600, .bg-purple-600, .bg-rose-600, .bg-pink-600, .bg-green-600, .bg-emerald-600, .bg-orange-600, .bg-red-600) :where(.text-white, .text-slate-100, .text-slate-200, .text-slate-300, .text-slate-400) {
+    color: rgb(255 255 255);
+  }
+
+  /* Global fallback for hardcoded dark-first utilities outside <main> */
+  .light :where(.bg-slate-900\/95, .bg-slate-900\/90, .bg-slate-900\/80, .bg-slate-900\/70, .bg-slate-900\/60, .bg-slate-900\/40, .bg-slate-900\/30, .bg-slate-800\/80, .bg-slate-800\/70, .bg-slate-800\/60, .bg-slate-800\/50, .bg-slate-800\/40, .bg-slate-800\/30, .bg-slate-800\/20, .bg-slate-700\/70, .bg-slate-700\/60, .bg-slate-700\/50, .bg-slate-700\/40, .bg-slate-700\/30, .bg-slate-700\/20) {
+    background-color: rgb(255 255 255 / 0.94);
+  }
+
+  .light :where(.bg-slate-900, .bg-slate-800, .bg-slate-700, .bg-slate-600) {
+    background-color: rgb(255 255 255 / 0.98);
+  }
+
+  .light :where(.border-slate-900, .border-slate-800, .border-slate-700, .border-slate-700\/60, .border-slate-700\/50, .border-slate-700\/40, .border-slate-600, .border-slate-600\/30) {
+    border-color: rgb(203 213 225 / 0.95);
+  }
+
+  .light :where(.ring-slate-900, .ring-slate-800, .ring-slate-700, .ring-slate-700\/40, .ring-slate-600, .ring-slate-500\/20) {
+    --tw-ring-color: rgb(226 232 240 / 0.95);
+  }
+
+  .light :where(.text-white, .text-white\/90, .text-white\/80, .text-slate-100, .text-slate-200) {
+    color: rgb(15 23 42);
+  }
+
+  .light :where(.text-slate-300, .text-slate-400) {
+    color: rgb(71 85 105);
+  }
+
+  .light :where(.text-slate-500, .text-slate-600) {
+    color: rgb(100 116 139);
+  }
+
+  .light :where(.hover\:bg-slate-900:hover, .hover\:bg-slate-800:hover, .hover\:bg-slate-700:hover, .hover\:bg-slate-600:hover) {
+    background-color: rgb(241 245 249);
+  }
+
+  .light :where(.hover\:text-white:hover, .hover\:text-slate-300:hover, .hover\:text-slate-200:hover) {
+    color: rgb(15 23 42);
+  }
+
+  .light :where(.hover\:border-slate-700:hover, .hover\:border-slate-600:hover, .hover\:border-slate-500:hover) {
+    border-color: rgb(148 163 184);
+  }
+
+  .light :where(input, textarea, select).bg-slate-900,
+  .light :where(input, textarea, select).bg-slate-800,
+  .light :where(input, textarea, select).bg-slate-700 {
+    background-color: rgb(255 255 255);
+    color: rgb(15 23 42);
+  }
+
+  .light :where(input, textarea, select).border-slate-700,
+  .light :where(input, textarea, select).border-slate-600 {
+    border-color: rgb(203 213 225 / 0.95);
+  }
+
+  .light :where(input, textarea, select)::placeholder {
+    color: rgb(100 116 139);
+  }
+
+  .light :where(
+    .bg-\[\#020810\],
+    .bg-\[\#050b18\],
+    .bg-\[\#081428\],
+    .bg-\[\#0b1328\],
+    .bg-\[\#0d1327\],
+    .bg-\[\#0d1526\],
+    .bg-\[\#0f1d3d\],
+    .bg-\[\#1a0a3e\],
+    .bg-\[\#1b1037\],
+    .bg-\[\#120830\]
+  ) {
+    background-color: rgb(255 255 255 / 0.98);
+    border-color: rgb(226 232 240 / 0.95);
+    color: rgb(15 23 42);
+  }
+
+  .light :where(
+    .from-\[\#020810\],
+    .from-\[\#050b18\],
+    .from-\[\#081428\],
+    .from-\[\#0b1328\],
+    .from-\[\#0d1327\],
+    .from-\[\#0d1526\],
+    .from-\[\#0f1d3d\],
+    .from-\[\#1a0a3e\],
+    .from-\[\#1b1037\],
+    .from-\[\#120830\]
+  ) {
+    --tw-gradient-from: rgb(255 255 255) var(--tw-gradient-from-position);
+    --tw-gradient-to: rgb(241 245 249 / 0) var(--tw-gradient-to-position);
+    --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to);
+  }
+
+  .light :where(
+    .via-\[\#020810\],
+    .via-\[\#050b18\],
+    .via-\[\#081428\],
+    .via-\[\#0b1328\],
+    .via-\[\#0d1327\],
+    .via-\[\#0d1526\],
+    .via-\[\#0f1d3d\],
+    .via-\[\#1a0a3e\],
+    .via-\[\#1b1037\],
+    .via-\[\#120830\]
+  ) {
+    --tw-gradient-stops: var(--tw-gradient-from), rgb(248 250 252) var(--tw-gradient-via-position), var(--tw-gradient-to);
+  }
+
+  .light :where(
+    .to-\[\#020810\],
+    .to-\[\#050b18\],
+    .to-\[\#081428\],
+    .to-\[\#0b1328\],
+    .to-\[\#0d1327\],
+    .to-\[\#0d1526\],
+    .to-\[\#0f1d3d\],
+    .to-\[\#1a0a3e\],
+    .to-\[\#1b1037\],
+    .to-\[\#120830\]
+  ) {
+    --tw-gradient-to: rgb(241 245 249) var(--tw-gradient-to-position);
+  }
+
+  .light :where(.shadow-black\/40, .shadow-black\/50, .shadow-black\/60) {
+    --tw-shadow-color: rgb(148 163 184 / 0.18);
+  }
+}
+
 @keyframes header-logo-float {
   0%,
   100% {

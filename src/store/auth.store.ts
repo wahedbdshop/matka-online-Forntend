@@ -14,6 +14,8 @@ export interface User {
   referralCode: string;
   emailVerified: boolean;
   image?: string;
+  preferredLanguage?: string;
+  language?: string;
 }
 
 interface AuthState {

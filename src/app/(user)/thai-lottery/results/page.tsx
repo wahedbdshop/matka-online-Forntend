@@ -32,7 +32,7 @@ const formatDate = (
 
 function SkeletonRow() {
   return (
-    <div className="grid grid-cols-[1.1fr_0.75fr_0.75fr] items-center rounded-[22px] border border-[#153055] bg-[#071427] px-4 py-4 shadow-[0_12px_28px_rgba(2,8,20,0.28)]">
+    <div className="thai-result-skeleton grid grid-cols-[1.1fr_0.75fr_0.75fr] items-center rounded-[22px] border border-[#153055] bg-[#071427] px-4 py-4 shadow-[0_12px_28px_rgba(2,8,20,0.28)]">
       <div className="space-y-1.5">
         <div className="h-4 w-24 animate-pulse rounded-lg bg-[#142848]" />
         <div className="h-3 w-16 animate-pulse rounded bg-[#142848]" />
@@ -61,7 +61,59 @@ export default function ThaiLotteryResultsPage({
   const totalPages = Math.ceil(total / LIMIT);
 
   return (
-    <div className="min-h-screen bg-[#020810] text-white">
+    <>
+      <style>{`
+        .light .thai-result-shell { background: linear-gradient(180deg, #faf8ff 0%, #f8fbff 100%); color: #0f172a; }
+        .light .thai-result-back,
+        .light .thai-result-empty,
+        .light .thai-result-header,
+        .light .thai-result-row,
+        .light .thai-result-pager-btn,
+        .light .thai-result-skeleton {
+          background: rgba(255,255,255,0.96);
+          border-color: rgba(148,163,184,0.35);
+          color: #0f172a;
+        }
+        .light .thai-result-back { box-shadow: 0 12px 24px rgba(148,163,184,0.18); }
+        .light .thai-result-title {
+          background-image: linear-gradient(135deg, #4f46e5 0%, #7c3aed 50%, #d97706 100%);
+        }
+        .light .thai-result-chip {
+          background: rgba(139, 92, 246, 0.1);
+          border-color: rgba(139, 92, 246, 0.2);
+        }
+        .light .thai-result-empty,
+        .light .thai-result-row,
+        .light .thai-result-skeleton {
+          box-shadow: 0 14px 30px rgba(148,163,184,0.12);
+        }
+        .light .thai-result-header {
+          background: linear-gradient(135deg, rgba(79,70,229,0.08), rgba(124,58,237,0.08));
+        }
+        .light .thai-result-header-date { color: #475569; }
+        .light .thai-result-header-up { color: #7c3aed; }
+        .light .thai-result-header-down { color: #ca8a04; }
+        .light .thai-result-row {
+          background: linear-gradient(135deg, rgba(255,255,255,0.98), rgba(248,250,252,0.98));
+        }
+        .light .thai-result-date { color: #0f172a; }
+        .light .thai-result-muted { color: #64748b; }
+        .light .thai-result-year { color: #94a3b8; }
+        .light .thai-result-threeup {
+          background: linear-gradient(135deg, rgba(139,92,246,0.16), rgba(168,85,247,0.12));
+          border-color: rgba(139,92,246,0.26);
+          color: #6d28d9;
+        }
+        .light .thai-result-down {
+          background: linear-gradient(135deg, rgba(245,158,11,0.16), rgba(251,191,36,0.12));
+          border-color: rgba(245,158,11,0.28);
+          color: #b45309;
+        }
+        .light .thai-result-pager-btn {
+          box-shadow: 0 10px 22px rgba(148,163,184,0.12);
+        }
+      `}</style>
+    <div className="thai-result-shell min-h-screen bg-[#020810] text-white">
       <div className="pointer-events-none fixed inset-0 overflow-hidden">
         <div className="absolute -top-24 -right-16 h-80 w-80 rounded-full bg-violet-700/10 blur-[80px]" />
         <div className="absolute bottom-10 -left-20 h-72 w-72 rounded-full bg-yellow-600/6 blur-[90px]" />
@@ -74,7 +126,7 @@ export default function ThaiLotteryResultsPage({
             <button
               type="button"
               onClick={() => router.back()}
-              className="inline-flex items-center gap-1.5 rounded-full border border-[#295487] bg-gradient-to-r from-[#0b1730] to-[#10203a] px-3 py-1.5 text-white/90 shadow-[0_10px_24px_rgba(0,0,0,0.22)] transition-all duration-200 hover:-translate-y-0.5 hover:border-violet-500/45 hover:text-white"
+              className="thai-result-back inline-flex items-center gap-1.5 rounded-full border border-[#295487] bg-gradient-to-r from-[#0b1730] to-[#10203a] px-3 py-1.5 text-white/90 shadow-[0_10px_24px_rgba(0,0,0,0.22)] transition-all duration-200 hover:-translate-y-0.5 hover:border-violet-500/45 hover:text-white"
               aria-label="Go back"
             >
               <ChevronLeft className="h-3.5 w-3.5" />
@@ -88,7 +140,7 @@ export default function ThaiLotteryResultsPage({
                 <ReceiptText className="h-5.5 w-5.5 text-violet-400" />
               </div>
 
-              <div className="mb-2 inline-flex items-center gap-1.5 rounded-full border border-violet-500/25 bg-violet-500/8 px-2.5 py-0.5">
+              <div className="thai-result-chip mb-2 inline-flex items-center gap-1.5 rounded-full border border-violet-500/25 bg-violet-500/8 px-2.5 py-0.5">
                 <span className="h-1.5 w-1.5 rounded-full bg-violet-400 animate-pulse" />
                 <span className="text-[10px] font-semibold uppercase tracking-widest text-violet-400">
                   Draw History
@@ -96,13 +148,13 @@ export default function ThaiLotteryResultsPage({
               </div>
 
               <h1 className="text-[28px] font-extrabold tracking-tight">
-                <span className="bg-gradient-to-br from-white via-violet-100 to-yellow-300 bg-clip-text text-transparent">
+                <span className="thai-result-title bg-gradient-to-br from-white via-violet-100 to-yellow-300 bg-clip-text text-transparent">
                   Lottery Results
                 </span>
               </h1>
 
               <div className="mx-auto mt-1.5 h-px w-40 bg-gradient-to-r from-transparent via-violet-500/50 to-transparent" />
-              <p className="mt-1.5 text-[11px] text-white/35 tracking-wide">
+              <p className="thai-result-muted mt-1.5 text-[11px] text-white/35 tracking-wide">
                 Thai Lottery · Public draw results
               </p>
             </div>
@@ -118,13 +170,13 @@ export default function ThaiLotteryResultsPage({
         )}
 
         {!isLoading && results.length === 0 && (
-          <div className="overflow-hidden border border-[#0f2244] bg-[#060f22] py-16 text-center">
+          <div className="thai-result-empty overflow-hidden border border-[#0f2244] bg-[#060f22] py-16 text-center">
             <div className="mb-10 h-px bg-gradient-to-r from-transparent via-violet-600/30 to-transparent" />
             <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl border border-violet-500/20 bg-violet-500/8">
               <ReceiptText className="h-7 w-7 text-violet-400/50" />
             </div>
-            <p className="text-sm font-semibold text-white/60">No results yet</p>
-            <p className="mt-1 text-xs text-white/25">
+            <p className="thai-result-muted text-sm font-semibold text-white/60">No results yet</p>
+            <p className="thai-result-year mt-1 text-xs text-white/25">
               Results will appear after each draw
             </p>
           </div>
@@ -132,10 +184,10 @@ export default function ThaiLotteryResultsPage({
 
         {!isLoading && results.length > 0 && (
           <div className="space-y-3">
-            <div className="grid grid-cols-[1.1fr_0.75fr_0.75fr] items-center rounded-[18px] border border-[#173866] bg-[#0d223f] px-4 py-3 text-center text-[11px] font-bold uppercase tracking-[0.12em] text-white/80">
-              <div className="text-left text-slate-200">Date</div>
-              <div className="text-violet-300">3Up</div>
-              <div className="text-yellow-300">Down</div>
+            <div className="thai-result-header grid grid-cols-[1.1fr_0.75fr_0.75fr] items-center rounded-[18px] border border-[#173866] bg-[#0d223f] px-4 py-3 text-center text-[11px] font-bold uppercase tracking-[0.12em] text-white/80">
+              <div className="thai-result-header-date text-left text-slate-200">Date</div>
+              <div className="thai-result-header-up text-violet-300">3Up</div>
+              <div className="thai-result-header-down text-yellow-300">Down</div>
             </div>
 
             <div className="space-y-3">
@@ -156,22 +208,22 @@ export default function ThaiLotteryResultsPage({
                 return (
                   <div
                     key={item.id ?? idx}
-                    className={`grid grid-cols-[1.1fr_0.75fr_0.75fr] items-center rounded-[22px] border border-[#143156] bg-gradient-to-r ${rowTone} px-4 py-4 text-white shadow-[0_16px_32px_rgba(2,8,20,0.22)]`}
+                    className={`thai-result-row grid grid-cols-[1.1fr_0.75fr_0.75fr] items-center rounded-[22px] border border-[#143156] bg-gradient-to-r ${rowTone} px-4 py-4 text-white shadow-[0_16px_32px_rgba(2,8,20,0.22)]`}
                   >
                     <div className="text-left">
-                      <p className="text-[14px] font-bold leading-none text-white">
+                      <p className="thai-result-date text-[14px] font-bold leading-none text-white">
                         {dt.compact}
                       </p>
-                      <p className="mt-1 text-[12px] font-semibold tracking-[0.08em] text-slate-400">
+                      <p className="thai-result-year mt-1 text-[12px] font-semibold tracking-[0.08em] text-slate-400">
                         {dt.year}
                       </p>
                     </div>
 
-                    <div className="mx-auto flex min-h-12 min-w-[84px] items-center justify-center rounded-2xl border border-violet-500/20 bg-violet-500/10 px-3 text-center font-mono text-[20px] font-black tracking-[0.16em] text-violet-200">
+                    <div className="thai-result-threeup mx-auto flex min-h-12 min-w-[84px] items-center justify-center rounded-2xl border border-violet-500/20 bg-violet-500/10 px-3 text-center font-mono text-[20px] font-black tracking-[0.16em] text-violet-200">
                       {threeUp}
                     </div>
 
-                    <div className="mx-auto flex min-h-12 min-w-[76px] items-center justify-center rounded-2xl border border-yellow-500/20 bg-yellow-500/10 px-3 text-center font-mono text-[20px] font-black tracking-[0.16em] text-yellow-200">
+                    <div className="thai-result-down mx-auto flex min-h-12 min-w-[76px] items-center justify-center rounded-2xl border border-yellow-500/20 bg-yellow-500/10 px-3 text-center font-mono text-[20px] font-black tracking-[0.16em] text-yellow-200">
                       {down}
                     </div>
                   </div>
@@ -187,19 +239,19 @@ export default function ThaiLotteryResultsPage({
               type="button"
               disabled={page <= 1}
               onClick={() => setPage((p) => p - 1)}
-              className="flex h-10 items-center gap-1.5 rounded-[14px] border border-[#0f2244] bg-[#060f22] px-4 text-sm font-semibold transition-colors hover:border-violet-700/50 disabled:opacity-30"
+              className="thai-result-pager-btn flex h-10 items-center gap-1.5 rounded-[14px] border border-[#0f2244] bg-[#060f22] px-4 text-sm font-semibold transition-colors hover:border-violet-700/50 disabled:opacity-30"
             >
               <ChevronLeft className="h-4 w-4" />
               Prev
             </button>
-            <span className="font-mono text-xs text-white/30">
+            <span className="thai-result-year font-mono text-xs text-white/30">
               {page} / {totalPages}
             </span>
             <button
               type="button"
               disabled={page >= totalPages}
               onClick={() => setPage((p) => p + 1)}
-              className="flex h-10 items-center gap-1.5 rounded-[14px] border border-[#0f2244] bg-[#060f22] px-4 text-sm font-semibold transition-colors hover:border-violet-700/50 disabled:opacity-30"
+              className="thai-result-pager-btn flex h-10 items-center gap-1.5 rounded-[14px] border border-[#0f2244] bg-[#060f22] px-4 text-sm font-semibold transition-colors hover:border-violet-700/50 disabled:opacity-30"
             >
               Next
               <ChevronLeft className="h-4 w-4 rotate-180" />
@@ -208,5 +260,6 @@ export default function ThaiLotteryResultsPage({
         )}
       </div>
     </div>
+    </>
   );
 }

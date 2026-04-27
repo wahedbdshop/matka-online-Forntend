@@ -13,10 +13,14 @@ export const ChatService = {
     return res.data;
   },
 
-  sendMessage: async (sessionId: string, message: string) => {
+  sendMessage: async (
+    sessionId: string,
+    message: string,
+    mode?: "AI" | "AGENT",
+  ) => {
     const res = await api.post<ApiResponse<any>>(
       `/chat/session/${sessionId}/message`,
-      { message },
+      { message, mode },
     );
     return res.data;
   },

@@ -27,6 +27,7 @@ import {
 import { DepositService } from "@/services/deposit.service";
 import { AdminService } from "@/services/admin.service";
 import { cn } from "@/lib/utils";
+import { useLanguage } from "@/providers/language-provider";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 type Step = "method" | "amount" | "instruction";
@@ -497,7 +498,40 @@ function SettingsSkeleton() {
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 export default function DepositPage() {
+  const { language } = useLanguage();
   const queryClient = useQueryClient();
+  const text = {
+    en: {
+      title: "Deposit",
+      newDeposit: "New Deposit",
+      history: "History",
+      noDeposits: "No deposits yet",
+      detail: "Deposit Detail",
+      close: "Close",
+      paymentSummary: "Payment Summary",
+      submitTransaction: "Submit Transaction",
+    },
+    bn: {
+      title: "ডিপোজিট",
+      newDeposit: "নতুন ডিপোজিট",
+      history: "হিস্টোরি",
+      noDeposits: "এখনও কোনো ডিপোজিট নেই",
+      detail: "ডিপোজিট বিস্তারিত",
+      close: "বন্ধ করুন",
+      paymentSummary: "পেমেন্ট সারাংশ",
+      submitTransaction: "ট্রানজেকশন সাবমিট",
+    },
+    hi: {
+      title: "डिपॉजिट",
+      newDeposit: "नया डिपॉजिट",
+      history: "हिस्ट्री",
+      noDeposits: "अभी कोई डिपॉजिट नहीं है",
+      detail: "डिपॉजिट विवरण",
+      close: "बंद करें",
+      paymentSummary: "पेमेंट सारांश",
+      submitTransaction: "ट्रांजैक्शन सबमिट करें",
+    },
+  }[language];
 
   // ── UI state ──────────────────────────────────────────────────────────────
   const [tab, setTab] = useState<"new" | "history">("new");
@@ -791,7 +825,7 @@ export default function DepositPage() {
         <div className="w-9 h-9 rounded-xl bg-purple-500/10 border border-purple-500/30 flex items-center justify-center">
           <Wallet className="h-4 w-4 text-purple-400" />
         </div>
-        <h1 className="text-white text-xl font-bold">Deposit</h1>
+        <h1 className="text-white text-xl font-bold">{text.title}</h1>
       </div>
 
       {/* ── Tabs ── */}
@@ -810,7 +844,7 @@ export default function DepositPage() {
                 : "text-slate-400 hover:text-white",
             )}
           >
-            {t === "new" ? "New Deposit" : "History"}
+            {t === "new" ? text.newDeposit : text.history}
           </button>
         ))}
       </div>
@@ -1097,7 +1131,7 @@ export default function DepositPage() {
                     {/* Header row: label + timer */}
                     <div className="flex items-center justify-between">
                       <p className="text-xs font-medium text-slate-400 uppercase tracking-wider">
-                        Payment Summary
+                        {text.paymentSummary}
                       </p>
                       <div
                         className={cn(
@@ -1211,7 +1245,7 @@ export default function DepositPage() {
                   {/* TXN submit card */}
                   <div className="rounded-2xl border border-slate-700/50 bg-slate-800/40 p-4 space-y-3">
                     <p className="text-xs font-medium text-slate-400 uppercase tracking-wider">
-                      Submit Transaction
+                      {text.submitTransaction}
                     </p>
                     <div>
                       <label className="text-[11px] text-slate-400 mb-1.5 block">
@@ -1303,7 +1337,7 @@ export default function DepositPage() {
               <div className="w-14 h-14 rounded-2xl bg-slate-700/50 border border-slate-700 flex items-center justify-center text-2xl">
                 📭
               </div>
-              <p className="text-slate-500 text-sm">No deposits yet</p>
+              <p className="text-slate-500 text-sm">{text.noDeposits}</p>
             </div>
           ) : (
             deposits.map((d: any) => {
@@ -1381,7 +1415,7 @@ export default function DepositPage() {
         >
           <div className="w-full max-w-sm rounded-[24px] border border-slate-700 bg-slate-900 p-5 space-y-3 my-auto">
             <div className="flex items-center justify-between">
-              <h2 className="text-sm font-bold text-white">Deposit Detail</h2>
+              <h2 className="text-sm font-bold text-white">{text.detail}</h2>
               <button
                 onClick={() => setDetailItem(null)}
                 className="text-slate-400 hover:text-white"
@@ -1425,7 +1459,7 @@ export default function DepositPage() {
               onClick={() => setDetailItem(null)}
               className="w-full rounded-xl border border-slate-600 bg-slate-800 py-2 text-sm text-slate-300 hover:bg-slate-700"
             >
-              Close
+              {text.close}
             </button>
           </div>
         </div>

@@ -24,24 +24,24 @@ const fmt = (n: any) => Number(n ?? 0).toLocaleString("en-BD");
 
 // Cycle of distinct row-group background colors
 const GROUP_COLORS = [
-  "bg-slate-800/20",
-  "bg-blue-900/15",
-  "bg-purple-900/15",
-  "bg-emerald-900/15",
-  "bg-orange-900/15",
-  "bg-rose-900/15",
-  "bg-cyan-900/15",
-  "bg-yellow-900/10",
+  "bg-slate-50 dark:bg-slate-800/20",
+  "bg-blue-50/80 dark:bg-blue-900/15",
+  "bg-violet-50/80 dark:bg-purple-900/15",
+  "bg-emerald-50/80 dark:bg-emerald-900/15",
+  "bg-orange-50/80 dark:bg-orange-900/15",
+  "bg-rose-50/80 dark:bg-rose-900/15",
+  "bg-cyan-50/80 dark:bg-cyan-900/15",
+  "bg-yellow-50/70 dark:bg-yellow-900/10",
 ];
 
 
 function tranColor(tranType: string) {
-  if (tranType.startsWith("Deposit"))            return "bg-emerald-500/10 text-emerald-400 border-emerald-500/20";
-  if (tranType.startsWith("Withdraw"))           return "bg-red-500/10    text-red-400    border-red-500/20";
-  if (tranType.startsWith("Transfer"))           return "bg-blue-500/10   text-blue-400   border-blue-500/20";
-  if (tranType.toLowerCase().includes("thai"))   return "bg-orange-500/10 text-orange-400 border-orange-500/20";
-  if (tranType.toLowerCase().includes("kalyan")) return "bg-purple-500/10 text-purple-400 border-purple-500/20";
-  return "bg-yellow-500/10 text-yellow-400 border-yellow-500/20";
+  if (tranType.startsWith("Deposit"))            return "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-400";
+  if (tranType.startsWith("Withdraw"))           return "border-red-200 bg-red-50 text-red-700 dark:border-red-500/20 dark:bg-red-500/10 dark:text-red-400";
+  if (tranType.startsWith("Transfer"))           return "border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-500/20 dark:bg-blue-500/10 dark:text-blue-400";
+  if (tranType.toLowerCase().includes("thai"))   return "border-orange-200 bg-orange-50 text-orange-700 dark:border-orange-500/20 dark:bg-orange-500/10 dark:text-orange-400";
+  if (tranType.toLowerCase().includes("kalyan")) return "border-violet-200 bg-violet-50 text-violet-700 dark:border-purple-500/20 dark:bg-purple-500/10 dark:text-purple-400";
+  return "border-yellow-200 bg-yellow-50 text-yellow-700 dark:border-yellow-500/20 dark:bg-yellow-500/10 dark:text-yellow-400";
 }
 
 export default function UserTransactionsPage() {
@@ -114,8 +114,8 @@ export default function UserTransactionsPage() {
             <ReceiptText className="h-4 w-4 text-cyan-400" />
           </div>
           <div>
-            <h1 className="text-xl font-bold text-white">All User Transactions</h1>
-            <p className="text-xs text-slate-400 mt-0.5">
+            <h1 className="text-xl font-bold text-slate-950 dark:text-white">All User Transactions</h1>
+            <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
               {meta?.total ? `${fmt(meta.total)} records` : "Per-transaction history"}
             </p>
           </div>
@@ -127,17 +127,17 @@ export default function UserTransactionsPage() {
           className="flex items-center gap-2"
         >
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-500" />
+            <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
             <input
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
               placeholder="Search username or name…"
-              className="w-56 rounded-xl border border-slate-700 bg-slate-800/60 pl-9 pr-3 py-2 text-xs text-white outline-none placeholder:text-slate-500 focus:border-cyan-500/60 transition-colors"
+              className="w-56 rounded-xl border border-slate-200 bg-white py-2 pl-9 pr-3 text-xs text-slate-900 outline-none transition-colors placeholder:text-slate-400 focus:border-cyan-400 dark:border-slate-700 dark:bg-slate-800/60 dark:text-white dark:placeholder:text-slate-500 dark:focus:border-cyan-500/60"
             />
           </div>
           <button
             type="submit"
-            className="rounded-xl border border-slate-700 bg-slate-800 px-3 py-2 text-xs text-slate-300 hover:text-white hover:border-slate-500 transition-all"
+            className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-600 transition-all hover:border-slate-300 hover:text-slate-950 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:border-slate-500 dark:hover:text-white"
           >
             Search
           </button>
@@ -145,7 +145,7 @@ export default function UserTransactionsPage() {
             <button
               type="button"
               onClick={() => { setSearch(""); setSearchInput(""); setPage(1); }}
-              className="flex items-center gap-1 rounded-xl border border-slate-700 bg-slate-800 px-2.5 py-2 text-xs text-slate-500 hover:text-white transition-all"
+              className="flex items-center gap-1 rounded-xl border border-slate-200 bg-white px-2.5 py-2 text-xs text-slate-500 transition-all hover:border-slate-300 hover:text-slate-900 dark:border-slate-700 dark:bg-slate-800 dark:hover:text-white"
             >
               <X className="h-3 w-3" />
             </button>
@@ -154,11 +154,11 @@ export default function UserTransactionsPage() {
       </div>
 
       {/* Table */}
-      <div className="rounded-2xl border border-slate-700/40 bg-slate-800/30 overflow-hidden">
+      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-700/40 dark:bg-slate-800/30 dark:shadow-none">
         <div className="overflow-x-auto">
           <table className="w-full text-xs border-collapse">
             <thead>
-              <tr className="bg-slate-800/80 border-b-2 border-slate-700">
+              <tr className="border-b border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-800/80">
                 {[
                   "SL",
                   "User Name",
@@ -173,7 +173,7 @@ export default function UserTransactionsPage() {
                   <th
                     key={h}
                     className={cn(
-                      "px-5 py-3.5 text-[10px] font-bold uppercase tracking-widest text-slate-400 whitespace-nowrap border-r border-slate-700/60 last:border-r-0",
+                      "whitespace-nowrap border-r border-slate-200 px-5 py-3.5 text-[10px] font-bold uppercase tracking-widest text-slate-500 last:border-r-0 dark:border-slate-700/60 dark:text-slate-400",
                       h === "View"
                         ? "text-center"
                         : h === "Old Balance" || h === "Amount" || h === "New Balance"
@@ -191,10 +191,10 @@ export default function UserTransactionsPage() {
             <tbody>
               {isLoading ? (
                 Array.from({ length: 10 }).map((_, i) => (
-                  <tr key={i} className="border-b border-slate-700/40 bg-slate-800/20">
+                  <tr key={i} className="border-b border-slate-200 bg-white dark:border-slate-700/40 dark:bg-slate-800/20">
                     {Array.from({ length: 9 }).map((_, j) => (
-                      <td key={j} className="px-5 py-3.5 border-r border-slate-700/30 last:border-r-0">
-                        <div className="h-3 w-20 animate-pulse rounded bg-slate-700/60" />
+                      <td key={j} className="border-r border-slate-200 px-5 py-3.5 last:border-r-0 dark:border-slate-700/30">
+                        <div className="h-3 w-20 animate-pulse rounded bg-slate-200 dark:bg-slate-700/60" />
                       </td>
                     ))}
                   </tr>
@@ -210,34 +210,34 @@ export default function UserTransactionsPage() {
                   <tr
                     key={`${row.transactionId}-${idx}`}
                     className={cn(
-                      "border-b border-slate-700/40 hover:brightness-110 transition-colors",
+                      "border-b border-slate-200 transition-colors hover:bg-slate-100/80 dark:border-slate-700/40 dark:hover:brightness-110",
                       rowColors[idx],
                     )}
                   >
-                    <td className="px-5 py-3.5 font-mono text-slate-500 border-r border-slate-700/30 w-14">
+                    <td className="w-14 border-r border-slate-200 px-5 py-3.5 font-mono text-slate-400 dark:border-slate-700/30 dark:text-slate-500">
                       {row.sl}
                     </td>
-                    <td className="px-5 py-3.5 border-r border-slate-700/30">
-                      <p className="font-semibold text-white">{row.username}</p>
+                    <td className="border-r border-slate-200 px-5 py-3.5 dark:border-slate-700/30">
+                      <p className="font-semibold text-slate-900 dark:text-white">{row.username}</p>
                     </td>
-                    <td className="px-5 py-3.5 font-mono text-slate-300 border-r border-slate-700/30">
+                    <td className="border-r border-slate-200 px-5 py-3.5 font-mono text-slate-500 dark:border-slate-700/30 dark:text-slate-300">
                       {row.transactionId || "-"}
                     </td>
-                    <td className="px-5 py-3.5 border-r border-slate-700/30 whitespace-nowrap">
+                    <td className="whitespace-nowrap border-r border-slate-200 px-5 py-3.5 dark:border-slate-700/30">
                       {row.createdAt ? (
                         <>
-                          <p className="text-slate-300 font-mono">
+                          <p className="font-mono text-slate-700 dark:text-slate-300">
                             {new Date(row.createdAt).toLocaleDateString("en-BD", { day: "2-digit", month: "short", year: "numeric" })}
                           </p>
-                          <p className="text-[10px] text-slate-500 mt-0.5 font-mono">
+                          <p className="mt-0.5 font-mono text-[10px] text-slate-400 dark:text-slate-500">
                             {new Date(row.createdAt).toLocaleTimeString("en-BD", { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: true })}
                           </p>
                         </>
                       ) : (
-                        <span className="text-slate-600">-</span>
+                        <span className="text-slate-400 dark:text-slate-600">-</span>
                       )}
                     </td>
-                    <td className="px-5 py-3.5 border-r border-slate-700/30">
+                    <td className="border-r border-slate-200 px-5 py-3.5 dark:border-slate-700/30">
                       <span
                         className={cn(
                           "inline-flex items-center rounded-lg border px-2.5 py-1 text-[10px] font-semibold",
@@ -251,21 +251,21 @@ export default function UserTransactionsPage() {
                           {row.balanceChangeType?.toLowerCase() === "credit" ? (
                             <>
                               <span className="text-slate-500">Receiver:</span>
-                              <span className="font-bold text-emerald-400">{row.username}</span>
+                              <span className="font-bold text-emerald-600 dark:text-emerald-400">{row.username}</span>
                             </>
                           ) : row.balanceChangeType?.toLowerCase() === "debit" ? (
                             <>
                               <span className="text-slate-500">Sender:</span>
-                              <span className="font-bold text-red-400">{row.username}</span>
+                              <span className="font-bold text-red-600 dark:text-red-400">{row.username}</span>
                             </>
                           ) : null}
                         </div>
                       )}
                     </td>
-                    <td className="px-5 py-3.5 text-right font-mono text-slate-300 border-r border-slate-700/30">
+                    <td className="border-r border-slate-200 px-5 py-3.5 text-right font-mono text-slate-600 dark:border-slate-700/30 dark:text-slate-300">
                       Rs {fmt(row.oldBalance)}
                     </td>
-                    <td className="px-5 py-3.5 text-right font-mono font-bold border-r border-slate-700/30">
+                    <td className="border-r border-slate-200 px-5 py-3.5 text-right font-mono font-bold dark:border-slate-700/30">
                       {(() => {
                         const isCredit = row.balanceChangeType?.toLowerCase() === "credit";
                         const isDebit = row.balanceChangeType?.toLowerCase() === "debit";
@@ -273,18 +273,18 @@ export default function UserTransactionsPage() {
                           <div className="flex flex-col items-end gap-0.5">
                             <div className={cn(
                               "inline-flex items-center gap-1",
-                              isCredit ? "text-emerald-400" : isDebit ? "text-red-400" : "text-white",
+                              isCredit ? "text-emerald-600 dark:text-emerald-400" : isDebit ? "text-red-600 dark:text-red-400" : "text-slate-900 dark:text-white",
                             )}>
                               {isCredit ? <Plus className="h-3 w-3" /> : isDebit ? <Minus className="h-3 w-3" /> : null}
                               <span>Rs {fmt(row.amount)}</span>
                             </div>
                             {row.bonusAmount != null && Number(row.bonusAmount) > 0 && (
-                              <span className="text-[10px] text-yellow-400 font-normal">
+                              <span className="text-[10px] font-normal text-yellow-600 dark:text-yellow-400">
                                 {row.bonusName ? `${row.bonusName}: ` : "Bonus: "}Rs {fmt(row.bonusAmount)}
                               </span>
                             )}
                             {isDebit && row.reason && (
-                              <span className="text-[10px] text-slate-400 font-normal max-w-[140px] text-right leading-tight">
+                              <span className="max-w-[140px] text-right text-[10px] font-normal leading-tight text-slate-500 dark:text-slate-400">
                                 {row.reason}
                               </span>
                             )}
@@ -292,17 +292,17 @@ export default function UserTransactionsPage() {
                         );
                       })()}
                     </td>
-                    <td className="px-5 py-3.5 text-right font-mono text-white border-r border-slate-700/30">
+                    <td className="border-r border-slate-200 px-5 py-3.5 text-right font-mono text-slate-900 dark:border-slate-700/30 dark:text-white">
                       <div className="flex items-center justify-end gap-2">
                         <span>Rs {fmt(row.newBalance)}</span>
                         {row.balanceChangeType && (
                           <span className={cn(
                             "inline-flex items-center rounded-lg border px-2 py-0.5 text-[10px] font-semibold",
                             row.balanceChangeType.toLowerCase() === "credit"
-                              ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
+                              ? "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-400"
                               : row.balanceChangeType.toLowerCase() === "debit"
-                                ? "bg-red-500/10 text-red-400 border-red-500/20"
-                                : "bg-slate-500/10 text-slate-300 border-slate-500/20",
+                                ? "border-red-200 bg-red-50 text-red-700 dark:border-red-500/20 dark:bg-red-500/10 dark:text-red-400"
+                                : "border-slate-200 bg-slate-100 text-slate-600 dark:border-slate-500/20 dark:bg-slate-500/10 dark:text-slate-300",
                           )}>
                             {row.balanceChangeType}
                           </span>
@@ -312,7 +312,7 @@ export default function UserTransactionsPage() {
                     <td className="px-5 py-3.5 text-center">
                       <Link
                         href={`/admin/users/${row.userId}`}
-                        className="inline-flex items-center gap-1 rounded-lg border border-slate-700 bg-slate-800 px-2.5 py-1 text-[10px] text-slate-300 hover:text-white hover:border-cyan-500/50 hover:bg-cyan-500/5 transition-all"
+                        className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-[10px] text-slate-600 transition-all hover:border-cyan-300 hover:bg-cyan-50 hover:text-cyan-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:border-cyan-500/50 dark:hover:bg-cyan-500/5 dark:hover:text-white"
                       >
                         View
                       </Link>
@@ -326,7 +326,7 @@ export default function UserTransactionsPage() {
 
         {/* Pagination */}
         {rows.length > 0 && (
-          <div className="flex items-center justify-between border-t border-slate-700/40 px-4 py-3">
+          <div className="flex items-center justify-between border-t border-slate-200 px-4 py-3 dark:border-slate-700/40">
             <span className="text-[10px] text-slate-500">
               Page {page} {meta?.total ? `of ${totalPages} · ${fmt(meta.total)} records` : ""}
             </span>
@@ -334,15 +334,15 @@ export default function UserTransactionsPage() {
               <button
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
                 disabled={page <= 1}
-                className="flex h-7 w-7 items-center justify-center rounded-lg border border-slate-700 bg-slate-800 text-slate-400 hover:text-white disabled:opacity-40 transition-all"
+                className="flex h-7 w-7 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 transition-all hover:border-slate-300 hover:text-slate-900 disabled:opacity-40 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400 dark:hover:text-white"
               >
                 <ChevronLeft className="h-3.5 w-3.5" />
               </button>
-              <span className="px-2 text-[10px] text-slate-400 font-mono">{page}</span>
+              <span className="px-2 font-mono text-[10px] text-slate-500 dark:text-slate-400">{page}</span>
               <button
                 onClick={() => setPage((p) => p + 1)}
                 disabled={rows.length < 20 && page >= totalPages}
-                className="flex h-7 w-7 items-center justify-center rounded-lg border border-slate-700 bg-slate-800 text-slate-400 hover:text-white disabled:opacity-40 transition-all"
+                className="flex h-7 w-7 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 transition-all hover:border-slate-300 hover:text-slate-900 disabled:opacity-40 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400 dark:hover:text-white"
               >
                 <ChevronRight className="h-3.5 w-3.5" />
               </button>

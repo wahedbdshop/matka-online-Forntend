@@ -21,7 +21,7 @@ import {
   ShieldCheck,
   UserCircle,
 } from "lucide-react";
-import { Sheet, SheetContent } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { ThemeProvider } from "@/providers/theme-provider";
@@ -170,7 +170,7 @@ function NavItemRow({
           className={cn(
             "flex rounded-lg border transition-colors",
             isParentActive
-              ? "border-cyan-500/30 bg-cyan-500/10"
+              ? "border-cyan-300 bg-cyan-50 dark:border-cyan-500/30 dark:bg-cyan-500/10"
               : "border-transparent",
           )}
         >
@@ -179,8 +179,8 @@ function NavItemRow({
             className={cn(
               "flex flex-1 items-center gap-3 px-3 py-2.5 text-sm rounded-l-lg transition-colors",
               isParentActive
-                ? "text-cyan-300"
-                : "text-slate-400 hover:text-white",
+                ? "text-cyan-700 dark:text-cyan-300"
+                : "text-slate-600 hover:text-slate-950 dark:text-slate-400 dark:hover:text-white",
             )}
           >
             <item.icon className="h-4 w-4 shrink-0" />
@@ -189,10 +189,10 @@ function NavItemRow({
           <button
             onClick={() => setOpen((value) => !value)}
             className={cn(
-              "flex items-center px-2.5 rounded-r-lg border-l border-slate-700/40 transition-colors",
+              "flex items-center px-2.5 rounded-r-lg border-l border-slate-200 transition-colors dark:border-slate-700/40",
               isParentActive
-                ? "text-cyan-300"
-                : "text-slate-500 hover:text-white",
+                ? "text-cyan-700 dark:text-cyan-300"
+                : "text-slate-500 hover:text-slate-900 dark:hover:text-white",
             )}
           >
             <ChevronDown
@@ -205,7 +205,7 @@ function NavItemRow({
         </div>
 
         {open ? (
-          <div className="ml-3 mt-1 space-y-0.5 border-l border-cyan-500/20 pl-3">
+          <div className="ml-3 mt-1 space-y-0.5 border-l border-cyan-200 pl-3 dark:border-cyan-500/20">
             {item.children.map((child) => {
               const isChildActive =
                 child.href === "/agent/thai-lottery" || child.href === "/agent/kalyan"
@@ -220,8 +220,8 @@ function NavItemRow({
                   className={cn(
                     "flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-xs transition-colors",
                     isChildActive
-                      ? "bg-cyan-500/10 text-cyan-300"
-                      : "text-slate-500 hover:bg-slate-800 hover:text-slate-300",
+                      ? "bg-cyan-50 text-cyan-700 dark:bg-cyan-500/10 dark:text-cyan-300"
+                      : "text-slate-600 hover:bg-slate-100 hover:text-slate-950 dark:text-slate-500 dark:hover:bg-slate-800 dark:hover:text-slate-300",
                   )}
                 >
                   <child.icon className="h-3.5 w-3.5 shrink-0" />
@@ -242,8 +242,8 @@ function NavItemRow({
       className={cn(
         "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors",
         isParentActive
-          ? "border border-cyan-500/30 bg-cyan-500/10 text-cyan-300"
-          : "text-slate-400 hover:bg-slate-800 hover:text-white",
+          ? "border border-cyan-300 bg-cyan-50 text-cyan-700 dark:border-cyan-500/30 dark:bg-cyan-500/10 dark:text-cyan-300"
+          : "text-slate-600 hover:bg-slate-100 hover:text-slate-950 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-white",
       )}
     >
       <item.icon className="h-4 w-4 shrink-0" />
@@ -287,14 +287,14 @@ function Sidebar({ onClose }: { onClose?: () => void }) {
   });
 
   return (
-    <div className="flex h-full flex-col border-r border-slate-700/60 bg-slate-900">
-      <div className="border-b border-slate-700/60 px-4 py-3">
+    <div className="flex h-full flex-col border-r border-slate-200 bg-white dark:border-slate-700/60 dark:bg-slate-900">
+      <div className="border-b border-slate-200 px-4 py-3 dark:border-slate-700/60">
         <div className="flex items-center gap-2.5">
           <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-linear-to-br from-cyan-500 to-blue-600 text-sm font-extrabold text-white shadow-lg shadow-cyan-900/40">
             S
           </div>
           <div>
-            <p className="text-sm font-bold text-white leading-tight">Support Agent</p>
+            <p className="text-sm font-bold text-slate-900 leading-tight dark:text-white">Support Agent</p>
             <p className="text-[10px] text-cyan-400 font-medium tracking-wide uppercase">
               Backoffice
             </p>
@@ -307,11 +307,11 @@ function Sidebar({ onClose }: { onClose?: () => void }) {
           <div key={item.href ?? index}>
             {item.section ? (
               <div className="mt-3 mb-1 flex items-center gap-2 px-2">
-                <div className="h-px flex-1 bg-slate-700/60" />
-                <p className="shrink-0 text-[9px] font-bold uppercase tracking-widest text-slate-500">
+                <div className="h-px flex-1 bg-slate-200 dark:bg-slate-700/60" />
+                <p className="shrink-0 text-[9px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">
                   {item.section}
                 </p>
-                <div className="h-px flex-1 bg-slate-700/60" />
+                <div className="h-px flex-1 bg-slate-200 dark:bg-slate-700/60" />
               </div>
             ) : null}
             <NavItemRow
@@ -324,23 +324,23 @@ function Sidebar({ onClose }: { onClose?: () => void }) {
         ))}
       </nav>
 
-      <div className="border-t border-slate-700/60 p-3">
-        <div className="flex items-center gap-3 rounded-xl bg-slate-800/70 px-3 py-2.5 ring-1 ring-slate-700/40">
+      <div className="border-t border-slate-200 p-3 dark:border-slate-700/60">
+        <div className="flex items-center gap-3 rounded-xl bg-slate-50 px-3 py-2.5 ring-1 ring-slate-200 dark:bg-slate-800/70 dark:ring-slate-700/40">
           <Avatar className="h-8 w-8 shrink-0">
             <AvatarFallback className="bg-linear-to-br from-cyan-600 to-blue-600 text-xs font-bold text-white">
               {user?.name?.charAt(0)?.toUpperCase() ?? "S"}
             </AvatarFallback>
           </Avatar>
           <div className="min-w-0 flex-1">
-            <p className="truncate text-xs font-semibold text-white">{user?.name}</p>
-            <p className="text-[10px] text-slate-400">Support Agent</p>
+            <p className="truncate text-xs font-semibold text-slate-900 dark:text-white">{user?.name}</p>
+            <p className="text-[10px] text-slate-500 dark:text-slate-400">Support Agent</p>
           </div>
           <Button
             variant="ghost"
             size="icon"
             onClick={() => logout()}
             disabled={isLoggingOut}
-            className="h-7 w-7 text-slate-400 hover:text-red-400 hover:bg-red-400/10 transition-colors"
+            className="h-7 w-7 text-slate-500 transition-colors hover:bg-red-50 hover:text-red-500 dark:text-slate-400 dark:hover:bg-red-400/10 dark:hover:text-red-400"
           >
             <LogOut className="h-3.5 w-3.5" />
           </Button>
@@ -395,7 +395,7 @@ export default function SupportAgentLayout({
 
   return (
     <ThemeProvider>
-      <div className="flex h-screen overflow-hidden bg-slate-950">
+      <div className="flex h-screen overflow-hidden bg-slate-50 dark:bg-slate-950">
         <div className="hidden w-64 shrink-0 lg:flex">
           <div className="w-full">
             <Sidebar />
@@ -405,31 +405,32 @@ export default function SupportAgentLayout({
         <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
           <SheetContent
             side="left"
-            className="w-64 border-slate-700 bg-slate-900 p-0"
+            className="w-64 border-slate-200 bg-white p-0 dark:border-slate-700 dark:bg-slate-900"
           >
+            <SheetTitle className="sr-only">Support agent navigation menu</SheetTitle>
             <Sidebar onClose={() => setSidebarOpen(false)} />
           </SheetContent>
         </Sheet>
 
         <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
-          <header className="flex h-14 shrink-0 items-center justify-between border-b border-slate-700 bg-slate-900/95 px-4">
+          <header className="flex h-14 shrink-0 items-center justify-between border-b border-slate-200 bg-white/95 px-4 dark:border-slate-700 dark:bg-slate-900/95">
             <div className="flex items-center gap-3">
               <Button
                 variant="ghost"
                 size="icon"
                 onClick={() => setSidebarOpen(true)}
-                className="lg:hidden text-slate-400"
+                className="lg:hidden text-slate-500 dark:text-slate-400"
               >
                 <Menu className="h-5 w-5" />
               </Button>
-              <h1 className="text-sm font-semibold text-white">{currentLabel}</h1>
+              <h1 className="text-sm font-semibold text-slate-900 dark:text-white">{currentLabel}</h1>
             </div>
             <div className="flex items-center gap-2">
               <ThemeToggle />
               <Button
                 variant="ghost"
                 size="icon"
-                className="text-slate-400 hover:text-white"
+                className="text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white"
               >
                 <Bell className="h-5 w-5" />
               </Button>

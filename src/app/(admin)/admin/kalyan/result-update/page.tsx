@@ -62,6 +62,103 @@ function formatDateLabel(value?: string) {
   return parsed.toLocaleDateString("en-GB");
 }
 
+function hasOpenResult(result: any) {
+  return !!result?.openPatti && result.openPatti !== "000";
+}
+
+function hasCloseResult(result: any) {
+  return !!result?.closePatti && result.closePatti !== "000";
+}
+
+function getOpenDigit(result: any) {
+  if (result?.openPatti && result.openPatti !== "000") {
+    const sum = String(result.openPatti)
+      .split("")
+      .reduce((total, digit) => total + Number(digit), 0);
+    return String(sum % 10);
+  }
+
+  if (result?.openTotal !== undefined && result?.openTotal !== null) {
+    return String(result.openTotal);
+  }
+
+  return result?.finalResult?.[0] ?? "";
+}
+
+function getCloseDigit(result: any) {
+  if (result?.closePatti && result.closePatti !== "000") {
+    const sum = String(result.closePatti)
+      .split("")
+      .reduce((total, digit) => total + Number(digit), 0);
+    return String(sum % 10);
+  }
+
+  if (result?.closeTotal !== undefined && result?.closeTotal !== null) {
+    return String(result.closeTotal);
+  }
+
+  return result?.finalResult?.[1] ?? "";
+}
+
+function inferPattiType(value?: string | null) {
+  const normalized = String(value ?? "").trim();
+
+  if (!/^\d{3}$/.test(normalized) || normalized === "000") return "";
+
+  const uniqueCount = new Set(normalized.split("")).size;
+  if (uniqueCount === 3) return "Single Patti";
+  if (uniqueCount === 2) return "Double Patti";
+  if (uniqueCount === 1) return "Triple Patti";
+  return "";
+}
+
+function getPattiLabel(result: any) {
+  const labels = [
+    inferPattiType(result?.openPatti),
+    inferPattiType(result?.closePatti),
+  ].filter(Boolean);
+
+  return [...new Set(labels)].join(" / ") || "-";
+}
+
+function getJoriLabel(result: any) {
+  const openDigit = getOpenDigit(result);
+  const closeDigit = getCloseDigit(result);
+
+  if (hasOpenResult(result) && hasCloseResult(result)) {
+    return `${openDigit}${closeDigit}`;
+  }
+
+  if (hasCloseResult(result)) {
+    return `${openDigit || "X"}${closeDigit || "X"}`;
+  }
+
+  if (hasOpenResult(result)) {
+    return `${openDigit || "X"}X`;
+  }
+
+  return "-";
+}
+
+function getTotalLabel(result: any) {
+  const openDigit = getOpenDigit(result);
+  const closeDigit = getCloseDigit(result);
+
+  if (hasOpenResult(result) && hasCloseResult(result)) {
+    return `${openDigit}-${closeDigit}`;
+  }
+
+  if (hasCloseResult(result)) {
+    return `${openDigit || "X"}-${closeDigit || "X"}`;
+  }
+
+  if (hasOpenResult(result)) {
+    return `${openDigit || "X"}-X`;
+  }
+
+  return "-";
+}
+
 export default function KalyanResultUpdatePage() {
   const queryClient = useQueryClient();
   const [marketFilter, setMarketFilter] = useState("");
@@ -188,12 +285,12 @@ export default function KalyanResultUpdatePage() {
     <div className="space-y-5">
       {/* Header */}
       <div className="flex items-center gap-3">
-        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-yellow-500/15">
+        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-yellow-100 dark:bg-yellow-500/15">
           <Pencil className="h-5 w-5 text-yellow-400" />
         </div>
         <div>
-          <h1 className="text-xl font-bold text-white">Result Update</h1>
-          <p className="text-xs text-slate-400">
+          <h1 className="text-xl font-bold text-slate-950 dark:text-white">Result Update</h1>
+          <p className="text-xs text-slate-500 dark:text-slate-400">
             Search and update existing results
           </p>
         </div>
@@ -207,7 +304,7 @@ export default function KalyanResultUpdatePage() {
             setMarketFilter(e.target.value);
             setPage(1);
           }}
-          className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-1.5 text-xs text-white outline-none"
+          className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-900 outline-none dark:border-slate-600 dark:bg-slate-800 dark:text-white"
         >
           <option value="">All Markets</option>
           {markets.map((m: any) => (
@@ -223,7 +320,7 @@ export default function KalyanResultUpdatePage() {
             setStatusFilter(e.target.value);
             setPage(1);
           }}
-          className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-1.5 text-xs text-white outline-none"
+          className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-900 outline-none dark:border-slate-600 dark:bg-slate-800 dark:text-white"
         >
           <option value="">All Status</option>
           <option value="PENDING">Pending</option>
@@ -238,27 +335,30 @@ export default function KalyanResultUpdatePage() {
             setDateFilter(e.target.value);
             setPage(1);
           }}
-          className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-1.5 text-xs text-white outline-none"
+          className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-900 outline-none dark:border-slate-600 dark:bg-slate-800 dark:text-white"
         />
       </div>
 
       {/* Table */}
-      <div className="rounded-xl border border-slate-700/80 bg-slate-800/55 overflow-x-auto shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]">
+      <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-700/80 dark:bg-slate-800/55 dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-slate-700/80 text-center">
+            <tr className="border-b border-slate-200 bg-slate-50 text-center dark:border-slate-700/80 dark:bg-transparent">
               {[
                 "SI",
                 "Games Name",
                 "Date",
                 "Open Patti",
                 "Close Patti",
+                "Patti",
+                "Jori",
+                "Total",
                 "Status",
                 "Actions",
               ].map((h) => (
                 <th
                   key={h}
-                  className="border-r border-slate-700/50 px-4 py-3 text-center text-xs font-medium text-slate-400 last:border-r-0"
+                  className="border-r border-slate-200 px-4 py-3 text-center text-xs font-medium text-slate-500 last:border-r-0 dark:border-slate-700/50 dark:text-slate-400"
                 >
                   {h}
                 </th>
@@ -268,10 +368,10 @@ export default function KalyanResultUpdatePage() {
           <tbody>
             {isLoading ? (
               Array.from({ length: 6 }).map((_, i) => (
-                <tr key={i} className="border-b border-slate-700/50">
-                  {Array.from({ length: 7 }).map((_, j) => (
-                    <td key={j} className="border-r border-slate-700/40 px-4 py-3 text-center last:border-r-0">
-                      <div className="h-4 w-20 animate-pulse rounded bg-slate-700" />
+                <tr key={i} className="border-b border-slate-200 dark:border-slate-700/50">
+                  {Array.from({ length: 10 }).map((_, j) => (
+                    <td key={j} className="border-r border-slate-200 px-4 py-3 text-center last:border-r-0 dark:border-slate-700/40">
+                      <div className="h-4 w-20 animate-pulse rounded bg-slate-200 dark:bg-slate-700" />
                     </td>
                   ))}
                 </tr>
@@ -279,7 +379,7 @@ export default function KalyanResultUpdatePage() {
             ) : results.length === 0 ? (
               <tr>
                 <td
-                  colSpan={7}
+                  colSpan={10}
                   className="px-4 py-10 text-center text-slate-500"
                 >
                   No results found
@@ -289,12 +389,12 @@ export default function KalyanResultUpdatePage() {
               results.map((r: any, idx: number) => (
                 <tr
                   key={r.id}
-                  className="border-b border-slate-700/50 hover:bg-slate-700/20 transition-colors"
+                  className="border-b border-slate-200 transition-colors hover:bg-slate-50 dark:border-slate-700/50 dark:hover:bg-slate-700/20"
                 >
-                  <td className="border-r border-slate-700/40 px-4 py-3 text-center text-xs text-slate-500 last:border-r-0">
+                  <td className="border-r border-slate-200 px-4 py-3 text-center text-xs text-slate-500 last:border-r-0 dark:border-slate-700/40">
                     {(page - 1) * LIMIT + idx + 1}
                   </td>
-                  <td className="border-r border-slate-700/40 px-4 py-3 text-center font-medium text-white last:border-r-0">
+                  <td className="border-r border-slate-200 px-4 py-3 text-center font-medium text-slate-900 last:border-r-0 dark:border-slate-700/40 dark:text-white">
                     {getGameName(r)}
                     {getSessionType(r) && (
                       <span className={`mt-0.5 block text-[10px] font-semibold uppercase tracking-wide ${getSessionType(r) === "OPEN" ? "text-emerald-400" : "text-rose-400"}`}>
@@ -302,16 +402,25 @@ export default function KalyanResultUpdatePage() {
                       </span>
                     )}
                   </td>
-                  <td className="border-r border-slate-700/40 px-4 py-3 text-center text-xs text-slate-300 last:border-r-0">
+                  <td className="border-r border-slate-200 px-4 py-3 text-center text-xs text-slate-600 last:border-r-0 dark:border-slate-700/40 dark:text-slate-300">
                     {formatDateLabel(r.resultDate)}
                   </td>
-                  <td className="border-r border-slate-700/40 px-4 py-3 text-center font-mono font-bold text-white last:border-r-0">
+                  <td className="border-r border-slate-200 px-4 py-3 text-center font-mono font-bold text-slate-900 last:border-r-0 dark:border-slate-700/40 dark:text-white">
                     {r.openPatti ?? "-"}
                   </td>
-                  <td className="border-r border-slate-700/40 px-4 py-3 text-center font-mono font-bold text-white last:border-r-0">
+                  <td className="border-r border-slate-200 px-4 py-3 text-center font-mono font-bold text-slate-900 last:border-r-0 dark:border-slate-700/40 dark:text-white">
                     {r.closePatti ?? "-"}
                   </td>
-                  <td className="border-r border-slate-700/40 px-4 py-3 text-center last:border-r-0">
+                  <td className="border-r border-slate-200 px-4 py-3 text-center text-xs font-semibold text-slate-700 last:border-r-0 dark:border-slate-700/40 dark:text-slate-200">
+                    {getPattiLabel(r)}
+                  </td>
+                  <td className="border-r border-slate-200 px-4 py-3 text-center font-mono font-semibold text-cyan-700 last:border-r-0 dark:border-slate-700/40 dark:text-cyan-300">
+                    {getJoriLabel(r)}
+                  </td>
+                  <td className="border-r border-slate-200 px-4 py-3 text-center font-mono font-semibold text-amber-700 last:border-r-0 dark:border-slate-700/40 dark:text-amber-300">
+                    {getTotalLabel(r)}
+                  </td>
+                  <td className="border-r border-slate-200 px-4 py-3 text-center last:border-r-0 dark:border-slate-700/40">
                     <span
                       className={`rounded-full border px-2 py-0.5 text-[10px] font-medium ${RESULT_STATUS_STYLE[r.status] ?? ""}`}
                     >
@@ -322,7 +431,7 @@ export default function KalyanResultUpdatePage() {
                     <button
                       onClick={() => openEdit(r)}
                       disabled={r.status === "CANCELLED"}
-                      className="flex items-center gap-1 rounded-lg border border-yellow-500/30 bg-yellow-500/10 px-2 py-1 text-[10px] font-medium text-yellow-400 hover:bg-yellow-500/20 disabled:opacity-30"
+                      className="flex items-center gap-1 rounded-lg border border-yellow-200 bg-yellow-50 px-2 py-1 text-[10px] font-medium text-yellow-700 hover:bg-yellow-100 disabled:opacity-30 dark:border-yellow-500/30 dark:bg-yellow-500/10 dark:text-yellow-400 dark:hover:bg-yellow-500/20"
                     >
                       <Pencil className="h-3 w-3" /> Edit
                     </button>
@@ -339,7 +448,7 @@ export default function KalyanResultUpdatePage() {
           <button
             disabled={page <= 1}
             onClick={() => setPage((p) => p - 1)}
-            className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-1.5 text-xs text-slate-300 disabled:opacity-40"
+            className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-600 disabled:opacity-40 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300"
           >
             Prev
           </button>
@@ -349,7 +458,7 @@ export default function KalyanResultUpdatePage() {
           <button
             disabled={page >= totalPages}
             onClick={() => setPage((p) => p + 1)}
-            className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-1.5 text-xs text-slate-300 disabled:opacity-40"
+            className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-600 disabled:opacity-40 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300"
           >
             Next
           </button>
@@ -364,12 +473,12 @@ export default function KalyanResultUpdatePage() {
             if (e.target === e.currentTarget) closeEdit();
           }}
         >
-          <div className="w-full max-w-md rounded-2xl border border-slate-700 bg-slate-900 p-6 space-y-5">
+          <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 space-y-5 dark:border-slate-700 dark:bg-slate-900">
             {/* Modal header */}
             <div className="flex items-center justify-between">
               <div>
-                <h2 className="text-sm font-bold text-white">Update Result</h2>
-                <p className="text-[10px] text-slate-400 mt-0.5">
+                <h2 className="text-sm font-bold text-slate-950 dark:text-white">Update Result</h2>
+                <p className="mt-0.5 text-[10px] text-slate-500 dark:text-slate-400">
                   {getGameName(editTarget)}
                   {getSessionType(editTarget) && (
                     <span className={`ml-1 font-semibold ${getSessionType(editTarget) === "OPEN" ? "text-emerald-400" : "text-rose-400"}`}>
@@ -381,7 +490,7 @@ export default function KalyanResultUpdatePage() {
               <button
                 type="button"
                 onClick={closeEdit}
-                className="flex h-7 w-7 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-800 hover:text-white transition-colors"
+                className="flex h-7 w-7 items-center justify-center rounded-lg text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-white"
               >
                 <X className="h-4 w-4" />
               </button>
@@ -390,13 +499,13 @@ export default function KalyanResultUpdatePage() {
             <form onSubmit={handleSubmit(onFormSubmit)} className="space-y-4">
               {/* Result Date */}
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-slate-400">
+                <label className="text-xs font-medium text-slate-500 dark:text-slate-400">
                   Result Date
                 </label>
                 <input
                   type="date"
                   {...register("resultDate")}
-                  className="w-full rounded-lg border border-slate-600 bg-slate-800 px-3 py-2.5 text-sm text-white outline-none focus:border-yellow-500"
+                  className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none focus:border-yellow-400 dark:border-slate-600 dark:bg-slate-800 dark:text-white dark:focus:border-yellow-500"
                 />
                 {errors.resultDate && (
                   <p className="text-[10px] text-red-400">
@@ -406,7 +515,7 @@ export default function KalyanResultUpdatePage() {
               </div>
 
               {/* ── Grouped Open / Close inputs ───────────────────── */}
-              <div className="rounded-xl border border-slate-700/60 bg-slate-800/40 p-3 space-y-3">
+              <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 space-y-3 dark:border-slate-700/60 dark:bg-slate-800/40">
                 <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-500">
                   Game Sessions
                 </p>
@@ -414,7 +523,7 @@ export default function KalyanResultUpdatePage() {
                 {/* Open Patti */}
                 <div className="space-y-1.5">
                   <div className="flex items-center justify-between">
-                    <label className="text-xs font-medium text-slate-400">
+                    <label className="text-xs font-medium text-slate-500 dark:text-slate-400">
                       Open Patti
                     </label>
                     <button
@@ -439,7 +548,7 @@ export default function KalyanResultUpdatePage() {
                       className={`w-full rounded-lg border px-3 py-2.5 text-center font-mono text-lg font-bold tracking-widest outline-none transition-all ${
                         openCancelled
                           ? "cursor-not-allowed border-rose-500/20 bg-rose-500/5 text-rose-400/50"
-                          : "border-slate-600 bg-slate-800 text-white focus:border-yellow-500"
+                          : "border-slate-200 bg-white text-slate-900 focus:border-yellow-400 dark:border-slate-600 dark:bg-slate-800 dark:text-white dark:focus:border-yellow-500"
                       }`}
                     />
                     {openCancelled && (
@@ -458,12 +567,12 @@ export default function KalyanResultUpdatePage() {
                 </div>
 
                 {/* Divider */}
-                <div className="h-px bg-slate-700/50" />
+                <div className="h-px bg-slate-200 dark:bg-slate-700/50" />
 
                 {/* Close Patti */}
                 <div className="space-y-1.5">
                   <div className="flex items-center justify-between">
-                    <label className="text-xs font-medium text-slate-400">
+                    <label className="text-xs font-medium text-slate-500 dark:text-slate-400">
                       Close Patti
                     </label>
                     <button
@@ -490,7 +599,7 @@ export default function KalyanResultUpdatePage() {
                       className={`w-full rounded-lg border px-3 py-2.5 text-center font-mono text-lg font-bold tracking-widest outline-none transition-all ${
                         closeCancelled
                           ? "cursor-not-allowed border-rose-500/20 bg-rose-500/5 text-rose-400/50"
-                          : "border-slate-600 bg-slate-800 text-white focus:border-yellow-500"
+                          : "border-slate-200 bg-white text-slate-900 focus:border-yellow-400 dark:border-slate-600 dark:bg-slate-800 dark:text-white dark:focus:border-yellow-500"
                       }`}
                     />
                     {closeCancelled && (
@@ -519,7 +628,7 @@ export default function KalyanResultUpdatePage() {
                 <button
                   type="button"
                   onClick={closeEdit}
-                  className="flex-1 rounded-lg border border-slate-600 bg-slate-800 py-2.5 text-sm text-slate-300 hover:bg-slate-700"
+                  className="flex-1 rounded-lg border border-slate-200 bg-white py-2.5 text-sm text-slate-600 hover:bg-slate-100 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
                 >
                   Cancel
                 </button>
@@ -538,30 +647,30 @@ export default function KalyanResultUpdatePage() {
       {/* ── Warning / Confirmation Modal ───────────────────────────── */}
       {pendingUpdate && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 px-4">
-          <div className="w-full max-w-sm rounded-2xl border border-amber-500/30 bg-slate-900 p-6 space-y-5 shadow-[0_20px_60px_rgba(0,0,0,0.5)]">
+          <div className="w-full max-w-sm rounded-2xl border border-amber-200 bg-white p-6 space-y-5 shadow-[0_20px_60px_rgba(15,23,42,0.16)] dark:border-amber-500/30 dark:bg-slate-900 dark:shadow-[0_20px_60px_rgba(0,0,0,0.5)]">
             {/* Icon + title */}
             <div className="flex items-start gap-3">
               <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-500/15">
                 <AlertTriangle className="h-5 w-5 text-amber-400" />
               </div>
               <div>
-                <h3 className="text-sm font-bold text-white">Confirm Update</h3>
-                <p className="mt-0.5 text-[10px] text-slate-400">
+                <h3 className="text-sm font-bold text-slate-950 dark:text-white">Confirm Update</h3>
+                <p className="mt-0.5 text-[10px] text-slate-500 dark:text-slate-400">
                   This action cannot be undone.
                 </p>
               </div>
             </div>
 
             {/* Warning body */}
-            <p className="rounded-xl border border-amber-500/20 bg-amber-500/5 px-4 py-3 text-xs leading-relaxed text-slate-300">
+            <p className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs leading-relaxed text-slate-600 dark:border-amber-500/20 dark:bg-amber-500/5 dark:text-slate-300">
               Updating this result will automatically{" "}
               <span className="font-semibold text-amber-300">
                 deduct previous winnings
               </span>{" "}
               from users for{" "}
-              <span className="font-semibold text-white">Patti</span>,{" "}
-              <span className="font-semibold text-white">Jori</span>, and{" "}
-              <span className="font-semibold text-white">Total</span>. Do you
+              <span className="font-semibold text-slate-900 dark:text-white">Patti</span>,{" "}
+              <span className="font-semibold text-slate-900 dark:text-white">Jori</span>, and{" "}
+              <span className="font-semibold text-slate-900 dark:text-white">Total</span>. Do you
               want to proceed?
             </p>
 
@@ -571,7 +680,7 @@ export default function KalyanResultUpdatePage() {
                 type="button"
                 onClick={() => setPendingUpdate(null)}
                 disabled={isPending}
-                className="flex-1 rounded-lg border border-slate-600 bg-slate-800 py-2.5 text-sm text-slate-300 transition-colors hover:bg-slate-700 disabled:opacity-50"
+                className="flex-1 rounded-lg border border-slate-200 bg-white py-2.5 text-sm text-slate-600 transition-colors hover:bg-slate-100 disabled:opacity-50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
               >
                 Go Back
               </button>
