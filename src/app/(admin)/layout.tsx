@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import { useState } from "react";
+import { useEffect, useReducer, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -57,6 +57,10 @@ import { FloatingAdminChatButton } from "@/components/admin/floating-admin-chat-
 import { AdminChatNotificationPopup } from "@/components/admin/admin-chat-notification-popup";
 import { AuthService } from "@/services/auth.service";
 import { clearClientAuthCookies } from "@/lib/auth-cookie";
+import {
+  ADMIN_CHAT_SEEN_MESSAGES_EVENT,
+  getAdminUnreadChatCount,
+} from "@/lib/admin-chat-unread";
 
 // ─── Types ────────────────────────────────────────────────────
 interface NavChild {
@@ -311,7 +315,14 @@ const navItems: NavItem[] = [
       { href: "/admin/tickets", icon: HelpCircle, label: "Support" },
       { href: "/admin/support-agents", icon: UserCog, label: "Support Agents" },
       { href: "/admin/audit-logs", icon: ClipboardList, label: "Audit Logs" },
-      { href: "/admin/chat", icon: MessageCircle, label: "Live Chat" },
+      {
+        icon: MessageCircle,
+        label: "Live Chat",
+        children: [
+          { href: "/admin/chat", icon: MessageSquare, label: "Inbox" },
+          { href: "/admin/live-chat", icon: Settings, label: "Settings" },
+        ],
+      },
 
   {
     icon: Settings,
@@ -604,6 +615,7 @@ function NavItemRow({
                 child.href === "/admin/ludo"
                   ? pathname === child.href
                   : pathname.startsWith(child.href!));
+              const childBadge = child.href === "/admin/chat" ? badge : undefined;
 
               return (
                 <Link
@@ -618,7 +630,12 @@ function NavItemRow({
                   )}
                 >
                   <child.icon className="h-3.5 w-3.5 shrink-0" />
-                  <span>{child.label}</span>
+                  <span className="flex-1">{child.label}</span>
+                  {!!childBadge && childBadge > 0 && (
+                    <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[9px] font-bold text-white">
+                      {childBadge > 99 ? "99+" : childBadge}
+                    </span>
+                  )}
                 </Link>
               );
             })}
@@ -665,9 +682,20 @@ function Sidebar({ onClose }: { onClose?: () => void }) {
     },
     refetchInterval: 10000,
   });
-  const chatBadge: number = (waitingData?.data ?? []).filter(
-    (s: any) => s.status === "WAITING_AGENT",
-  ).length;
+  const [, refreshUnreadCount] = useReducer((value: number) => value + 1, 0);
+  const chatBadge: number = getAdminUnreadChatCount(waitingData?.data ?? []);
+
+  useEffect(() => {
+    const refreshCount = () => refreshUnreadCount();
+
+    window.addEventListener(ADMIN_CHAT_SEEN_MESSAGES_EVENT, refreshCount);
+    window.addEventListener("storage", refreshCount);
+
+    return () => {
+      window.removeEventListener(ADMIN_CHAT_SEEN_MESSAGES_EVENT, refreshCount);
+      window.removeEventListener("storage", refreshCount);
+    };
+  }, []);
 
   const { mutate: logout, isPending: isLoggingOut } = useMutation({
     mutationFn: AuthService.logout,
@@ -725,7 +753,12 @@ function Sidebar({ onClose }: { onClose?: () => void }) {
               item={item}
               pathname={pathname}
               onClose={onClose}
-              badge={item.href === "/admin/chat" ? chatBadge : undefined}
+              badge={
+                item.href === "/admin/chat" ||
+                item.children?.some((child) => child.href === "/admin/chat")
+                  ? chatBadge
+                  : undefined
+              }
             />
           </div>
         ))}

@@ -5,15 +5,22 @@ import { useRouter, usePathname } from "next/navigation";
 import { MessageCircle, X, GripVertical } from "lucide-react";
 import { useSocket } from "@/hooks/use-socket";
 import { ChatService } from "@/services/chat.service";
-
-export const CHAT_SESSION_KEY = "chat_session_id";
-export const CHAT_AGENT_COUNT_KEY = "chat_agent_count";
+import {
+  CHAT_AGENT_COUNT_KEY,
+  CHAT_SESSION_KEY,
+  getAgentMessageCount,
+  markChatAgentMessagesSeen,
+  readChatUnreadCount,
+  setChatUnreadFromAgentTotal,
+  writeChatUnreadCount,
+} from "@/lib/chat-unread";
 
 export function ChatReplyPopup() {
   const router = useRouter();
   const pathname = usePathname();
   const [show, setShow] = useState(false);
   const [lastMessage, setLastMessage] = useState("");
+  const [unreadCount, setUnreadCount] = useState(0);
   const posRef = useRef({ x: 16, y: 200 });
   const [renderPos, setRenderPos] = useState({ x: 16, y: 200 });
   const isDragging = useRef(false);
@@ -30,7 +37,7 @@ export function ChatReplyPopup() {
     rejoinSession();
   }, [rejoinSession]);
 
-  // Re-join when tab becomes visible again (mobile app switch)
+  // Re-join when tab becomes visible again.
   useEffect(() => {
     const onVisible = () => {
       if (document.visibilityState === "visible") rejoinSession();
@@ -39,18 +46,20 @@ export function ChatReplyPopup() {
     return () => document.removeEventListener("visibilitychange", onVisible);
   }, [rejoinSession]);
 
-  // Socket listener
   useEffect(() => {
     const unsub = onNewMessage((data: { role?: string; message?: string }) => {
       if (data.role === "AGENT" && pathname !== "/chat") {
         setLastMessage(data.message ?? "Admin replied to your message");
+        const nextUnreadCount = readChatUnreadCount() + 1;
+        writeChatUnreadCount(nextUnreadCount);
+        setUnreadCount(nextUnreadCount);
         setShow(true);
       }
     });
     return unsub;
   }, [onNewMessage, pathname]);
 
-  // HTTP polling fallback — catches messages when socket is unreliable on mobile
+  // HTTP polling fallback catches messages when socket is unreliable on mobile.
   useEffect(() => {
     if (pathname === "/chat") return;
     const sessionId = localStorage.getItem(CHAT_SESSION_KEY);
@@ -59,24 +68,24 @@ export function ChatReplyPopup() {
     const poll = async () => {
       try {
         const res = await ChatService.getSession(sessionId);
-        const msgs: { role: string; message?: string }[] = res.data?.messages ?? [];
-        const agentMsgs = msgs.filter((m) => m.role === "AGENT");
-        const count = agentMsgs.length;
+        const msgs: { role: string; message?: string }[] =
+          res.data?.messages ?? [];
+        const agentMsgs = msgs.filter((message) => message.role === "AGENT");
+        const count = getAgentMessageCount(msgs);
+        const stored = localStorage.getItem(CHAT_AGENT_COUNT_KEY);
 
-        // Use localStorage baseline so it survives page reloads and app restarts
-        const stored = parseInt(localStorage.getItem(CHAT_AGENT_COUNT_KEY) ?? "-1", 10);
-
-        if (stored === -1) {
-          // First time ever — set baseline silently
-          localStorage.setItem(CHAT_AGENT_COUNT_KEY, String(count));
+        if (stored === null) {
+          markChatAgentMessagesSeen(count);
           return;
         }
 
-        if (count > stored) {
+        const nextUnreadCount = setChatUnreadFromAgentTotal(count);
+        setUnreadCount(nextUnreadCount);
+
+        if (nextUnreadCount > 0) {
           const newest = agentMsgs[agentMsgs.length - 1];
           setLastMessage(newest?.message ?? "Admin replied to your message");
           setShow(true);
-          // Don't update stored count here — update only when user opens chat
         }
       } catch {
         // silent
@@ -87,6 +96,12 @@ export function ChatReplyPopup() {
     poll();
     return () => clearInterval(interval);
   }, [pathname]);
+
+  const openChat = () => {
+    setShow(false);
+    markChatAgentMessagesSeen();
+    router.push("/chat?mode=agent");
+  };
 
   const onPointerDown = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
     e.currentTarget.setPointerCapture(e.pointerId);
@@ -123,7 +138,6 @@ export function ChatReplyPopup() {
       }}
       className="w-64 select-none rounded-2xl border border-cyan-500/30 bg-[#0f1d3d] shadow-[0_8px_32px_rgba(0,0,0,0.55)]"
     >
-      {/* Drag handle */}
       <div
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
@@ -145,18 +159,14 @@ export function ChatReplyPopup() {
         </button>
       </div>
 
-      {/* Message preview */}
       <button
-        onClick={() => {
-          setShow(false);
-          router.push("/chat");
-        }}
+        onClick={openChat}
         className="w-full rounded-b-2xl px-4 py-3 text-left transition-colors hover:bg-white/5"
       >
         <p className="mb-1 text-[11px] text-slate-400">Support replied:</p>
         <p className="line-clamp-2 text-sm text-white">{lastMessage}</p>
         <p className="mt-2 text-[10px] font-semibold text-cyan-400">
-          Tap to open chat →
+          Tap to open chat - {unreadCount > 9 ? "9+" : unreadCount} new
         </p>
       </button>
     </div>

@@ -1,11 +1,15 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useReducer, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { MessageCircle } from "lucide-react";
 import { useAdminAuth } from "@/hooks/use-admin-auth";
 import { api } from "@/lib/axios";
+import {
+  ADMIN_CHAT_SEEN_MESSAGES_EVENT,
+  getAdminUnreadChatCount,
+} from "@/lib/admin-chat-unread";
 
 export function FloatingAdminChatButton() {
   const router = useRouter();
@@ -22,10 +26,11 @@ export function FloatingAdminChatButton() {
   });
 
   const waitingSessions = data ?? [];
-  const waitingCount = waitingSessions.length;
+  const [, refreshUnreadCount] = useReducer((value: number) => value + 1, 0);
+  const waitingCount = getAdminUnreadChatCount(waitingSessions);
 
   // Drag state
-  const [pos, setPos] = useState<{ bottom: number; right: number } | null>(null);
+  const [pos, setPos] = useState({ bottom: 20, right: 20 });
   const dragRef = useRef<{
     dragging: boolean;
     startX: number;
@@ -36,9 +41,16 @@ export function FloatingAdminChatButton() {
   } | null>(null);
   const btnRef = useRef<HTMLDivElement>(null);
 
-  // Init position
   useEffect(() => {
-    setPos({ bottom: 20, right: 20 });
+    const refreshCount = () => refreshUnreadCount();
+
+    window.addEventListener(ADMIN_CHAT_SEEN_MESSAGES_EVENT, refreshCount);
+    window.addEventListener("storage", refreshCount);
+
+    return () => {
+      window.removeEventListener(ADMIN_CHAT_SEEN_MESSAGES_EVENT, refreshCount);
+      window.removeEventListener("storage", refreshCount);
+    };
   }, []);
 
   const handleMouseDown = (e: React.MouseEvent) => {
@@ -63,7 +75,7 @@ export function FloatingAdminChatButton() {
       setPos({ bottom: newBottom, right: newRight });
     };
 
-    const onMouseUp = (_ev: MouseEvent) => {
+    const onMouseUp = () => {
       if (dragRef.current && !dragRef.current.moved) {
         router.push("/admin/chat");
       }
@@ -113,7 +125,6 @@ export function FloatingAdminChatButton() {
   };
 
   if (waitingCount <= 0) return null;
-  if (!pos) return null;
 
   return (
     <div

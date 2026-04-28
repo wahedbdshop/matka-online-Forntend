@@ -24,6 +24,12 @@ import { cn } from "@/lib/utils";
 import { api } from "@/lib/axios";
 import { ChatService } from "@/services/chat.service";
 import {
+  isAdminChatSessionUnread,
+  markAdminChatSessionSeen,
+  readAdminChatSeenMap,
+  sortChatSessionsByLatestMessage,
+} from "@/lib/admin-chat-unread";
+import {
   AudioBubble,
   ImageBubble,
   ImagePreviewModal,
@@ -125,11 +131,12 @@ function AdminChatPageInner() {
   });
 
   const chatSessions = sessionsData?.data || [];
-  const liveSessions = selectedSession
-    ? [selectedSession, ...chatSessions.filter((s: any) => s.id !== selectedSession.id)].filter(
-        (s: any) => s.status !== "CLOSED",
-      )
-    : chatSessions;
+  const liveSessions = sortChatSessionsByLatestMessage(
+    (selectedSession
+      ? [selectedSession, ...chatSessions.filter((s: any) => s.id !== selectedSession.id)]
+      : chatSessions
+    ).filter((s: any) => s.status !== "CLOSED"),
+  );
 
   const loadSession = async (sessionId: string) => {
     const res = await api.get(`/chat/agent/session/${sessionId}`);
@@ -138,6 +145,7 @@ function AdminChatPageInner() {
     scrollBehaviorRef.current = "auto";
     setSelectedSession(session);
     setMessages(session.messages || []);
+    markAdminChatSessionSeen(session);
     joinSession(sessionId);
     setShowChat(true);
     localStorage.setItem("admin_chat_session", sessionId);
@@ -161,6 +169,7 @@ function AdminChatPageInner() {
         const session = res.data.data;
         setMessages(session.messages || []);
         setSelectedSession(session);
+        markAdminChatSessionSeen(session);
       } catch { /* silent */ }
     }, 3000);
     return () => clearInterval(interval);
@@ -312,6 +321,10 @@ function AdminChatPageInner() {
             sessionsToRender.map((session: any) => {
               const last = lastMsg(session);
               const isActive = selectedSession?.id === session.id;
+              const isUnread = isAdminChatSessionUnread(
+                session,
+                readAdminChatSeenMap(),
+              );
               return (
                 <button
                   key={session.id}
@@ -351,7 +364,7 @@ function AdminChatPageInner() {
                       </p>
                     )}
                   </div>
-                  {session.status === "WAITING_AGENT" && (
+                  {isUnread && (
                     <span className="shrink-0 rounded-full bg-yellow-500/20 px-2 py-0.5 text-[10px] font-bold text-yellow-400">
                       NEW
                     </span>

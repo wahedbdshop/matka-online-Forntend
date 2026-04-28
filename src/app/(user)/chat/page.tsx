@@ -3,7 +3,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import {
   Send,
@@ -39,7 +39,11 @@ import {
   ImageBubble,
   ImagePreviewModal,
 } from "@/components/chat/media-bubbles";
-import { CHAT_SESSION_KEY, CHAT_AGENT_COUNT_KEY } from "@/components/user/chat-reply-popup";
+import {
+  CHAT_SESSION_KEY,
+  getAgentMessageCount,
+  markChatAgentMessagesSeen,
+} from "@/lib/chat-unread";
 
 interface Message {
   id?: string;
@@ -184,13 +188,16 @@ const applyThreadHints = (
 
 export default function ChatPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const requestedMode: SupportMode =
+    searchParams.get("mode")?.toLowerCase() === "ai" ? "AI" : "AGENT";
   const user = useAuthStore((s) => s.user);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputMessage, setInputMessage] = useState("");
   const [isSending, setIsSending] = useState(false);
   const [sessionStatus, setSessionStatus] = useState("AI_HANDLING");
-  const [supportMode, setSupportMode] = useState<SupportMode>("AI");
+  const [supportMode, setSupportMode] = useState<SupportMode>(requestedMode);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [showMicDeniedDialog, setShowMicDeniedDialog] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -198,6 +205,7 @@ export default function ChatPage() {
   const shouldAutoScrollRef = useRef(true);
   const scrollBehaviorRef = useRef<ScrollBehavior>("smooth");
   const imageInputRef = useRef<HTMLInputElement>(null);
+  const autoRequestedAgentRef = useRef(false);
   const { isConnected, joinSession, onNewMessage, onAgentJoined } = useSocket();
   const { isRecording, micPermission, startRecording, stopRecording } = useVoiceRecorder();
 
@@ -208,8 +216,10 @@ export default function ChatPage() {
       const session = data.data;
       shouldAutoScrollRef.current = true;
       scrollBehaviorRef.current = "auto";
+      autoRequestedAgentRef.current = false;
       setSessionId(session.id);
       setSessionStatus(session.status);
+      setSupportMode(requestedMode);
       localStorage.setItem(CHAT_SESSION_KEY, session.id);
 
       if (session.messages?.length > 0) {
@@ -261,13 +271,9 @@ export default function ChatPage() {
     const session = sessionData?.data;
     if (!session) return;
     setSessionStatus(session.status);
-    if (session.status === "AI_HANDLING" || session.status === "CLOSED") {
-      setSupportMode("AI");
-    }
-
     // Track how many agent messages user has seen — popup uses this as baseline
-    const agentCount = (session.messages ?? []).filter((m: Message) => m.role === "AGENT").length;
-    localStorage.setItem(CHAT_AGENT_COUNT_KEY, String(agentCount));
+    const agentCount = getAgentMessageCount(session.messages ?? []);
+    markChatAgentMessagesSeen(agentCount);
 
     if (session.messages?.length > 0) {
       setMessages((prev) => {
@@ -307,6 +313,31 @@ export default function ChatPage() {
   }, [sessionData, supportMode]);
 
   useEffect(() => {
+    if (
+      supportMode !== "AGENT" ||
+      !sessionId ||
+      sessionStatus !== "AI_HANDLING" ||
+      autoRequestedAgentRef.current
+    ) {
+      return;
+    }
+
+    const identifier = user?.username || user?.email || user?.name;
+    if (!identifier) return;
+
+    autoRequestedAgentRef.current = true;
+    requestAgent({ sessionId, identifier });
+  }, [
+    requestAgent,
+    sessionId,
+    sessionStatus,
+    supportMode,
+    user?.email,
+    user?.name,
+    user?.username,
+  ]);
+
+  useEffect(() => {
     if (!shouldAutoScrollRef.current) return;
     messagesEndRef.current?.scrollIntoView({
       behavior: scrollBehaviorRef.current,
@@ -327,6 +358,10 @@ export default function ChatPage() {
     startSession();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    setSupportMode(requestedMode);
+  }, [requestedMode]);
 
   useEffect(() => {
     if (!sessionId || !isConnected) return;
@@ -523,9 +558,7 @@ export default function ChatPage() {
   };
 
   const statusInfo = getStatusInfo();
-  const hasLiveAgentThread =
-    sessionStatus === "WAITING_AGENT" || sessionStatus === "AGENT_HANDLING";
-  const activeTitle = supportMode === "AGENT" ? "Live Agent" : "AI Assistant";
+  const activeTitle = supportMode === "AI" ? "AI Assistant" : "Live Agent";
   const displayedMessages = getThreadMessages(messages, supportMode, supportMode);
 
   const handleBack = () => {
@@ -571,21 +604,23 @@ export default function ChatPage() {
       <Card className="rounded-b-none border-slate-200/90 bg-white/95 shadow-sm dark:border-slate-700 dark:bg-slate-800/50 dark:shadow-none">
         <CardContent className="p-3">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="relative">
+            <button
+              type="button"
+              onClick={() => setSupportMode("AGENT")}
+              className="flex min-w-0 items-center gap-3 text-left"
+              aria-label="Show live agent chat"
+            >
+              <div className="relative shrink-0">
                 <Avatar className="h-9 w-9 border border-slate-200 dark:border-slate-600">
                   <AvatarFallback
                     className={cn("text-sm", {
-                      "bg-blue-600/20": sessionStatus === "AI_HANDLING",
-                      "bg-green-600/20": sessionStatus === "AGENT_HANDLING",
+                      "bg-green-600/20":
+                        sessionStatus === "AI_HANDLING" ||
+                        sessionStatus === "AGENT_HANDLING",
                       "bg-yellow-600/20": sessionStatus === "WAITING_AGENT",
                     })}
                   >
-                    {supportMode === "AGENT" ? (
-                      <Headphones className="h-4 w-4 text-green-400" />
-                    ) : (
-                      <Bot className="h-4 w-4 text-blue-400" />
-                    )}
+                    <Headphones className="h-4 w-4 text-green-400" />
                   </AvatarFallback>
                 </Avatar>
                 <div
@@ -610,53 +645,9 @@ export default function ChatPage() {
                   )}
                 </div>
               </div>
-            </div>
+            </button>
 
-            <div className="flex items-center gap-1">
-              {hasLiveAgentThread && (
-                <div className="flex rounded-full border border-slate-200 bg-slate-100 p-0.5 dark:border-slate-700 dark:bg-slate-900/60">
-                  <button
-                    type="button"
-                    onClick={() => setSupportMode("AI")}
-                    className={cn(
-                      "flex h-7 w-7 items-center justify-center rounded-full text-slate-500 transition-colors dark:text-slate-400",
-                      supportMode === "AI" && "bg-blue-500/20 text-blue-300",
-                    )}
-                    aria-label="Use AI support"
-                  >
-                    <Bot className="h-3.5 w-3.5" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setSupportMode("AGENT")}
-                    className={cn(
-                      "flex h-7 w-7 items-center justify-center rounded-full text-slate-500 transition-colors dark:text-slate-400",
-                      supportMode === "AGENT" && "bg-green-500/20 text-green-300",
-                    )}
-                    aria-label="Use live agent"
-                  >
-                    <Headphones className="h-3.5 w-3.5" />
-                  </button>
-                </div>
-              )}
-
-              {sessionStatus === "AI_HANDLING" && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleRequestAgent}
-                  disabled={isRequestingAgent || !sessionId}
-                  className="h-8 text-xs text-violet-600 hover:text-violet-700 dark:text-purple-400 dark:hover:text-purple-300"
-                >
-                  {isRequestingAgent ? (
-                    <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" />
-                  ) : (
-                    <Headphones className="mr-1 h-3.5 w-3.5" />
-                  )}
-                  {isRequestingAgent ? "Requesting..." : "Live Agent"}
-                </Button>
-              )}
-            </div>
+            <div aria-hidden="true" />
           </div>
         </CardContent>
       </Card>

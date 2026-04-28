@@ -6,8 +6,12 @@ import { usePathname, useRouter } from "next/navigation";
 import { Bell, MessageCircle, X } from "lucide-react";
 import { api } from "@/lib/axios";
 import { useAuthStore } from "@/store/auth.store";
+import {
+  ADMIN_CHAT_SEEN_MESSAGES_KEY,
+  buildAdminChatMessageKey,
+  getLatestUserMessage,
+} from "@/lib/admin-chat-unread";
 
-const STORAGE_KEY = "admin_chat_seen_messages";
 const POPUP_DURATION_MS = 12000;
 
 type ChatMessage = {
@@ -37,41 +41,13 @@ function readSeenMap() {
   if (typeof window === "undefined") return {} as Record<string, string>;
 
   try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
+    const raw = window.localStorage.getItem(ADMIN_CHAT_SEEN_MESSAGES_KEY);
     if (!raw) return {};
     const parsed = JSON.parse(raw) as Record<string, string>;
     return parsed && typeof parsed === "object" ? parsed : {};
   } catch {
     return {};
   }
-}
-
-function writeSeenMap(value: Record<string, string>) {
-  if (typeof window === "undefined") return;
-  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(value));
-}
-
-function getLatestUserMessage(session: ChatSession) {
-  const messages = Array.isArray(session?.messages) ? session.messages : [];
-
-  return [...messages]
-    .filter((message) => String(message?.role ?? "").toUpperCase() === "USER")
-    .sort((left, right) => {
-      const rightTime = new Date(right?.createdAt ?? 0).getTime();
-      const leftTime = new Date(left?.createdAt ?? 0).getTime();
-      return rightTime - leftTime;
-    })[0];
-}
-
-function buildMessageKey(sessionId: string, message: ChatMessage | undefined) {
-  if (!message) return `${sessionId}:none`;
-
-  return [
-    sessionId,
-    message.id ?? "",
-    message.createdAt ?? "",
-    message.message ?? "",
-  ].join(":");
 }
 
 export function AdminChatNotificationPopup() {
@@ -110,11 +86,10 @@ export function AdminChatNotificationPopup() {
         if (!sessionId) return;
 
         const latestUserMessage = getLatestUserMessage(session);
-        nextSeenMap[sessionId] = buildMessageKey(sessionId, latestUserMessage);
+        nextSeenMap[sessionId] = buildAdminChatMessageKey(sessionId, latestUserMessage);
       });
 
       seenMapRef.current = nextSeenMap;
-      writeSeenMap(nextSeenMap);
       initializedRef.current = true;
       return;
     }
@@ -127,7 +102,7 @@ export function AdminChatNotificationPopup() {
         const latestUserMessage = getLatestUserMessage(session);
         if (!latestUserMessage) return null;
 
-        const messageKey = buildMessageKey(sessionId, latestUserMessage);
+        const messageKey = buildAdminChatMessageKey(sessionId, latestUserMessage);
         const seenKey = nextSeenMap[sessionId];
 
         nextSeenMap[sessionId] = messageKey;
@@ -154,7 +129,6 @@ export function AdminChatNotificationPopup() {
       })[0];
 
     seenMapRef.current = nextSeenMap;
-    writeSeenMap(nextSeenMap);
 
     if (!nextPopup || pathname === "/admin/chat") return;
 
