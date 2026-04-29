@@ -16,6 +16,7 @@ import {
   ShieldCheck,
   ArrowLeft,
   Mail,
+  MonitorSmartphone,
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -50,6 +51,10 @@ const loginSchema = z.object({
 });
 
 type LoginForm = z.infer<typeof loginSchema>;
+
+type PendingDeviceLogin = LoginForm & {
+  captchaId: string;
+};
 
 const adminOtpSchema = z.object({
   otp: z.string().regex(/^\d{6}$/, "Enter the 6-digit verification code"),
@@ -90,6 +95,15 @@ function getErrorMessage(error: unknown, fallback: string) {
   return fallback;
 }
 
+function isDeviceLoginConflictResponse(response: unknown) {
+  return (
+    typeof response === "object" &&
+    response !== null &&
+    "message" in response &&
+    response.message === "DEVICE_LOGIN_CONFLICT"
+  );
+}
+
 export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [captchaId, setCaptchaId] = useState<string>("");
@@ -100,6 +114,8 @@ export default function LoginPage() {
   } | null>(null);
   const [otpErrorMessage, setOtpErrorMessage] = useState<string | null>(null);
   const [showExpiredCta, setShowExpiredCta] = useState(false);
+  const [pendingDeviceLogin, setPendingDeviceLogin] =
+    useState<PendingDeviceLogin | null>(null);
 
   const {
     data: captchaData,
@@ -157,6 +173,7 @@ export default function LoginPage() {
     setPendingAdminOtp(null);
     setOtpErrorMessage(null);
     setShowExpiredCta(false);
+    setPendingDeviceLogin(null);
     otpForm.reset();
     handleRefreshCaptcha();
   }, [handleRefreshCaptcha, otpForm]);
@@ -164,6 +181,7 @@ export default function LoginPage() {
   const onSubmit = (data: LoginForm) => {
     setOtpErrorMessage(null);
     setShowExpiredCta(false);
+    setPendingDeviceLogin(null);
 
     loginWithCaptcha(
       {
@@ -174,6 +192,16 @@ export default function LoginPage() {
       },
       {
         onSuccess: (response) => {
+          if (isDeviceLoginConflictResponse(response)) {
+            setPendingDeviceLogin({
+              identifier: data.identifier.trim(),
+              password: data.password,
+              captchaCode: data.captchaCode.toUpperCase(),
+              captchaId,
+            });
+            return;
+          }
+
           if (
             "requiresAdminOtp" in response.data &&
             response.data.requiresAdminOtp === true
@@ -186,9 +214,54 @@ export default function LoginPage() {
             otpForm.reset({ otp: "" });
           }
         },
-        onError: () => handleRefreshCaptcha(),
+        onError: (error: unknown) => {
+          if (getErrorMessage(error, "") === "DEVICE_LOGIN_CONFLICT") {
+            setPendingDeviceLogin({
+              identifier: data.identifier.trim(),
+              password: data.password,
+              captchaCode: data.captchaCode.toUpperCase(),
+              captchaId,
+            });
+            return;
+          }
+
+          handleRefreshCaptcha();
+        },
       },
     );
+  };
+
+  const handleForceLogin = () => {
+    if (!pendingDeviceLogin) return;
+
+    loginWithCaptcha(
+      {
+        identifier: pendingDeviceLogin.identifier,
+        password: pendingDeviceLogin.password,
+        captchaId: pendingDeviceLogin.captchaId,
+        captchaCode: pendingDeviceLogin.captchaCode.toUpperCase(),
+        forceLogin: true,
+      },
+      {
+        onSuccess: (response) => {
+          if (!isDeviceLoginConflictResponse(response)) {
+            setPendingDeviceLogin(null);
+            window.setTimeout(() => {
+              window.location.replace("/dashboard");
+            }, 100);
+          }
+        },
+        onError: () => {
+          setPendingDeviceLogin(null);
+          handleRefreshCaptcha();
+        },
+      },
+    );
+  };
+
+  const handleKeepCurrentDevice = () => {
+    setPendingDeviceLogin(null);
+    handleRefreshCaptcha();
   };
 
   const onSubmitAdminOtp = (data: AdminOtpForm) => {
@@ -250,7 +323,49 @@ export default function LoginPage() {
       </CardHeader>
 
       <CardContent>
-        {pendingAdminOtp ? (
+        {pendingDeviceLogin ? (
+          <div className="space-y-4">
+            <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-4 text-sm text-amber-50">
+              <div className="flex items-start gap-3">
+                <MonitorSmartphone className="mt-0.5 h-5 w-5 shrink-0 text-amber-300" />
+                <div className="space-y-1.5">
+                  <p className="font-semibold text-white">
+                    This account is already logged in on another device
+                  </p>
+                  <p className="text-amber-100/90">
+                    If you continue here, the previous device will be logged out.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <Button
+              type="button"
+              onClick={handleForceLogin}
+              disabled={isPending}
+              className="w-full bg-purple-600 hover:bg-purple-700"
+            >
+              {isPending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Logging in...
+                </>
+              ) : (
+                "Log in on this device"
+              )}
+            </Button>
+
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleKeepCurrentDevice}
+              disabled={isPending}
+              className="w-full border-slate-600 bg-transparent text-slate-200 hover:bg-slate-700/50 hover:text-white"
+            >
+              Stay on current device
+            </Button>
+          </div>
+        ) : pendingAdminOtp ? (
           <div className="space-y-4">
             <div className="rounded-lg border border-purple-500/30 bg-purple-500/10 px-4 py-3 text-sm text-slate-200">
               <div className="flex items-start gap-3">

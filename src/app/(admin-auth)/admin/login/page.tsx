@@ -16,6 +16,7 @@ import {
   ShieldCheck,
   ArrowLeft,
   Mail,
+  MonitorSmartphone,
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -73,6 +74,12 @@ type AdminLoginResponse =
       accessToken?: string;
       refreshToken?: string;
       token?: string;
+    }
+  | {
+      adminSessionLimitReached: true;
+      maxSessions: number;
+      activeSessions: number;
+      message: string;
     };
 
 function maskEmail(email: string) {
@@ -150,6 +157,15 @@ function hasEstablishedAdminSession(data: AdminLoginResponse) {
   return Boolean(data.accessToken || data.refreshToken || data.token);
 }
 
+function isAdminSessionLimitResponse(
+  data: AdminLoginResponse,
+): data is Extract<AdminLoginResponse, { adminSessionLimitReached: true }> {
+  return (
+    "adminSessionLimitReached" in data &&
+    data.adminSessionLimitReached === true
+  );
+}
+
 export default function AdminLoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [captchaId, setCaptchaId] = useState<string>("");
@@ -164,6 +180,9 @@ export default function AdminLoginPage() {
   } | null>(null);
   const [otpErrorMessage, setOtpErrorMessage] = useState<string | null>(null);
   const [showExpiredCta, setShowExpiredCta] = useState(false);
+  const [adminSessionLimitMessage, setAdminSessionLimitMessage] = useState<
+    string | null
+  >(null);
 
   const {
     data: captchaData,
@@ -221,6 +240,7 @@ export default function AdminLoginPage() {
     setPendingAdminOtp(null);
     setOtpErrorMessage(null);
     setShowExpiredCta(false);
+    setAdminSessionLimitMessage(null);
     otpForm.reset();
     handleRefreshCaptcha();
   }, [handleRefreshCaptcha, otpForm]);
@@ -228,12 +248,22 @@ export default function AdminLoginPage() {
   const onSubmit = (data: LoginForm) => {
     setOtpErrorMessage(null);
     setShowExpiredCta(false);
+    setAdminSessionLimitMessage(null);
     setLastAdminCredentials({
       identifier: data.identifier.trim(),
       password: data.password,
     });
 
     const handleAdminLoginResponse = (response: { data: AdminLoginResponse }) => {
+      if (isAdminSessionLimitResponse(response.data)) {
+        setPendingAdminOtp(null);
+        setAdminSessionLimitMessage(
+          response.data.message ||
+            "Maximum 6 admin devices are already logged in. Please contact another admin to log out a device, then try again.",
+        );
+        return;
+      }
+
       if (
         "requiresAdminOtp" in response.data &&
         response.data.requiresAdminOtp === true
@@ -320,6 +350,7 @@ export default function AdminLoginPage() {
 
     setOtpErrorMessage(null);
     setShowExpiredCta(false);
+    setAdminSessionLimitMessage(null);
 
     resendAdminOtp(
       {
@@ -353,6 +384,14 @@ export default function AdminLoginPage() {
     verifyAdminOtp(
       { pendingToken: pendingAdminOtp.pendingToken, otp: data.otp },
       {
+        onSuccess: (response) => {
+          if (isAdminSessionLimitResponse(response.data)) {
+            setAdminSessionLimitMessage(
+              response.data.message ||
+                "Maximum 6 admin devices are already logged in. Please contact another admin to log out a device, then try again.",
+            );
+          }
+        },
         onError: (error: unknown) => {
           const message = getErrorMessage(error, "OTP verification failed");
           const normalizedMessage = String(message).toLowerCase();
@@ -397,7 +436,32 @@ export default function AdminLoginPage() {
       </CardHeader>
 
       <CardContent>
-        {pendingAdminOtp ? (
+        {adminSessionLimitMessage ? (
+          <div className="space-y-4">
+            <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-4 text-sm text-amber-50">
+              <div className="flex items-start gap-3">
+                <MonitorSmartphone className="mt-0.5 h-5 w-5 shrink-0 text-amber-300" />
+                <div className="space-y-1.5">
+                  <p className="font-semibold text-white">
+                    Admin device limit reached
+                  </p>
+                  <p className="text-amber-100/90">
+                    {adminSessionLimitMessage}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleBackToLogin}
+              className="w-full border-slate-600 bg-transparent text-slate-200 hover:bg-slate-700/50 hover:text-white"
+            >
+              Back to login
+            </Button>
+          </div>
+        ) : pendingAdminOtp ? (
           <div className="space-y-4">
             <div className="rounded-lg border border-purple-500/30 bg-purple-500/10 px-4 py-3 text-sm text-slate-200">
               <div className="flex items-start gap-3">

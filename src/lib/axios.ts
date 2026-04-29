@@ -149,18 +149,10 @@ api.interceptors.response.use(
       error.response?.status === 403 &&
       error.response?.data?.code === "MAX_SESSIONS_REACHED"
     ) {
-      toast.error("Maximum 3 devices are already logged in", {
+      toast.error("Maximum 6 admin devices are already logged in", {
         description:
           "To get access on a new device, remove one device from Profile › Sessions.",
         duration: 10000,
-        action: {
-          label: "Manage Sessions",
-          onClick: () => {
-            if (typeof window !== "undefined") {
-              window.location.href = "/admin/admin/profile";
-            }
-          },
-        },
       });
     }
 

@@ -22,22 +22,22 @@ const BONUS_TYPE_META: Record<
 > = {
   DEPOSIT_BONUS: {
     label: "Deposit Bonus",
-    badge: "bg-blue-500/20 text-blue-300",
+    badge: "bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300",
     icon: Wallet,
   },
   MANUAL_DEPOSIT_BONUS: {
     label: "Manual Deposit Bonus",
-    badge: "bg-cyan-500/20 text-cyan-300",
+    badge: "bg-cyan-100 text-cyan-700 dark:bg-cyan-500/20 dark:text-cyan-300",
     icon: Wallet,
   },
   REFERRAL_DEPOSIT_BONUS: {
     label: "Referral Bonus",
-    badge: "bg-green-500/20 text-green-300",
+    badge: "bg-green-100 text-green-700 dark:bg-green-500/20 dark:text-green-300",
     icon: Users,
   },
   JOIN_BONUS: {
     label: "Join Bonus",
-    badge: "bg-yellow-500/20 text-yellow-300",
+    badge: "bg-yellow-100 text-yellow-700 dark:bg-yellow-500/20 dark:text-yellow-300",
     icon: Sparkles,
   },
 };
@@ -65,16 +65,16 @@ function SummaryCard({
   color: string;
 }) {
   return (
-    <div className="rounded-[18px] border border-slate-700 bg-slate-800/50 p-4">
+    <div className="rounded-[18px] border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-800/50 dark:shadow-none">
       <div className="mb-2 flex items-center gap-2">
         <div className={cn("rounded-xl p-2", color)}>
           <Icon className="h-4 w-4" />
         </div>
-        <p className="text-[11px] font-medium uppercase tracking-wide text-slate-400">
+        <p className="text-[11px] font-medium uppercase tracking-wide text-slate-600 dark:text-slate-400">
           {title}
         </p>
       </div>
-      <p className="text-lg font-bold text-white">{value}</p>
+      <p className="text-lg font-bold text-slate-950 dark:text-white">{value}</p>
     </div>
   );
 }
@@ -93,13 +93,13 @@ export default function BonusHistoryPage() {
   if (isLoading) {
     return (
       <div className="space-y-4">
-        <Skeleton className="h-10 w-40 bg-slate-800" />
+        <Skeleton className="h-10 w-40 bg-slate-200 dark:bg-slate-800" />
         <div className="grid grid-cols-2 gap-3">
           {Array.from({ length: 4 }).map((_, i) => (
-            <Skeleton key={i} className="h-24 bg-slate-800" />
+            <Skeleton key={i} className="h-24 bg-slate-200 dark:bg-slate-800" />
           ))}
         </div>
-        <Skeleton className="h-72 bg-slate-800" />
+        <Skeleton className="h-72 bg-slate-200 dark:bg-slate-800" />
       </div>
     );
   }
@@ -118,8 +118,8 @@ export default function BonusHistoryPage() {
             Back
           </span>
         </button>
-        <h1 className="text-xl font-bold text-white">Bonus History</h1>
-        <p className="mt-1 text-sm text-slate-400">
+        <h1 className="text-xl font-bold text-slate-950 dark:text-white">Bonus History</h1>
+        <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
           Track deposit, referral, and join bonuses in one place.
         </p>
       </div>
@@ -129,40 +129,40 @@ export default function BonusHistoryPage() {
           title="Available Bonus"
           value={fmt(summary.availableBonusBalance)}
           icon={Gift}
-          color="bg-purple-500/15 text-purple-300"
+          color="bg-purple-100 text-purple-700 dark:bg-purple-500/15 dark:text-purple-300"
         />
         <SummaryCard
           title="Total Earned"
           value={fmt(summary.totalBonusEarned)}
           icon={TrendingUp}
-          color="bg-emerald-500/15 text-emerald-300"
+          color="bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300"
         />
         <SummaryCard
           title="Deposit Bonus"
           value={fmt(summary.totalDepositBonus)}
           icon={Wallet}
-          color="bg-blue-500/15 text-blue-300"
+          color="bg-blue-100 text-blue-700 dark:bg-blue-500/15 dark:text-blue-300"
         />
         <SummaryCard
           title="Referral Bonus"
           value={fmt(summary.totalReferralBonus)}
           icon={Users}
-          color="bg-green-500/15 text-green-300"
+          color="bg-green-100 text-green-700 dark:bg-green-500/15 dark:text-green-300"
         />
       </div>
 
-      <div className="rounded-[22px] border border-slate-700 bg-slate-800/50 p-4">
+      <div className="rounded-[22px] border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-800/50 dark:shadow-none">
         <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-white">Extra Summary</h2>
-          <Badge className="bg-yellow-500/15 text-yellow-300">
+          <h2 className="text-sm font-semibold text-slate-950 dark:text-white">Extra Summary</h2>
+          <Badge className="bg-yellow-100 text-yellow-700 dark:bg-yellow-500/15 dark:text-yellow-300">
             Join Bonus {fmt(summary.totalJoinBonus)}
           </Badge>
         </div>
 
         {history.length === 0 ? (
-          <div className="rounded-[18px] border border-dashed border-slate-700 bg-slate-900/40 px-4 py-10 text-center">
-            <Gift className="mx-auto mb-3 h-10 w-10 text-slate-600" />
-            <p className="text-sm text-slate-400">No bonus history yet</p>
+          <div className="rounded-[18px] border border-dashed border-slate-200 bg-slate-50 px-4 py-10 text-center dark:border-slate-700 dark:bg-slate-900/40">
+            <Gift className="mx-auto mb-3 h-10 w-10 text-slate-400 dark:text-slate-600" />
+            <p className="text-sm text-slate-500 dark:text-slate-400">No bonus history yet</p>
           </div>
         ) : (
           <div className="space-y-3">
@@ -178,26 +178,26 @@ export default function BonusHistoryPage() {
               return (
                 <div
                   key={item.id}
-                  className="rounded-[18px] border border-slate-700 bg-slate-900/50 p-4"
+                  className="rounded-[18px] border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-900/50"
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex min-w-0 items-start gap-3">
-                      <div className="rounded-xl bg-slate-800 p-2 text-slate-200">
+                      <div className="rounded-xl bg-white p-2 text-slate-600 shadow-sm dark:bg-slate-800 dark:text-slate-200 dark:shadow-none">
                         <Icon className="h-4 w-4" />
                       </div>
                       <div className="min-w-0">
                         <div className="flex items-center gap-2">
-                          <p className="truncate text-sm font-semibold text-white">
+                          <p className="truncate text-sm font-semibold text-slate-950 dark:text-white">
                             {item.title || meta.label}
                           </p>
                           <Badge className={meta.badge}>{meta.label}</Badge>
                         </div>
                         {item.description && (
-                          <p className="mt-1 text-xs text-slate-400">
+                            <p className="mt-1 text-xs text-slate-600 dark:text-slate-400">
                             {item.description}
                           </p>
                         )}
-                        <p className="mt-2 flex items-center gap-1 text-[11px] text-slate-500">
+                        <p className="mt-2 flex items-center gap-1 text-[11px] text-slate-500 dark:text-slate-500">
                           <CalendarDays className="h-3 w-3" />
                           {item.createdAt
                             ? new Date(item.createdAt).toLocaleString("en-BD")

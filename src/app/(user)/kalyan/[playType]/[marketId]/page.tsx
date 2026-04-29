@@ -27,16 +27,16 @@ import { Rate } from "@/types/kalyan";
 import { useServerTime } from "@/hooks/use-server-time";
 
 const SECTION_COLORS = [
-  "bg-blue-600/20 text-blue-300",
-  "bg-indigo-600/20 text-indigo-300",
-  "bg-purple-600/20 text-purple-300",
-  "bg-pink-600/20 text-pink-300",
-  "bg-rose-600/20 text-rose-300",
-  "bg-orange-600/20 text-orange-300",
-  "bg-amber-600/20 text-amber-300",
-  "bg-yellow-600/20 text-yellow-300",
-  "bg-lime-600/20 text-lime-300",
-  "bg-green-600/20 text-green-300",
+  "bg-blue-100 text-blue-700 dark:bg-blue-600/20 dark:text-blue-300",
+  "bg-indigo-100 text-indigo-700 dark:bg-indigo-600/20 dark:text-indigo-300",
+  "bg-purple-100 text-purple-700 dark:bg-purple-600/20 dark:text-purple-300",
+  "bg-pink-100 text-pink-700 dark:bg-pink-600/20 dark:text-pink-300",
+  "bg-rose-100 text-rose-700 dark:bg-rose-600/20 dark:text-rose-300",
+  "bg-orange-100 text-orange-700 dark:bg-orange-600/20 dark:text-orange-300",
+  "bg-amber-100 text-amber-700 dark:bg-amber-600/20 dark:text-amber-300",
+  "bg-yellow-100 text-yellow-700 dark:bg-yellow-600/20 dark:text-yellow-300",
+  "bg-lime-100 text-lime-700 dark:bg-lime-600/20 dark:text-lime-300",
+  "bg-green-100 text-green-700 dark:bg-green-600/20 dark:text-green-300",
 ];
 
 const SESSION_TYPES = ["OPEN", "CLOSE"] as const;
@@ -397,8 +397,8 @@ export default function GamePlayPage() {
       />
 
       {discountPct > 0 && (
-        <div className="rounded-xl border border-slate-700/40 bg-slate-800/30 px-4 py-3">
-          <p className="text-xs leading-relaxed text-emerald-300/90">
+        <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 dark:border-slate-700/40 dark:bg-slate-800/30">
+          <p className="text-xs leading-relaxed text-emerald-700 dark:text-emerald-300/90">
             Discount: {discountPct}% applied. Wallet will deduct only the payable
             amount, but winnings will still be calculated from your entered
             amount.
@@ -407,13 +407,13 @@ export default function GamePlayPage() {
       )}
 
       {playTypeEnum === "GAME_TOTAL" && (
-        <div className="rounded-2xl border border-slate-700/60 bg-slate-800/30 overflow-hidden">
-          <div className="bg-blue-600/25 px-4 py-2.5">
-            <span className="inline-flex rounded-full border border-blue-400/25 bg-blue-500/15 px-3 py-1 text-sm font-extrabold uppercase tracking-[0.12em] text-blue-200 shadow-[0_10px_24px_rgba(59,130,246,0.16)]">
+        <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white dark:border-slate-700/80 dark:bg-[#060b1d]">
+          <div className="bg-blue-100 px-4 py-2.5 dark:bg-[#132f68]">
+            <span className="inline-flex rounded-full border border-blue-300 bg-blue-50 px-3 py-1 text-sm font-extrabold uppercase tracking-[0.12em] text-blue-700 shadow-[0_10px_24px_rgba(59,130,246,0.12)] dark:border-blue-400/35 dark:bg-blue-500/25 dark:text-blue-100 dark:shadow-[0_10px_24px_rgba(59,130,246,0.16)]">
               Total 0 – 9
             </span>
           </div>
-          <div className="grid grid-cols-2 gap-2 p-3">
+          <div className="grid grid-cols-2 gap-2 p-3 dark:gap-2.5 dark:p-3">
             {GAME_TOTAL_NUMBERS.map((num) => (
               <NumberAmountCell key={num} number={num} register={register} />
             ))}
@@ -450,8 +450,8 @@ export default function GamePlayPage() {
       )}
 
       {playTypeEnum === "TRIPLE_PATTI" && (
-        <div className="rounded-2xl border border-slate-700/60 bg-slate-800/30 overflow-hidden">
-          <div className="bg-orange-600/20 px-4 py-2 text-orange-300">
+        <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white dark:border-slate-700/80 dark:bg-[#060b1d]">
+          <div className="bg-orange-100 px-4 py-2 text-orange-700 dark:bg-orange-600/20 dark:text-orange-300">
             <span className="text-xs font-bold uppercase tracking-wide">
               Triple Patti Numbers
             </span>
@@ -491,7 +491,7 @@ export default function GamePlayPage() {
           payableAmount={payableAmount}
         />
         {isTimeOver ? (
-          <div className="mt-2 flex w-full cursor-not-allowed items-center justify-center gap-2 rounded-2xl border border-red-500/40 bg-red-500/20 py-2.5 text-sm font-bold text-red-200">
+          <div className="mt-2 flex w-full cursor-not-allowed items-center justify-center gap-2 rounded-2xl border border-red-300 bg-red-50 py-2.5 text-sm font-bold text-red-700 dark:border-red-500/40 dark:bg-red-500/20 dark:text-red-200">
             <TimerOff className="h-4 w-4" />
             Time Over — Betting Closed
           </div>

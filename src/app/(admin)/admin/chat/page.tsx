@@ -114,10 +114,12 @@ function AdminChatPageInner() {
   const [isSendingMedia, setIsSendingMedia] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesViewportRef = useRef<HTMLDivElement>(null);
+  const chatShellRef = useRef<HTMLDivElement>(null);
   const shouldAutoScrollRef = useRef(true);
   const scrollBehaviorRef = useRef<ScrollBehavior>("smooth");
   const inputRef = useRef<HTMLInputElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
+  const [chatShellHeight, setChatShellHeight] = useState<number | null>(null);
   const { joinSession } = useSocket();
   const { isRecording, startRecording, stopRecording } = useVoiceRecorder();
 
@@ -183,6 +185,45 @@ function AdminChatPageInner() {
     });
     scrollBehaviorRef.current = "smooth";
   }, [messages]);
+
+  useEffect(() => {
+    const updateChatShellHeight = () => {
+      const shell = chatShellRef.current;
+      if (!shell) return;
+
+      const visualViewport = window.visualViewport;
+      const visibleBottom = visualViewport
+        ? visualViewport.offsetTop + visualViewport.height
+        : window.innerHeight;
+      const nextHeight = Math.floor(
+        visibleBottom - shell.getBoundingClientRect().top - 8,
+      );
+
+      setChatShellHeight(Math.max(320, nextHeight));
+
+      if (shouldAutoScrollRef.current) {
+        window.requestAnimationFrame(() => {
+          messagesEndRef.current?.scrollIntoView({
+            behavior: "auto",
+            block: "end",
+          });
+        });
+      }
+    };
+
+    updateChatShellHeight();
+    window.addEventListener("resize", updateChatShellHeight);
+    window.addEventListener("orientationchange", updateChatShellHeight);
+    window.visualViewport?.addEventListener("resize", updateChatShellHeight);
+    window.visualViewport?.addEventListener("scroll", updateChatShellHeight);
+
+    return () => {
+      window.removeEventListener("resize", updateChatShellHeight);
+      window.removeEventListener("orientationchange", updateChatShellHeight);
+      window.visualViewport?.removeEventListener("resize", updateChatShellHeight);
+      window.visualViewport?.removeEventListener("scroll", updateChatShellHeight);
+    };
+  }, []);
 
   const handleMessagesScroll = () => {
     const viewport = messagesViewportRef.current;
@@ -262,7 +303,11 @@ function AdminChatPageInner() {
   const agentMessages = getAgentMessages(messages);
 
   return (
-    <div className="flex h-[calc(100dvh-4.5rem)] min-h-0 overflow-hidden rounded-lg border border-slate-200 bg-white md:rounded-xl dark:border-slate-700/60 dark:bg-[#0b0f1e] lg:h-[calc(100dvh-5rem)]">
+    <div
+      ref={chatShellRef}
+      className="flex h-[calc(100dvh-4.5rem)] min-h-0 overflow-hidden rounded-lg border border-slate-200 bg-white md:rounded-xl dark:border-slate-700/60 dark:bg-[#0b0f1e] lg:h-[calc(100dvh-5rem)]"
+      style={chatShellHeight ? { height: chatShellHeight } : undefined}
+    >
 
       {/* Hidden inputs */}
       <input
@@ -552,6 +597,14 @@ function AdminChatPageInner() {
                         value={replyText}
                         onChange={(e) => setReplyText(e.target.value)}
                         onKeyDown={(e) => { if (e.key === "Enter") handleReply(); }}
+                        onFocus={() => {
+                          window.setTimeout(() => {
+                            messagesEndRef.current?.scrollIntoView({
+                              behavior: "auto",
+                              block: "end",
+                            });
+                          }, 250);
+                        }}
                         placeholder={isRecording ? "Recording…" : "Type a message..."}
                         disabled={isBusy}
                         className="flex-1 bg-transparent text-[13px] text-slate-900 placeholder:text-slate-400 outline-none disabled:opacity-50 dark:text-white dark:placeholder:text-slate-500 md:text-sm"

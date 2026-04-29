@@ -6,24 +6,24 @@ interface ResultCardProps {
 
 const CARD_THEME = {
   shell:
-    "bg-[radial-gradient(circle_at_top_left,rgba(236,72,153,0.24),transparent_34%),radial-gradient(circle_at_top_right,rgba(59,130,246,0.22),transparent_32%),linear-gradient(135deg,#1b1038_0%,#0c1738_52%,#101f4e_100%)] hover:-translate-y-0.5 hover:shadow-[0_18px_44px_rgba(56,189,248,0.24)]",
+    "bg-[radial-gradient(circle_at_top_left,rgba(236,72,153,0.10),transparent_34%),radial-gradient(circle_at_top_right,rgba(59,130,246,0.10),transparent_32%),linear-gradient(135deg,#ffffff_0%,#f8fafc_52%,#eef6ff_100%)] hover:-translate-y-0.5 hover:shadow-[0_18px_44px_rgba(14,165,233,0.16)] dark:bg-[radial-gradient(circle_at_top_left,rgba(236,72,153,0.24),transparent_34%),radial-gradient(circle_at_top_right,rgba(59,130,246,0.22),transparent_32%),linear-gradient(135deg,#1b1038_0%,#0c1738_52%,#101f4e_100%)] dark:hover:shadow-[0_18px_44px_rgba(56,189,248,0.24)]",
   border:
     "bg-[linear-gradient(90deg,rgba(255,95,109,0.96)_0%,rgba(217,70,239,0.92)_32%,rgba(96,165,250,0.96)_68%,rgba(34,211,238,0.96)_100%)]",
-  glowLeft: "bg-pink-500/45",
-  glowRight: "bg-cyan-400/45",
-  title: "text-white drop-shadow-[0_0_14px_rgba(255,255,255,0.18)]",
+  glowLeft: "bg-pink-300/35 dark:bg-pink-500/45",
+  glowRight: "bg-cyan-300/35 dark:bg-cyan-400/45",
+  title: "text-slate-950 dark:text-white dark:drop-shadow-[0_0_14px_rgba(255,255,255,0.18)]",
   chip:
-    "border border-white/15 bg-[linear-gradient(90deg,rgba(251,146,60,0.98)_0%,rgba(244,63,94,0.95)_45%,rgba(217,70,239,0.95)_100%)] text-white shadow-[0_0_18px_rgba(244,114,182,0.35)]",
-  date: "text-cyan-300 drop-shadow-[0_0_12px_rgba(34,211,238,0.24)]",
+    "border border-white/15 bg-[linear-gradient(90deg,rgba(251,146,60,0.98)_0%,rgba(244,63,94,0.95)_45%,rgba(217,70,239,0.95)_100%)] !text-white shadow-[0_0_18px_rgba(244,114,182,0.24)] dark:shadow-[0_0_18px_rgba(244,114,182,0.35)]",
+  date: "text-cyan-700 dark:text-cyan-300 dark:drop-shadow-[0_0_12px_rgba(34,211,238,0.24)]",
   resultShell:
-    "border border-cyan-400/35 bg-[linear-gradient(90deg,rgba(124,58,237,0.20)_0%,rgba(30,41,59,0.18)_100%)] shadow-[inset_0_1px_0_rgba(255,255,255,0.06),0_0_26px_rgba(59,130,246,0.12)]",
-  done: "text-white drop-shadow-[0_0_18px_rgba(255,255,255,0.26)]",
-  partial: "text-amber-200 drop-shadow-[0_0_16px_rgba(251,191,36,0.26)]",
+    "border border-cyan-300/55 bg-[linear-gradient(90deg,rgba(236,254,255,0.92)_0%,rgba(248,250,252,0.96)_100%)] shadow-[inset_0_1px_0_rgba(255,255,255,0.7),0_0_22px_rgba(14,165,233,0.10)] dark:border-cyan-400/35 dark:bg-[linear-gradient(90deg,rgba(124,58,237,0.20)_0%,rgba(30,41,59,0.18)_100%)] dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.06),0_0_26px_rgba(59,130,246,0.12)]",
+  done: "text-slate-950 dark:text-white dark:drop-shadow-[0_0_18px_rgba(255,255,255,0.26)]",
+  partial: "text-amber-700 dark:text-amber-200 dark:drop-shadow-[0_0_16px_rgba(251,191,36,0.26)]",
   sideLeft:
-    "border border-pink-400/45 bg-[linear-gradient(90deg,rgba(236,72,153,0.9)_0%,rgba(192,38,211,0.68)_100%)] text-white shadow-[0_0_20px_rgba(236,72,153,0.28)]",
+    "border border-pink-300/70 bg-[linear-gradient(90deg,rgba(252,231,243,0.96)_0%,rgba(243,232,255,0.92)_100%)] text-slate-950 shadow-[0_0_18px_rgba(236,72,153,0.12)] dark:border-pink-400/45 dark:bg-[linear-gradient(90deg,rgba(236,72,153,0.9)_0%,rgba(192,38,211,0.68)_100%)] dark:text-white dark:shadow-[0_0_20px_rgba(236,72,153,0.28)]",
   sideRight:
-    "border border-cyan-400/40 bg-[linear-gradient(90deg,rgba(67,56,202,0.9)_0%,rgba(14,165,233,0.58)_100%)] text-white shadow-[0_0_20px_rgba(34,211,238,0.22)]",
-  divider: "bg-white/14",
+    "border border-cyan-300/70 bg-[linear-gradient(90deg,rgba(224,231,255,0.96)_0%,rgba(207,250,254,0.92)_100%)] text-slate-950 shadow-[0_0_18px_rgba(34,211,238,0.12)] dark:border-cyan-400/40 dark:bg-[linear-gradient(90deg,rgba(67,56,202,0.9)_0%,rgba(14,165,233,0.58)_100%)] dark:text-white dark:shadow-[0_0_20px_rgba(34,211,238,0.22)]",
+  divider: "bg-slate-300 dark:bg-white/14",
 };
 
 function formatCardDate(value?: string) {
@@ -144,7 +144,7 @@ export function ResultCard({ result }: ResultCardProps) {
             <p
               className={`font-black tracking-[0.03em] ${
                 isPending
-                  ? "text-[0.88rem] italic text-slate-300/70 group-hover:text-slate-200 sm:text-[1rem]"
+                  ? "text-[0.88rem] italic text-slate-500 group-hover:text-slate-700 dark:text-slate-300/70 dark:group-hover:text-slate-200 sm:text-[1rem]"
                   : hasPartialResult
                     ? `text-[1.02rem] sm:text-[1.16rem] ${theme.partial}`
                     : `text-[1.04rem] sm:text-[1.18rem] ${theme.done}`

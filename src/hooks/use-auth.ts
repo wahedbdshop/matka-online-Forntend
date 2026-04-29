@@ -71,10 +71,23 @@ function isForcePasswordResetResponse(
   );
 }
 
+function isAdminSessionLimitResponse(
+  data: LoginResponseData,
+): data is Extract<LoginResponseData, { adminSessionLimitReached: true }> {
+  return (
+    "adminSessionLimitReached" in data &&
+    data.adminSessionLimitReached === true
+  );
+}
+
 function isAuthenticatedLoginResponse(
   data: LoginResponseData,
 ): data is AuthenticatedLoginResponse {
   return "user" in data;
+}
+
+function isDeviceLoginConflict(error: any) {
+  return error?.response?.data?.message === "DEVICE_LOGIN_CONFLICT";
 }
 
 export const useRegister = () => {
@@ -99,6 +112,13 @@ export const useLogin = () => {
   return useMutation({
     mutationFn: AuthService.login,
     onSuccess: async (data) => {
+      if (data.message === "DEVICE_LOGIN_CONFLICT") return;
+
+      if (isAdminSessionLimitResponse(data.data)) {
+        toast.error(data.data.message);
+        return;
+      }
+
       if (isAdminOtpRequiredResponse(data.data)) {
         toast.error("Admin accounts must sign in from the admin login page.");
         router.push("/admin/login");
@@ -140,6 +160,7 @@ export const useLogin = () => {
       router.push("/dashboard");
     },
     onError: (error: any) => {
+      if (isDeviceLoginConflict(error)) return;
       toast.error(error.response?.data?.message || "Login failed");
     },
   });
@@ -152,6 +173,13 @@ export const useLoginWithCaptcha = () => {
   return useMutation({
     mutationFn: AuthService.loginWithCaptcha,
     onSuccess: async (data) => {
+      if (data.message === "DEVICE_LOGIN_CONFLICT") return;
+
+      if (isAdminSessionLimitResponse(data.data)) {
+        toast.error(data.data.message);
+        return;
+      }
+
       if (isAdminOtpRequiredResponse(data.data)) {
         toast.error("Admin accounts must sign in from the admin login page.");
         router.push("/admin/login");
@@ -193,6 +221,7 @@ export const useLoginWithCaptcha = () => {
       router.push("/dashboard");
     },
     onError: (error: any) => {
+      if (isDeviceLoginConflict(error)) return;
       toast.error(error.response?.data?.message || "Login failed");
     },
   });
@@ -205,6 +234,11 @@ export const useAdminLoginWithCaptcha = () => {
   return useMutation({
     mutationFn: AuthService.adminLoginWithCaptcha,
     onSuccess: async (data) => {
+      if (isAdminSessionLimitResponse(data.data)) {
+        toast.error(data.data.message);
+        return;
+      }
+
       if (isAdminOtpRequiredResponse(data.data)) {
         return;
       }
@@ -246,6 +280,11 @@ export const useAdminLogin = () => {
   return useMutation({
     mutationFn: AuthService.login,
     onSuccess: async (data) => {
+      if (isAdminSessionLimitResponse(data.data)) {
+        toast.error(data.data.message);
+        return;
+      }
+
       if (isAdminOtpRequiredResponse(data.data)) {
         return;
       }
@@ -287,6 +326,16 @@ export const useVerifyAdminLoginOtp = () => {
   return useMutation({
     mutationFn: AuthService.verifyAdminLoginOtp,
     onSuccess: async (data) => {
+      if (isAdminSessionLimitResponse(data.data)) {
+        toast.error(data.data.message);
+        return;
+      }
+
+      if (!isAuthenticatedLoginResponse(data.data)) {
+        toast.error("Admin OTP response is invalid");
+        return;
+      }
+
       const responseUser = data.data.user;
       if (!isAdminRole(responseUser?.role)) {
         toast.error("Access denied. This portal is for admins only.");

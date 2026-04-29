@@ -238,42 +238,42 @@ export default function WinHistoryPage() {
 
       {rows.length > 0 && (
         <div className="space-y-3">
-          <div className="overflow-hidden rounded-2xl border border-slate-700/70 bg-slate-900/50 shadow-[0_16px_40px_rgba(15,23,42,0.24)]">
+          <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_16px_40px_rgba(15,23,42,0.12)] dark:border-slate-700/70 dark:bg-slate-900/50 dark:shadow-[0_16px_40px_rgba(15,23,42,0.24)]">
             <div className="overflow-x-auto">
               <table className="w-full table-fixed border-collapse text-center">
                 <thead>
-                  <tr className="bg-slate-800/95 text-[9px] font-semibold uppercase tracking-[0.08em] text-slate-300">
-                    <th className="border-b border-r border-slate-700/70 px-2 py-2 sm:px-3">
+                  <tr className="bg-slate-100 text-[9px] font-semibold uppercase tracking-[0.08em] text-slate-700 dark:bg-slate-800/95 dark:text-slate-300">
+                    <th className="border-b border-r border-slate-200 px-2 py-2 dark:border-slate-700/70 sm:px-3">
                       <span className="block leading-tight">SI</span>
-                      <span className="mt-1 block text-[9px] text-slate-500">No</span>
+                      <span className="mt-1 block text-[9px] text-slate-500 dark:text-slate-500">No</span>
                     </th>
-                    <th className="border-b border-r border-slate-700/70 px-2 py-2 sm:px-3">
+                    <th className="border-b border-r border-slate-200 px-2 py-2 dark:border-slate-700/70 sm:px-3">
                       <span className="block leading-tight">User</span>
-                      <span className="mt-1 block text-[9px] text-slate-500">Name</span>
+                      <span className="mt-1 block text-[9px] text-slate-500 dark:text-slate-500">Name</span>
                     </th>
-                    <th className="border-b border-r border-slate-700/70 px-2 py-2 sm:px-3">
+                    <th className="border-b border-r border-slate-200 px-2 py-2 dark:border-slate-700/70 sm:px-3">
                       <span className="block leading-tight">Games</span>
-                      <span className="mt-1 block text-[9px] text-slate-500">Name</span>
+                      <span className="mt-1 block text-[9px] text-slate-500 dark:text-slate-500">Name</span>
                     </th>
-                    <th className="border-b border-r border-slate-700/70 px-2 py-2 sm:px-3">
+                    <th className="border-b border-r border-slate-200 px-2 py-2 dark:border-slate-700/70 sm:px-3">
                       <span className="block leading-tight">Bet</span>
-                      <span className="mt-1 block text-[9px] text-slate-500">Number</span>
+                      <span className="mt-1 block text-[9px] text-slate-500 dark:text-slate-500">Number</span>
                     </th>
-                    <th className="border-b border-r border-slate-700/70 px-2 py-2 sm:px-3">
+                    <th className="border-b border-r border-slate-200 px-2 py-2 dark:border-slate-700/70 sm:px-3">
                       <span className="block leading-tight">Play</span>
-                      <span className="mt-1 block text-[9px] text-slate-500">Type</span>
+                      <span className="mt-1 block text-[9px] text-slate-500 dark:text-slate-500">Type</span>
                     </th>
-                    <th className="border-b border-r border-slate-700/70 px-2 py-2 sm:px-3">
+                    <th className="border-b border-r border-slate-200 px-2 py-2 dark:border-slate-700/70 sm:px-3">
                       <span className="block leading-tight">Bet</span>
-                      <span className="mt-1 block text-[9px] text-slate-500">Amount</span>
+                      <span className="mt-1 block text-[9px] text-slate-500 dark:text-slate-500">Amount</span>
                     </th>
-                    <th className="border-b border-r border-slate-700/70 px-2 py-2 sm:px-3">
+                    <th className="border-b border-r border-slate-200 px-2 py-2 dark:border-slate-700/70 sm:px-3">
                       <span className="block leading-tight">Win</span>
-                      <span className="mt-1 block text-[9px] text-slate-500">Amount</span>
+                      <span className="mt-1 block text-[9px] text-slate-500 dark:text-slate-500">Amount</span>
                     </th>
-                    <th className="border-b border-slate-700/70 px-2 py-2 sm:px-3">
+                    <th className="border-b border-slate-200 px-2 py-2 dark:border-slate-700/70 sm:px-3">
                       <span className="block leading-tight">Date</span>
-                      <span className="mt-1 block text-[9px] text-slate-500">&amp; Time</span>
+                      <span className="mt-1 block text-[9px] text-slate-500 dark:text-slate-500">&amp; Time</span>
                     </th>
                   </tr>
                 </thead>
@@ -281,15 +281,15 @@ export default function WinHistoryPage() {
                   {rows.map((row, index) => (
                     <tr
                       key={row.key}
-                      className="border-b border-slate-800/80 bg-slate-900/25 text-[9px] text-slate-200 transition-colors hover:bg-slate-800/35 sm:text-[10px]"
+                      className="border-b border-slate-200 bg-white text-[9px] text-slate-700 transition-colors hover:bg-slate-50 dark:border-slate-800/80 dark:bg-slate-900/25 dark:text-slate-200 dark:hover:bg-slate-800/35 sm:text-[10px]"
                     >
-                      <td className="w-[6%] border-r border-slate-700/60 px-1 py-2 font-semibold text-slate-300 sm:px-2 whitespace-nowrap">
+                      <td className="w-[6%] whitespace-nowrap border-r border-slate-200 px-1 py-2 font-semibold text-slate-600 dark:border-slate-700/60 dark:text-slate-300 sm:px-2">
                         {index + 1}
                       </td>
-                      <td className="w-[15%] border-r border-slate-700/60 px-1 py-2 text-[8px] font-medium leading-tight text-white break-words sm:px-2">
+                      <td className="w-[15%] break-words border-r border-slate-200 px-1 py-2 text-[8px] font-medium leading-tight text-slate-950 dark:border-slate-700/60 dark:text-white sm:px-2">
                         {row.userName}
                       </td>
-                      <td className="w-[18%] border-r border-slate-700/60 px-1 py-2 text-[8px] font-medium leading-tight text-slate-100 break-words sm:px-2">
+                      <td className="w-[18%] break-words border-r border-slate-200 px-1 py-2 text-[8px] font-medium leading-tight text-slate-800 dark:border-slate-700/60 dark:text-slate-100 sm:px-2">
                         {row.gameName}
                         {row.sessionType && (
                           <span className={`mt-0.5 block text-[7px] font-semibold uppercase tracking-wide ${row.sessionType === "OPEN" ? "text-emerald-400" : "text-rose-400"}`}>
@@ -297,19 +297,19 @@ export default function WinHistoryPage() {
                           </span>
                         )}
                       </td>
-                      <td className="w-[12%] border-r border-slate-700/60 px-1 py-2 text-[8px] font-semibold leading-tight tracking-[0.03em] text-cyan-300 break-all sm:px-2">
+                      <td className="w-[12%] break-all border-r border-slate-200 px-1 py-2 text-[8px] font-semibold leading-tight tracking-[0.03em] text-cyan-700 dark:border-slate-700/60 dark:text-cyan-300 sm:px-2">
                         {row.betNumber}
                       </td>
-                      <td className="w-[11%] border-r border-slate-700/60 px-1 py-2 text-[8px] font-semibold leading-tight tracking-[0.03em] text-yellow-300 wrap-break-word sm:px-2">
+                      <td className="w-[11%] border-r border-slate-200 px-1 py-2 text-[8px] font-semibold leading-tight tracking-[0.03em] text-yellow-700 wrap-break-word dark:border-slate-700/60 dark:text-yellow-300 sm:px-2">
                         {row.playTypeLabel}
                       </td>
-                      <td className="w-[12%] border-r border-slate-700/60 px-1 py-2 text-[8px] font-semibold leading-tight text-emerald-300 break-words sm:px-2">
+                      <td className="w-[12%] break-words border-r border-slate-200 px-1 py-2 text-[8px] font-semibold leading-tight text-emerald-700 dark:border-slate-700/60 dark:text-emerald-300 sm:px-2">
                         Rs. {row.betAmount.toLocaleString("en-IN")}
                       </td>
-                      <td className="w-[14%] border-r border-slate-700/60 px-1 py-2 text-[8px] font-semibold leading-tight text-amber-300 break-words sm:px-2">
+                      <td className="w-[14%] break-words border-r border-slate-200 px-1 py-2 text-[8px] font-semibold leading-tight text-amber-700 dark:border-slate-700/60 dark:text-amber-300 sm:px-2">
                         Rs. {row.winAmount.toLocaleString("en-IN")}
                       </td>
-                      <td className="w-[19%] px-1 py-2 text-[8px] leading-tight text-slate-300 break-words sm:px-2">
+                      <td className="w-[19%] break-words px-1 py-2 text-[8px] leading-tight text-slate-600 dark:text-slate-300 sm:px-2">
                         {formatDateTime(row.dateTime)}
                       </td>
                     </tr>
@@ -323,7 +323,7 @@ export default function WinHistoryPage() {
             <button
               onClick={loadMore}
               disabled={loading}
-              className="w-full rounded-xl border border-slate-700/60 bg-slate-800/40 py-3 text-xs font-semibold text-slate-400 transition-colors hover:bg-slate-800 disabled:opacity-50"
+              className="w-full rounded-xl border border-slate-200 bg-white py-3 text-xs font-semibold text-slate-700 transition-colors hover:bg-slate-50 disabled:opacity-50 dark:border-slate-700/60 dark:bg-slate-800/40 dark:text-slate-400 dark:hover:bg-slate-800"
             >
               {loading ? "Loading..." : "Load more"}
             </button>

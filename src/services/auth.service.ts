@@ -14,6 +14,7 @@ export interface RegisterPayload {
 export interface LoginPayload {
   emailOrUsername: string;
   password: string;
+  forceLogin?: boolean;
 }
 
 export interface AuthenticatedLoginResponse {
@@ -38,10 +39,18 @@ export interface ForcePasswordResetResponse {
   email: string;
 }
 
+export interface AdminSessionLimitResponse {
+  adminSessionLimitReached: true;
+  maxSessions: number;
+  activeSessions: number;
+  message: string;
+}
+
 export type LoginResponseData =
   | AuthenticatedLoginResponse
   | AdminOtpRequiredResponse
-  | ForcePasswordResetResponse;
+  | ForcePasswordResetResponse
+  | AdminSessionLimitResponse;
 
 export interface VerifyEmailPayload {
   email: string;
@@ -68,6 +77,7 @@ export interface LoginWithCaptchaPayload {
   password: string;
   captchaId: string;
   captchaCode: string;
+  forceLogin?: boolean;
 }
 
 export interface VerifyAdminLoginOtpPayload {
@@ -157,7 +167,7 @@ export const AuthService = {
   },
 
   verifyAdminLoginOtp: async (payload: VerifyAdminLoginOtpPayload) => {
-    const res = await publicApi.post<ApiResponse<AuthenticatedLoginResponse>>(
+    const res = await publicApi.post<ApiResponse<LoginResponseData>>(
       "/auth/admin-login/verify-otp",
       payload,
     );

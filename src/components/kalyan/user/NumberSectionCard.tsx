@@ -15,7 +15,7 @@ export function NumberSectionCard({
   accentColor = "bg-slate-700/50 text-slate-300",
 }: NumberSectionCardProps) {
   return (
-    <div className="rounded-2xl border border-slate-700/60 bg-slate-800/30 overflow-hidden">
+    <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white dark:border-slate-700/80 dark:bg-[#060b1d]">
       <div className={`flex justify-center px-4 py-2.5 ${accentColor}`}>
         <span className="text-sm font-extrabold tracking-[0.08em] uppercase">{title}</span>
       </div>

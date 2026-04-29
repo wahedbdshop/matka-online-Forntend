@@ -60,8 +60,8 @@ export default function EditProfilePage() {
   if (isLoading) {
     return (
       <div className="space-y-4 animate-pulse">
-        <div className="h-8 w-40 rounded bg-slate-800" />
-        <div className="h-64 rounded-2xl bg-slate-800" />
+        <div className="h-8 w-40 rounded bg-slate-200 dark:bg-slate-800" />
+        <div className="h-64 rounded-2xl bg-slate-200 dark:bg-slate-800" />
       </div>
     );
   }
@@ -71,18 +71,18 @@ export default function EditProfilePage() {
       <div className="space-y-3">
         <Link
           href="/profile"
-          className="inline-flex items-center gap-2 rounded-full border border-slate-700 bg-slate-900/70 px-3 py-1.5 text-xs font-medium text-slate-300 transition-colors hover:border-slate-600 hover:bg-slate-800 hover:text-white"
+          className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 shadow-sm transition-colors hover:border-slate-300 hover:bg-slate-50 hover:text-slate-950 dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-300 dark:shadow-none dark:hover:border-slate-600 dark:hover:bg-slate-800 dark:hover:text-white"
         >
           <ArrowLeft className="h-3.5 w-3.5" />
           Back
         </Link>
-        <h1 className="text-xl font-bold text-white">Edit Profile</h1>
-        <p className="text-xs text-slate-500 mt-0.5">
+        <h1 className="text-xl font-bold text-slate-950 dark:text-white">Edit Profile</h1>
+        <p className="text-xs text-slate-500 mt-0.5 dark:text-slate-500">
           Update your personal information
         </p>
       </div>
 
-      <div className="rounded-2xl border border-slate-700 bg-slate-800/50 p-5">
+      <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-800/50 dark:shadow-none">
         <Form {...form}>
           <form
             onSubmit={form.handleSubmit((d) => mutate(d))}
@@ -94,7 +94,7 @@ export default function EditProfilePage() {
               name="name"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-slate-400 text-xs">
+                  <FormLabel className="text-slate-700 text-xs dark:text-slate-400">
                     Full Name
                   </FormLabel>
                   <FormControl>
@@ -103,7 +103,7 @@ export default function EditProfilePage() {
                       <Input
                         {...field}
                         placeholder="Your name"
-                        className="pl-10 bg-slate-700/50 border-slate-600 text-white placeholder:text-slate-500"
+                        className="pl-10 border-slate-200 bg-white text-slate-950 placeholder:text-slate-400 dark:border-slate-600 dark:bg-slate-700/50 dark:text-white dark:placeholder:text-slate-500"
                       />
                     </div>
                   </FormControl>
@@ -114,72 +114,72 @@ export default function EditProfilePage() {
 
             {/* Username — readonly */}
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-slate-400">
+              <label className="text-xs font-medium text-slate-700 dark:text-slate-400">
                 Username
               </label>
               <div className="relative">
-                <User className="absolute left-3 top-2.5 h-4 w-4 text-slate-500" />
+                <User className="absolute left-3 top-2.5 h-4 w-4 text-slate-500 dark:text-slate-400" />
                 <input
                   value={profile?.username ?? ""}
                   readOnly
-                  className="w-full rounded-lg border border-slate-700 bg-slate-900/50 px-3 py-2 pl-10 text-sm text-slate-500 cursor-not-allowed"
+                  className="w-full cursor-not-allowed rounded-lg border border-slate-200 bg-slate-100 px-3 py-2 pl-10 text-sm text-slate-600 dark:border-slate-600/80 dark:bg-slate-900/50 dark:text-slate-300"
                 />
               </div>
-              <p className="text-[10px] text-slate-600">
+              <p className="text-[10px] text-slate-500 dark:text-slate-500">
                 Username cannot be changed
               </p>
             </div>
 
             {/* Email — readonly */}
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-slate-400">
+              <label className="text-xs font-medium text-slate-700 dark:text-slate-400">
                 Email
               </label>
               <div className="relative">
-                <Mail className="absolute left-3 top-2.5 h-4 w-4 text-slate-500" />
+                <Mail className="absolute left-3 top-2.5 h-4 w-4 text-slate-500 dark:text-slate-400" />
                 <input
                   value={profile?.email ?? ""}
                   readOnly
-                  className="w-full rounded-lg border border-slate-700 bg-slate-900/50 px-3 py-2 pl-10 text-sm text-slate-500 cursor-not-allowed"
+                  className="w-full cursor-not-allowed rounded-lg border border-slate-200 bg-slate-100 px-3 py-2 pl-10 text-sm text-slate-600 dark:border-slate-600/80 dark:bg-slate-900/50 dark:text-slate-300"
                 />
               </div>
-              <p className="text-[10px] text-slate-600">
+              <p className="text-[10px] text-slate-500 dark:text-slate-500">
                 Email cannot be changed
               </p>
             </div>
 
             {/* Phone — readonly */}
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-slate-400">
+              <label className="text-xs font-medium text-slate-700 dark:text-slate-400">
                 Phone Number
               </label>
               <div className="relative">
-                <Phone className="absolute left-3 top-2.5 h-4 w-4 text-slate-500" />
+                <Phone className="absolute left-3 top-2.5 h-4 w-4 text-slate-500 dark:text-slate-400" />
                 <input
                   value={profile?.phone ?? ""}
                   readOnly
-                  className="w-full rounded-lg border border-slate-700 bg-slate-900/50 px-3 py-2 pl-10 text-sm text-slate-500 cursor-not-allowed"
+                  className="w-full cursor-not-allowed rounded-lg border border-slate-200 bg-slate-100 px-3 py-2 pl-10 text-sm text-slate-600 dark:border-slate-600/80 dark:bg-slate-900/50 dark:text-slate-300"
                 />
               </div>
-              <p className="text-[10px] text-slate-600">
+              <p className="text-[10px] text-slate-500 dark:text-slate-500">
                 Phone number cannot be changed
               </p>
             </div>
 
             {/* Country — readonly */}
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-slate-400">
+              <label className="text-xs font-medium text-slate-700 dark:text-slate-400">
                 Country
               </label>
               <div className="relative">
-                <Globe className="absolute left-3 top-2.5 h-4 w-4 text-slate-500" />
+                <Globe className="absolute left-3 top-2.5 h-4 w-4 text-slate-500 dark:text-slate-400" />
                 <input
                   value={profile?.country ?? ""}
                   readOnly
-                  className="w-full rounded-lg border border-slate-700 bg-slate-900/50 px-3 py-2 pl-10 text-sm text-slate-500 cursor-not-allowed"
+                  className="w-full cursor-not-allowed rounded-lg border border-slate-200 bg-slate-100 px-3 py-2 pl-10 text-sm text-slate-600 dark:border-slate-600/80 dark:bg-slate-900/50 dark:text-slate-300"
                 />
               </div>
-              <p className="text-[10px] text-slate-600">
+              <p className="text-[10px] text-slate-500 dark:text-slate-500">
                 Country cannot be changed
               </p>
             </div>
