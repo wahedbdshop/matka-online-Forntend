@@ -13,6 +13,7 @@ import {
   clearForcedPasswordResetSession,
   setForcedPasswordResetSession,
 } from "@/lib/forced-password-reset";
+import { markAppDownloadPromptPending } from "@/lib/app-download-prompt";
 import { markLoginPopupPending } from "@/lib/login-popup";
 import {
   isAdminPortalRole,
@@ -156,6 +157,7 @@ export const useLogin = () => {
       if (!user) return;
 
       markLoginPopupPending();
+      markAppDownloadPromptPending();
       toast.success("Login successful!");
       router.push("/dashboard");
     },
@@ -217,6 +219,7 @@ export const useLoginWithCaptcha = () => {
       if (!user) return;
 
       markLoginPopupPending();
+      markAppDownloadPromptPending();
       toast.success("Login successful!");
       router.push("/dashboard");
     },
@@ -447,6 +450,7 @@ export const useForceChangePassword = () => {
         router.push(resolveHomePathByRole(user.role));
       } else {
         markLoginPopupPending();
+        markAppDownloadPromptPending();
         router.push("/dashboard");
       }
     },

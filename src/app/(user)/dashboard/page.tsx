@@ -12,6 +12,7 @@ import { useLanguage } from "@/providers/language-provider";
 
 import { BannerSlider } from "./_components/banner-slider";
 import { PopupBanner } from "./_components/popup-banner";
+import { AppDownloadPrompt } from "./_components/app-download-prompt";
 import { PaymentMethodsRow } from "./_components/payment-methods-row";
 import { HomeGameHub } from "./_components/home-game-hub";
 import { WinnerCard } from "./_components/winner-card";
@@ -166,6 +167,7 @@ export default function DashboardPage() {
   return (
     <>
       <PopupBanner popup={popup} />
+      <AppDownloadPrompt />
       <FloatingChatButton bottomClassName="bottom-[88px]" />
 
       <div className="space-y-2 pb-6">
