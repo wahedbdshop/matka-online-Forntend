@@ -50,6 +50,7 @@ export const TopHeader = ({
   const isAuthenticated = isAuthStore;
   const showAuthenticatedUi =
     isAuthStore || (!isAuthReady && (hasCookie || isProtectedRoute));
+  const logoHref = showAuthenticatedUi ? "/dashboard" : "/";
 
   const {
     data: profileData,
@@ -109,7 +110,7 @@ export const TopHeader = ({
         )}
 
         <Link
-          href="/"
+          href={logoHref}
           className="absolute left-1/2 top-1/2 z-10 flex items-center justify-center header-logo-shell"
         >
           <Image
