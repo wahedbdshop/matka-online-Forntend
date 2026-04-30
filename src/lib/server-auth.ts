@@ -196,7 +196,8 @@ export async function refreshBackendSession(options: {
 
       const refreshToken =
         readString(data, "refreshToken") ?? options.refreshToken ?? null;
-      const sessionToken = readString(data, "token");
+      const sessionToken =
+        readString(data, "sessionToken") ?? readString(data, "token");
       const user = readObject(data, "user") as SessionUser | null;
 
       return {

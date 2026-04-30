@@ -106,7 +106,7 @@ function createClearedAuthNext() {
   return response;
 }
 
-async function getSessionUser(token: string) {
+async function getSessionUser(token: string, cookieHeader?: string | null) {
   if (!API_URL) {
     return {
       user: null,
@@ -121,6 +121,7 @@ async function getSessionUser(token: string) {
       method: "GET",
       headers: {
         Authorization: `Bearer ${token}`,
+        ...(cookieHeader ? { Cookie: cookieHeader } : {}),
         "Content-Type": "application/json",
       },
       cache: "no-store",
@@ -228,7 +229,8 @@ export async function proxy(request: NextRequest) {
     return finalizeResponse(NextResponse.next());
   }
 
-  let sessionLookup = await getSessionUser(token);
+  const cookieHeader = request.headers.get("cookie");
+  let sessionLookup = await getSessionUser(token, cookieHeader);
   let sessionUser = sessionLookup.user;
 
   if (!sessionUser && refreshToken) {
@@ -240,7 +242,7 @@ export async function proxy(request: NextRequest) {
     if (refreshResult?.accessToken) {
       refreshedSession = refreshResult;
       token = refreshResult.accessToken;
-      sessionLookup = await getSessionUser(token);
+      sessionLookup = await getSessionUser(token, cookieHeader);
       sessionUser = sessionLookup.user;
     } else if (refreshResult?.isTerminalError) {
       refreshHadTerminalFailure = true;

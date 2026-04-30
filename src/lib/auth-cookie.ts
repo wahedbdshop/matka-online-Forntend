@@ -65,3 +65,12 @@ export function getClientAccessTokenCookie() {
 
   return null;
 }
+
+export function getClientSessionTokenCookie() {
+  for (const name of SESSION_COOKIE_NAMES) {
+    const value = Cookies.get(name);
+    if (value) return value;
+  }
+
+  return null;
+}

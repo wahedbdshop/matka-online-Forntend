@@ -15,7 +15,7 @@ function buildCookieHeader(
   return entries.map(({ name, value }) => `${name}=${value}`).join("; ");
 }
 
-async function getSessionUser(accessToken: string) {
+async function getSessionUser(accessToken: string, cookieHeader?: string | null) {
   const apiUrl = process.env.NEXT_PUBLIC_API_URL;
 
   if (!apiUrl) return null;
@@ -25,6 +25,7 @@ async function getSessionUser(accessToken: string) {
       method: "GET",
       headers: {
         Authorization: `Bearer ${accessToken}`,
+        ...(cookieHeader ? { Cookie: cookieHeader } : {}),
         "Content-Type": "application/json",
       },
       cache: "no-store",
@@ -52,11 +53,12 @@ export async function getInitialSession(): Promise<InitialSession> {
     cookieStore.get("refresh_token")?.value ??
     null;
 
-  let user = accessToken ? await getSessionUser(accessToken) : null;
+  const cookieHeader = buildCookieHeader(cookieEntries);
+  let user = accessToken ? await getSessionUser(accessToken, cookieHeader) : null;
 
   if (!user && refreshToken) {
     const refreshed = await refreshBackendSession({
-      cookieHeader: buildCookieHeader(cookieEntries),
+      cookieHeader,
       refreshToken,
     });
 
@@ -64,7 +66,7 @@ export async function getInitialSession(): Promise<InitialSession> {
       accessToken = refreshed.accessToken;
       user =
         (refreshed.user as User | null | undefined) ??
-        (await getSessionUser(refreshed.accessToken));
+        (await getSessionUser(refreshed.accessToken, cookieHeader));
     }
   }
 

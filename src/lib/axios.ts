@@ -5,7 +5,10 @@ import {
   clearServerSession,
   requestSessionRefresh,
 } from "@/lib/auth-session";
-import { getClientAccessTokenCookie } from "@/lib/auth-cookie";
+import {
+  getClientAccessTokenCookie,
+  getClientSessionTokenCookie,
+} from "@/lib/auth-cookie";
 import { resolveLoginPathByPathname } from "@/lib/auth-role";
 import { useAuthStore } from "@/store/auth.store";
 
@@ -51,10 +54,17 @@ async function refreshAccessToken() {
 
 api.interceptors.request.use((config) => {
   const token = useAuthStore.getState().token ?? getClientAccessTokenCookie();
+  const sessionToken = getClientSessionTokenCookie();
   const existingAuthorization = config.headers?.Authorization;
+  const existingSessionToken =
+    config.headers?.["x-session-token"] ?? config.headers?.["X-Session-Token"];
 
   if (token && !existingAuthorization) {
     config.headers.Authorization = `Bearer ${token}`;
+  }
+
+  if (sessionToken && !existingSessionToken) {
+    config.headers["x-session-token"] = sessionToken;
   }
 
   return config;
