@@ -3,8 +3,9 @@
 
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Search, Trophy } from "lucide-react";
-import { useSearchParams } from "next/navigation";
+import { ArrowLeft, Search, Trophy } from "lucide-react";
+import Link from "next/link";
+import { usePathname, useSearchParams } from "next/navigation";
 import { KalyanAdminService } from "@/services/kalyanAdmin.service";
 import { PLAY_TYPE_LABEL, ENTRY_STATUS_STYLE, type PlayType } from "@/types/kalyan";
 import {
@@ -161,9 +162,13 @@ function isCloseFinalSettlementRow(sessionType: "OPEN" | "CLOSE" | undefined, pl
 }
 
 function KalyanWinHistoryPageContent() {
+  const pathname = usePathname();
   const searchParams = useSearchParams();
   const settlementView = searchParams.get("settlementView") ?? "";
   const resultAddedAt = searchParams.get("resultAddedAt") ?? "";
+  const addResultsPath = pathname?.startsWith("/agent/")
+    ? "/agent/kalyan/add-results"
+    : "/admin/kalyan/add-results";
   const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState("");
   const [marketFilter, setMarketFilter] = useState(
@@ -535,7 +540,7 @@ function KalyanWinHistoryPageContent() {
 
   return (
     <div className="space-y-5">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
           <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-yellow-100 dark:bg-yellow-500/15">
             <Trophy className="h-5 w-5 text-yellow-400" />
@@ -545,9 +550,18 @@ function KalyanWinHistoryPageContent() {
             <p className="text-xs text-slate-500 dark:text-slate-400">All winning Kalyan bets</p>
           </div>
         </div>
-        <span className="rounded-full border border-yellow-200 bg-yellow-50 px-3 py-1 text-xs font-semibold text-yellow-700 dark:border-yellow-500/30 dark:bg-yellow-500/10 dark:text-yellow-400">
-          {total} Records
-        </span>
+        <div className="flex flex-wrap items-center gap-2">
+          <Link
+            href={addResultsPath}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition-colors hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
+          >
+            <ArrowLeft className="h-3.5 w-3.5" />
+            Back to Add Result
+          </Link>
+          <span className="rounded-full border border-yellow-200 bg-yellow-50 px-3 py-1 text-xs font-semibold text-yellow-700 dark:border-yellow-500/30 dark:bg-yellow-500/10 dark:text-yellow-400">
+            {total} Records
+          </span>
+        </div>
       </div>
 
       <div className="flex flex-wrap gap-2">
