@@ -5,11 +5,13 @@ import {
   clearServerSession,
   requestSessionRefresh,
 } from "@/lib/auth-session";
+import { getClientAccessTokenCookie } from "@/lib/auth-cookie";
 import { resolveLoginPathByPathname } from "@/lib/auth-role";
 import { useAuthStore } from "@/store/auth.store";
 
 type RequestConfigWithAuth = InternalAxiosRequestConfig & {
   skipAuthRedirect?: boolean;
+  skipAuthRefresh?: boolean;
   _retry?: boolean;
 };
 
@@ -48,7 +50,7 @@ async function refreshAccessToken() {
 }
 
 api.interceptors.request.use((config) => {
-  const token = useAuthStore.getState().token;
+  const token = useAuthStore.getState().token ?? getClientAccessTokenCookie();
   const existingAuthorization = config.headers?.Authorization;
 
   if (token && !existingAuthorization) {
@@ -73,6 +75,7 @@ api.interceptors.response.use(
     const skipAuthRedirect = Boolean(
       requestConfig.skipAuthRedirect,
     );
+    const skipAuthRefresh = Boolean(requestConfig.skipAuthRefresh);
 
     const isUnauthorized = error.response?.status === 401;
     const isRefreshRequest =
@@ -84,6 +87,7 @@ api.interceptors.response.use(
 
     if (
       isUnauthorized &&
+      !skipAuthRefresh &&
       !requestConfig._retry &&
       !isRefreshRequest &&
       !isAuthLoginRequest
@@ -149,7 +153,7 @@ api.interceptors.response.use(
       error.response?.status === 403 &&
       error.response?.data?.code === "MAX_SESSIONS_REACHED"
     ) {
-      toast.error("Maximum 6 admin devices are already logged in", {
+      toast.error("Maximum 7 admin devices are already registered", {
         description:
           "To get access on a new device, remove one device from Profile › Sessions.",
         duration: 10000,

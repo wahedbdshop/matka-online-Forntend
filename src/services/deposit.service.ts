@@ -43,8 +43,18 @@ export const DepositService = {
   },
   // ─── New ──────────────────────────────────────────────────────────────────
   getGlobalAgents: async (): Promise<{ data: any[] }> => {
-    const res = await api.get("/deposit/global-agents");
-    return res.data;
+    try {
+      const res = await api.get("/deposit/global-agents", {
+        skipAuthRedirect: true,
+        skipAuthRefresh: true,
+      } as any);
+      return res.data;
+    } catch (error: any) {
+      if (error?.response?.status === 401 || error?.response?.status === 403) {
+        return { data: [] };
+      }
+      throw error;
+    }
   },
 
   getPublicCommission: async (): Promise<{ data: any | null }> => {

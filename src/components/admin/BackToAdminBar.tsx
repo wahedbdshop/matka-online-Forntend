@@ -7,6 +7,7 @@ import { Shield } from "lucide-react";
 import { useEffect, useState } from "react";
 import { ADMIN_BACKUP_SESSION_KEY } from "@/lib/admin-login-as";
 import { applyClientSession, syncServerSession } from "@/lib/auth-session";
+import { isAdminPortalRole } from "@/lib/auth-role";
 
 export function BackToAdminBar() {
   const { setAuth, user } = useAuthStore();
@@ -19,7 +20,8 @@ export function BackToAdminBar() {
 
     try {
       const adminBackup = JSON.parse(adminBackupRaw);
-      if (adminBackup?.user?.role === "ADMIN" && adminBackup?.token) {
+      const adminAccessToken = adminBackup?.accessToken ?? adminBackup?.token;
+      if (isAdminPortalRole(adminBackup?.user?.role) && adminAccessToken) {
         setShow(true);
       } else {
         sessionStorage.removeItem(ADMIN_BACKUP_SESSION_KEY);
@@ -37,24 +39,33 @@ export function BackToAdminBar() {
 
     try {
       const adminBackup = JSON.parse(adminBackupRaw);
-      if (adminBackup?.user?.role !== "ADMIN" || !adminBackup?.token) {
+      const adminAccessToken = adminBackup?.accessToken ?? adminBackup?.token;
+      if (!isAdminPortalRole(adminBackup?.user?.role) || !adminAccessToken) {
         sessionStorage.removeItem(ADMIN_BACKUP_SESSION_KEY);
         return;
       }
 
       applyClientSession({
-        accessToken: adminBackup.token,
+        accessToken: adminAccessToken,
+        refreshToken: adminBackup.refreshToken,
+        sessionToken: adminBackup.sessionToken ?? adminBackup.token,
+        sessionMaxAgeMs: adminBackup.sessionMaxAgeMs,
+        refreshTokenMaxAgeMs: adminBackup.refreshTokenMaxAgeMs,
       });
       await syncServerSession({
-        accessToken: adminBackup.token,
+        accessToken: adminAccessToken,
+        refreshToken: adminBackup.refreshToken,
+        sessionToken: adminBackup.sessionToken ?? adminBackup.token,
+        sessionMaxAgeMs: adminBackup.sessionMaxAgeMs,
+        refreshTokenMaxAgeMs: adminBackup.refreshTokenMaxAgeMs,
       });
-      setAuth(adminBackup.user, adminBackup.token);
+      setAuth(adminBackup.user, adminAccessToken);
       sessionStorage.removeItem(ADMIN_BACKUP_SESSION_KEY);
 
       window.location.replace("/admin/dashboard");
     } catch {
       sessionStorage.removeItem(ADMIN_BACKUP_SESSION_KEY);
-      window.location.replace("/login");
+      window.location.replace("/admin/login");
     }
   };
 

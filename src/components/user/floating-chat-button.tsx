@@ -15,10 +15,12 @@ import { toast } from "sonner";
 import { AdminService } from "@/services/admin.service";
 import { ChatService } from "@/services/chat.service";
 import { DepositService } from "@/services/deposit.service";
+import { hasClientAuthCookie } from "@/lib/auth-cookie";
 import {
   CHAT_AGENT_COUNT_KEY,
   CHAT_SESSION_KEY,
   CHAT_UNREAD_EVENT,
+  clearChatTracking,
   getAgentMessageCount,
   markChatAgentMessagesSeen,
   readChatUnreadCount,
@@ -41,6 +43,18 @@ type ButtonPosition = {
 type GlobalAgent = {
   whatsappNumber?: string | null;
 };
+
+function isUnauthorizedError(error: unknown) {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "response" in error &&
+    typeof error.response === "object" &&
+    error.response !== null &&
+    "status" in error.response &&
+    (error.response.status === 401 || error.response.status === 403)
+  );
+}
 
 function clampPosition(x: number, y: number): ButtonPosition {
   if (typeof window === "undefined") return { x, y };
@@ -175,9 +189,28 @@ export function FloatingChatButton({
     const sessionId = window.localStorage.getItem(CHAT_SESSION_KEY);
     if (!sessionId) return;
 
+    if (!hasClientAuthCookie()) {
+      clearChatTracking();
+      setUnreadCount(0);
+      return;
+    }
+
+    let interval: number | null = null;
+    let stopped = false;
+
+    const stopPolling = () => {
+      stopped = true;
+      if (interval) {
+        window.clearInterval(interval);
+        interval = null;
+      }
+    };
+
     const pollUnreadCount = async () => {
+      if (stopped) return;
+
       try {
-        const res = await ChatService.getSession(sessionId);
+        const res = await ChatService.getSession(sessionId, { silent: true });
         const count = getAgentMessageCount(res.data?.messages ?? []);
 
         if (window.localStorage.getItem(CHAT_AGENT_COUNT_KEY) === null) {
@@ -187,14 +220,18 @@ export function FloatingChatButton({
         }
 
         setUnreadCount(setChatUnreadFromAgentTotal(count));
-      } catch {
-        // silent
+      } catch (error) {
+        if (isUnauthorizedError(error)) {
+          clearChatTracking();
+          setUnreadCount(0);
+          stopPolling();
+        }
       }
     };
 
-    pollUnreadCount();
-    const interval = window.setInterval(pollUnreadCount, 5000);
-    return () => window.clearInterval(interval);
+    void pollUnreadCount();
+    interval = window.setInterval(pollUnreadCount, 5000);
+    return stopPolling;
   }, []);
 
   const savePosition = useCallback((nextPosition: ButtonPosition) => {
@@ -213,7 +250,6 @@ export function FloatingChatButton({
     hasDraggedRef.current = false;
     event.currentTarget.setPointerCapture(event.pointerId);
     setIsDragging(true);
-    setIsMenuOpen(false);
   };
 
   const handlePointerMove = (event: PointerEvent<HTMLButtonElement>) => {
@@ -268,6 +304,11 @@ export function FloatingChatButton({
   const goToChat = (mode: "ai" | "agent") => {
     setIsMenuOpen(false);
     if (mode === "agent") {
+      if (!hasClientAuthCookie()) {
+        router.push("/login");
+        return;
+      }
+
       markChatAgentMessagesSeen();
       setUnreadCount(0);
     }
@@ -348,7 +389,13 @@ export function FloatingChatButton({
               className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-xs font-semibold text-slate-100 transition-colors hover:bg-emerald-500/15 hover:text-emerald-200"
             >
               <Headphones className="h-4 w-4 text-emerald-300" />
-              Agent
+              <span className="flex min-w-0 flex-1 items-center justify-between gap-2">
+                <span>Agent</span>
+                <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wide text-emerald-300">
+                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(74,222,128,0.9)]" />
+                  Live
+                </span>
+              </span>
             </button>
             <button
               type="button"

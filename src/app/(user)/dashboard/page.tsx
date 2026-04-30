@@ -2,7 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
-import { TrendingUp, Trophy, Users } from "lucide-react";
+import { Download, TrendingUp, Trophy, Users } from "lucide-react";
 import { FloatingChatButton } from "@/components/user/floating-chat-button";
 import { GlobalNoticeBar } from "@/components/shared/global-notice-bar";
 import { HomeService } from "@/services/home.service";
@@ -63,6 +63,40 @@ function filterLatestDraw(winners: Record<string, unknown>[]) {
 
   const latestKey = getDrawKey(sorted[0]);
   return winners.filter((w) => getDrawKey(w) === latestKey);
+}
+
+function AndroidAppLogo() {
+  return (
+    <svg
+      viewBox="0 0 48 48"
+      aria-hidden="true"
+      className="h-7 w-7"
+      fill="none"
+    >
+      <path
+        d="M15 18h18v14a7 7 0 0 1-7 7h-4a7 7 0 0 1-7-7V18Z"
+        fill="currentColor"
+      />
+      <path
+        d="M15 17c.7-5.2 4.3-9 9-9s8.3 3.8 9 9H15Z"
+        fill="currentColor"
+      />
+      <path
+        d="M16.5 9.5 13 5.5M31.5 9.5 35 5.5"
+        stroke="currentColor"
+        strokeWidth="2.5"
+        strokeLinecap="round"
+      />
+      <path
+        d="M9 20v10M39 20v10"
+        stroke="currentColor"
+        strokeWidth="5"
+        strokeLinecap="round"
+      />
+      <circle cx="21" cy="14" r="1.4" fill="#06101f" />
+      <circle cx="27" cy="14" r="1.4" fill="#06101f" />
+    </svg>
+  );
 }
 
 export default function DashboardPage() {
@@ -299,6 +333,45 @@ export default function DashboardPage() {
               <p key={item}>{item}</p>
             ))}
           </div>
+        </div>
+
+        <div className="rounded-xl border border-amber-200 bg-white p-4 shadow-sm dark:border-[#35507f] dark:bg-[linear-gradient(180deg,#182849_0%,#121d35_100%)] dark:shadow-none">
+          <div className="flex items-start gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-emerald-300 bg-emerald-50 text-[#3ddc84] shadow-sm shadow-emerald-500/10 dark:border-[#3ddc84]/45 dark:bg-[#3ddc84]/12 dark:text-[#3ddc84]">
+              <AndroidAppLogo />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-black text-slate-950 dark:text-white">
+                Official Matka Online 24 App
+              </p>
+              <p className="mt-1 text-[11px] leading-relaxed text-slate-600 dark:text-slate-400">
+                Secure APK from our official websites. Download and play faster
+                from your Android phone.
+              </p>
+              <div className="mt-3 flex flex-wrap gap-1.5">
+                {[
+                  "matka24.org",
+                  "matkaonline24.com",
+                  "matkaonline24.online",
+                ].map((site) => (
+                  <span
+                    key={site}
+                    className="rounded-full border border-sky-200 bg-sky-50 px-2.5 py-1 text-[10px] font-semibold text-sky-700 dark:border-[#3b5f92] dark:bg-[#10213d] dark:text-[#9fd2ff]"
+                  >
+                    {site}
+                  </span>
+                ))}
+              </div>
+            </div>
+          </div>
+          <a
+            href="/matka24.apk"
+            download="matka24.apk"
+            className="mt-4 flex items-center justify-center gap-2 rounded-xl bg-linear-to-r from-[#f0bf38] to-[#d18e09] px-5 py-3 text-sm font-black text-[#1a1f39] shadow-lg shadow-[#f0bf38]/15 transition-all hover:scale-[1.01] hover:opacity-90"
+          >
+            <Download className="h-4 w-4" />
+            Download Official App
+          </a>
         </div>
       </div>
 

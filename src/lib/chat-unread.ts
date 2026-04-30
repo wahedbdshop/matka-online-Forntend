@@ -60,3 +60,11 @@ export function markChatAgentMessagesSeen(totalAgentMessages?: number) {
   writeSeenAgentCount(nextSeenCount);
   writeChatUnreadCount(0);
 }
+
+export function clearChatTracking() {
+  if (typeof window === "undefined") return;
+
+  window.localStorage.removeItem(CHAT_SESSION_KEY);
+  window.localStorage.removeItem(CHAT_AGENT_COUNT_KEY);
+  writeChatUnreadCount(0);
+}

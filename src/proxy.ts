@@ -2,12 +2,14 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import {
   applySessionCookies,
+  clearSessionCookies,
   createClearedAuthRedirect,
   refreshBackendSession,
 } from "@/lib/server-auth";
 import {
   isAdminPortalRole,
   isSupportAgentRole,
+  pathnameMatchesRoute,
   resolveHomePathByRole,
   resolveLoginPathByPathname,
 } from "@/lib/auth-role";
@@ -98,6 +100,12 @@ function withSecurityHeaders(response: NextResponse) {
   return response;
 }
 
+function createClearedAuthNext() {
+  const response = NextResponse.next();
+  clearSessionCookies(response.cookies);
+  return response;
+}
+
 async function getSessionUser(token: string) {
   if (!API_URL) {
     return {
@@ -166,14 +174,14 @@ export async function proxy(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
 
   const isAdminPublicPath = publicAuthPaths.some(
-    (p) => pathname === p || pathname.startsWith(p + "/"),
+    (p) => pathnameMatchesRoute(pathname, p),
   );
+  const isAdminRoute = pathnameMatchesRoute(pathname, "/admin");
+  const isAgentRoute = pathnameMatchesRoute(pathname, "/agent");
 
   const isProtectedRoute =
     !isAdminPublicPath &&
-    protectedRoutes.some(
-      (route) => pathname === route || pathname.startsWith(route + "/"),
-    );
+    protectedRoutes.some((route) => pathnameMatchesRoute(pathname, route));
 
   let refreshedSession:
     | Awaited<ReturnType<typeof refreshBackendSession>>
@@ -249,10 +257,14 @@ export async function proxy(request: NextRequest) {
       return finalizeResponse(NextResponse.next());
     }
 
-    const loginPath = resolveLoginPathByPathname(pathname);
-    return withSecurityHeaders(
-      createClearedAuthRedirect(new URL(loginPath, request.url)),
-    );
+    if (isProtectedRoute) {
+      const loginPath = resolveLoginPathByPathname(pathname);
+      return withSecurityHeaders(
+        createClearedAuthRedirect(new URL(loginPath, request.url)),
+      );
+    }
+
+    return withSecurityHeaders(createClearedAuthNext());
   }
 
   const response = NextResponse.next();
@@ -274,7 +286,7 @@ export async function proxy(request: NextRequest) {
   }
 
   // Non-admin trying to access admin-only paths (excluding admin/login)
-  if (pathname.startsWith("/admin") && !isAdminPublicPath && !isAdmin) {
+  if (isAdminRoute && !isAdminPublicPath && !isAdmin) {
     return finalizeResponse(
       NextResponse.redirect(
         new URL(resolveHomePathByRole(sessionUser.role), request.url),
@@ -282,7 +294,7 @@ export async function proxy(request: NextRequest) {
     );
   }
 
-  if (pathname.startsWith("/agent") && !isAdminPublicPath && !isSupportAgent) {
+  if (isAgentRoute && !isAdminPublicPath && !isSupportAgent) {
     return finalizeResponse(
       NextResponse.redirect(
         new URL(resolveHomePathByRole(sessionUser.role), request.url),
@@ -297,13 +309,6 @@ export async function proxy(request: NextRequest) {
     pathname === "/admin/login" ||
     pathname === "/agent/login"
   ) {
-    const redirectTo = resolveHomePathByRole(sessionUser.role);
-    return finalizeResponse(
-      NextResponse.redirect(new URL(redirectTo, request.url)),
-    );
-  }
-
-  if (pathname === "/") {
     const redirectTo = resolveHomePathByRole(sessionUser.role);
     return finalizeResponse(
       NextResponse.redirect(new URL(redirectTo, request.url)),

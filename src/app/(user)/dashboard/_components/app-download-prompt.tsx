@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Download, Smartphone, X } from "lucide-react";
 import {
   consumeAppDownloadPromptPending,
@@ -11,14 +11,14 @@ import {
 const APK_URL = "/matka24.apk";
 
 export function AppDownloadPrompt() {
-  const [show, setShow] = useState<boolean>(() => {
-    if (typeof window === "undefined") return false;
+  const [show, setShow] = useState(false);
 
+  useEffect(() => {
     const shouldForceShow = consumeAppDownloadPromptPending();
-    if (!shouldForceShow && hasDismissedAppDownloadPrompt()) return false;
+    if (!shouldForceShow && hasDismissedAppDownloadPrompt()) return;
 
-    return true;
-  });
+    setShow(true);
+  }, []);
 
   const closePrompt = () => {
     dismissAppDownloadPrompt();

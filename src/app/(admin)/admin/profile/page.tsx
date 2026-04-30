@@ -113,6 +113,9 @@ function SessionRow({
       "device.isCurrent",
     ]),
   );
+  const isActive = normalizeBoolean(
+    pickSessionValue(session, ["isActive", "is_active", "active"]),
+  );
   const deviceLabel =
     pickSessionValue(session, [
       "deviceName",
@@ -202,6 +205,11 @@ function SessionRow({
           {isCurrent && (
             <span className="shrink-0 rounded-full bg-green-500/15 border border-green-500/30 px-2 py-0.5 text-[9px] font-bold text-green-400 uppercase tracking-wide">
               Current
+            </span>
+          )}
+          {!isCurrent && !isActive && (
+            <span className="shrink-0 rounded-full bg-slate-500/10 border border-slate-600/40 px-2 py-0.5 text-[9px] font-bold text-slate-400 uppercase tracking-wide">
+              Logged out
             </span>
           )}
         </div>

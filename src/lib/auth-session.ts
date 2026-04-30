@@ -1,8 +1,21 @@
 import { clearClientAuthCookies, setClientAuthCookies } from "@/lib/auth-cookie";
+import { pathnameMatchesRoute } from "@/lib/auth-role";
 import { useAuthStore } from "@/store/auth.store";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL?.replace(/\/+$/, "");
 const REFRESH_ENDPOINT_PATH = "/auth/refresh-token";
+const LOGIN_REDIRECT_PATHS = [
+  "/dashboard",
+  "/deposit",
+  "/withdrawal",
+  "/transfer",
+  "/profile",
+  "/notifications",
+  "/referral",
+  "/chat",
+  "/admin",
+  "/agent",
+];
 
 export type SessionSyncPayload = {
   accessToken?: string | null;
@@ -51,9 +64,21 @@ function getLoginPath() {
     return "/login";
   }
 
-  return window.location.pathname.startsWith("/admin")
+  return pathnameMatchesRoute(window.location.pathname, "/admin")
     ? "/admin/login"
     : "/login";
+}
+
+function shouldRedirectToLogin() {
+  if (typeof window === "undefined") {
+    return false;
+  }
+
+  const pathname = window.location.pathname;
+
+  return LOGIN_REDIRECT_PATHS.some(
+    (path) => pathname === path || pathname.startsWith(`${path}/`),
+  );
 }
 
 function clearRefreshBlock() {
@@ -74,7 +99,7 @@ async function redirectToLoginOnce(trigger: string, status: number | null) {
 
   hasRedirectedToLogin = true;
 
-  if (window.location.pathname !== loginPath) {
+  if (window.location.pathname !== loginPath && shouldRedirectToLogin()) {
     window.location.replace(loginPath);
   }
 

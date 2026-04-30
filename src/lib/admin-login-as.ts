@@ -19,11 +19,21 @@ export type LoginAsTransferUser = {
 };
 
 export type LoginAsTransferPayload = {
+  accessToken?: string;
   token?: string;
+  refreshToken?: string;
+  sessionToken?: string;
+  sessionMaxAgeMs?: number;
+  refreshTokenMaxAgeMs?: number;
   createdAt?: number;
   user?: LoginAsTransferUser;
   adminBackup?: {
+    accessToken?: string;
     token?: string;
+    refreshToken?: string;
+    sessionToken?: string;
+    sessionMaxAgeMs?: number;
+    refreshTokenMaxAgeMs?: number;
     user?: LoginAsTransferUser;
   };
 };

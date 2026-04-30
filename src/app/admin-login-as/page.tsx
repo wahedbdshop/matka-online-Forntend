@@ -10,6 +10,7 @@ import {
   LoginAsTransferPayload,
 } from "@/lib/admin-login-as";
 import { applyClientSession, syncServerSession } from "@/lib/auth-session";
+import { isAdminPortalRole } from "@/lib/auth-role";
 
 function AdminLoginAsContent() {
   const router = useRouter();
@@ -39,16 +40,19 @@ function AdminLoginAsContent() {
       if (event.data?.type !== "auth-payload") return;
 
       const payload = event.data.payload;
+      const accessToken = payload?.accessToken ?? payload?.token;
+      const adminAccessToken =
+        payload?.adminBackup?.accessToken ?? payload?.adminBackup?.token;
       const isExpired =
         !payload?.createdAt ||
         Date.now() - payload.createdAt > ADMIN_LOGIN_AS_MAX_AGE_MS;
 
       if (
         isExpired ||
-        !payload?.token ||
+        !accessToken ||
         !payload.user ||
-        payload.adminBackup?.user?.role !== "ADMIN" ||
-        !payload.adminBackup?.token
+        !isAdminPortalRole(payload.adminBackup?.user?.role) ||
+        !adminAccessToken
       ) {
         window.clearTimeout(timeout);
         channel.close();
@@ -58,14 +62,29 @@ function AdminLoginAsContent() {
 
       sessionStorage.setItem(
         ADMIN_BACKUP_SESSION_KEY,
-        JSON.stringify(payload.adminBackup),
+        JSON.stringify({
+          ...payload.adminBackup,
+          accessToken: adminAccessToken,
+          token:
+            payload.adminBackup?.sessionToken ??
+            payload.adminBackup?.token ??
+            adminAccessToken,
+        }),
       );
 
       applyClientSession({
-        accessToken: payload.token,
+        accessToken,
+        refreshToken: payload.refreshToken,
+        sessionToken: payload.sessionToken ?? payload.token,
+        sessionMaxAgeMs: payload.sessionMaxAgeMs,
+        refreshTokenMaxAgeMs: payload.refreshTokenMaxAgeMs,
       });
       await syncServerSession({
-        accessToken: payload.token,
+        accessToken,
+        refreshToken: payload.refreshToken,
+        sessionToken: payload.sessionToken ?? payload.token,
+        sessionMaxAgeMs: payload.sessionMaxAgeMs,
+        refreshTokenMaxAgeMs: payload.refreshTokenMaxAgeMs,
       });
 
       setAuth(
@@ -84,7 +103,7 @@ function AdminLoginAsContent() {
           emailVerified: payload.user.emailVerified ?? false,
           image: payload.user.image ?? undefined,
         },
-        payload.token,
+        accessToken,
       );
 
       window.clearTimeout(timeout);
@@ -113,7 +132,7 @@ function AdminLoginAsContent() {
   );
 }
 
-export default function AdminLoginAsPage() {
+export function AdminLoginAsPageContent() {
   return (
     <Suspense
       fallback={
@@ -125,4 +144,8 @@ export default function AdminLoginAsPage() {
       <AdminLoginAsContent />
     </Suspense>
   );
+}
+
+export default function AdminLoginAsPage() {
+  return <AdminLoginAsPageContent />;
 }

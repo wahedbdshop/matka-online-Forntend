@@ -259,7 +259,7 @@ export default function AdminLoginPage() {
         setPendingAdminOtp(null);
         setAdminSessionLimitMessage(
           response.data.message ||
-            "Maximum 6 admin devices are already logged in. Please contact another admin to log out a device, then try again.",
+            "Maximum 7 admin devices are already registered. Please remove a device from Profile > Sessions, then try again.",
         );
         return;
       }
@@ -388,7 +388,7 @@ export default function AdminLoginPage() {
           if (isAdminSessionLimitResponse(response.data)) {
             setAdminSessionLimitMessage(
               response.data.message ||
-                "Maximum 6 admin devices are already logged in. Please contact another admin to log out a device, then try again.",
+                "Maximum 7 admin devices are already registered. Please remove a device from Profile > Sessions, then try again.",
             );
           }
         },

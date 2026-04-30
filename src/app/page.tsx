@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
+  Download,
   FileText,
   Flame,
   Gamepad2,
@@ -53,6 +54,40 @@ function extractList(payload: any): any[] {
   if (Array.isArray(payload?.winners)) return payload.winners;
   if (Array.isArray(payload?.results)) return payload.results;
   return [];
+}
+
+function AndroidAppLogo() {
+  return (
+    <svg
+      viewBox="0 0 48 48"
+      aria-hidden="true"
+      className="h-7 w-7"
+      fill="none"
+    >
+      <path
+        d="M15 18h18v14a7 7 0 0 1-7 7h-4a7 7 0 0 1-7-7V18Z"
+        fill="currentColor"
+      />
+      <path
+        d="M15 17c.7-5.2 4.3-9 9-9s8.3 3.8 9 9H15Z"
+        fill="currentColor"
+      />
+      <path
+        d="M16.5 9.5 13 5.5M31.5 9.5 35 5.5"
+        stroke="currentColor"
+        strokeWidth="2.5"
+        strokeLinecap="round"
+      />
+      <path
+        d="M9 20v10M39 20v10"
+        stroke="currentColor"
+        strokeWidth="5"
+        strokeLinecap="round"
+      />
+      <circle cx="21" cy="14" r="1.4" fill="#06101f" />
+      <circle cx="27" cy="14" r="1.4" fill="#06101f" />
+    </svg>
+  );
 }
 
 const publicBottomNavItems = [
@@ -467,6 +502,45 @@ export default function LandingPage() {
                   </div>
                 </div>
 
+                <div className="rounded-[22px] border border-[#35507f] bg-[linear-gradient(180deg,#182849_0%,#121d35_100%)] p-4 shadow-[0_18px_42px_rgba(3,7,18,0.32)]">
+                  <div className="flex items-start gap-3">
+                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-[#3ddc84]/45 bg-[#3ddc84]/12 text-[#3ddc84] shadow-sm shadow-[#3ddc84]/15">
+                      <AndroidAppLogo />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-black text-white">
+                        Official Matka Online 24 App
+                      </p>
+                      <p className="mt-1 text-[11px] leading-relaxed text-slate-400">
+                        Secure APK from our official website. Download and play
+                        faster from your Android phone.
+                      </p>
+                      <div className="mt-3 flex flex-wrap gap-1.5">
+                        {[
+                          "matka24.org",
+                          "matkaonline24.com",
+                          "matkaonline24.online",
+                        ].map((site) => (
+                          <span
+                            key={site}
+                            className="rounded-full border border-[#3b5f92] bg-[#10213d] px-2.5 py-1 text-[10px] font-semibold text-[#9fd2ff]"
+                          >
+                            {site}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                  <a
+                    href="/matka24.apk"
+                    download="matka24.apk"
+                    className="mt-4 flex items-center justify-center gap-2 rounded-xl bg-linear-to-r from-[#f0bf38] to-[#d18e09] px-5 py-3 text-sm font-black text-[#1a1f39] shadow-lg shadow-[#f0bf38]/15 transition-all hover:scale-[1.01] hover:opacity-90"
+                  >
+                    <Download className="h-4 w-4" />
+                    Download Official App
+                  </a>
+                </div>
+
                 <div className="space-y-3 pt-2 text-center">
                   <Link href="/register">
                     <button className="w-full rounded-xl bg-linear-to-r from-[#f0bf38] to-[#d18e09] py-4 text-base font-black text-[#1a1f39] shadow-lg shadow-[#f0bf38]/20 transition-all hover:scale-[1.01] hover:opacity-90">
@@ -488,7 +562,7 @@ export default function LandingPage() {
           </div>
         </main>
 
-        <footer className="border-t border-[#2e3a5c] bg-[#0d1120] px-4 py-6">
+        <footer className="border-t border-[#2e3a5c] bg-[#0d1120] px-4 pb-24 pt-6">
           <div className="mx-auto max-w-lg space-y-2 text-center">
             <div className="mb-3 flex items-center justify-center gap-2">
               <div className="flex h-7 w-7 items-center justify-center rounded-xl bg-linear-to-br from-[#f0bf38] to-[#d18e09] text-xs font-black text-[#1a1f39]">

@@ -8,8 +8,11 @@ export const ChatService = {
     return res.data;
   },
 
-  getSession: async (sessionId: string) => {
-    const res = await api.get<ApiResponse<any>>(`/chat/session/${sessionId}`);
+  getSession: async (sessionId: string, options?: { silent?: boolean }) => {
+    const res = await api.get<ApiResponse<any>>(`/chat/session/${sessionId}`, {
+      skipAuthRedirect: options?.silent,
+      skipAuthRefresh: options?.silent,
+    } as any);
     return res.data;
   },
 

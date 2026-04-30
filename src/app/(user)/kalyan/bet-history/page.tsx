@@ -1,8 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { KalyanUserService } from "@/services/kalyanUser.service";
-import { EntryItem, EntrySlip, PLAY_TYPE_LABEL } from "@/types/kalyan";
+import { EntryItem, EntrySlip, PlayType, Rate, PLAY_TYPE_LABEL } from "@/types/kalyan";
 import { KalyanPageHeader } from "@/components/kalyan/user/KalyanPageHeader";
 import { LoadingState } from "@/components/kalyan/user/LoadingState";
 import { ErrorState } from "@/components/kalyan/user/ErrorState";
@@ -13,9 +14,49 @@ const STATUS_FILTERS = [
   { label: "All", value: "" },
   { label: "Win", value: "WON" },
   { label: "Lost", value: "LOST" },
-  { label: "Pending", value: "ACTIVE" },
+  { label: "Active", value: "ACTIVE" },
   { label: "Cancel", value: "CANCELLED" },
 ] as const;
+
+type StatusFilter = (typeof STATUS_FILTERS)[number]["value"];
+
+function getInitialStatusFilter(value: string | null): StatusFilter {
+  return STATUS_FILTERS.some((filter) => filter.value === value)
+    ? (value as StatusFilter)
+    : "";
+}
+
+function getEntryList(value: unknown): EntrySlip[] {
+  if (Array.isArray(value)) {
+    return value as EntrySlip[];
+  }
+
+  if (value && typeof value === "object") {
+    const record = value as Record<string, unknown>;
+
+    if (Array.isArray(record.entries)) {
+      return record.entries as EntrySlip[];
+    }
+
+    if (Array.isArray(record.data)) {
+      return record.data as EntrySlip[];
+    }
+
+    if (record.data && typeof record.data === "object") {
+      return getEntryList(record.data);
+    }
+
+    if (Array.isArray(record.items)) {
+      return record.items as EntrySlip[];
+    }
+
+    if (Array.isArray(record.rows)) {
+      return record.rows as EntrySlip[];
+    }
+  }
+
+  return [];
+}
 
 function formatDateTime(value: string) {
   return new Date(value).toLocaleString("en-IN", {
@@ -57,6 +98,65 @@ function resolveCategoryLabel(entry: EntrySlip, item?: EntryItem) {
   return inferredPlayType
     ? PLAY_TYPE_LABEL[inferredPlayType as keyof typeof PLAY_TYPE_LABEL]
     : "-";
+}
+
+function renderCategoryLabel(label: string) {
+  if (!["Double Patti", "Game Total", "Single Patti"].includes(label)) {
+    return label;
+  }
+
+  return label.split(" ").map((part) => (
+    <span key={part} className="block leading-tight">
+      {part}
+    </span>
+  ));
+}
+
+function getWinAmount(entry: EntrySlip, item?: Record<string, unknown>) {
+  const itemWinAmount =
+    item?.winningAmount ??
+    item?.winAmount ??
+    item?.payoutAmount ??
+    item?.profitAmount;
+  const entryRecord = entry as EntrySlip & Record<string, unknown>;
+  const entryWinAmount =
+    entryRecord.winningAmount ??
+    entryRecord.winAmount ??
+    entryRecord.payoutAmount ??
+    entryRecord.profitAmount;
+
+  return Number(itemWinAmount ?? entryWinAmount ?? 0);
+}
+
+function inferPlayType(value?: string | null): PlayType | undefined {
+  const normalized = String(value ?? "").trim();
+
+  if (/^\d$/.test(normalized)) return "GAME_TOTAL";
+  if (/^\d{2}$/.test(normalized)) return "JORI";
+  if (/^\d{3}$/.test(normalized)) {
+    const uniqueCount = new Set(normalized.split("")).size;
+    if (uniqueCount === 3) return "SINGLE_PATTI";
+    if (uniqueCount === 2) return "DOUBLE_PATTI";
+    if (uniqueCount === 1) return "TRIPLE_PATTI";
+  }
+
+  return undefined;
+}
+
+function calculateWinAmount(
+  betAmount: number,
+  playType: PlayType | undefined,
+  rates: Rate[],
+  fallbackWinAmount: number,
+) {
+  if (fallbackWinAmount > 0) return fallbackWinAmount;
+
+  const matchedRate = rates.find((rate) => rate.playType === playType);
+  const payoutRate = Number(matchedRate?.rate ?? 0);
+
+  if (!payoutRate || betAmount <= 0) return 0;
+
+  return Number(((betAmount * payoutRate) / 100).toFixed(2));
 }
 
 function getRawStatus(entry: EntrySlip, item?: EntryItem) {
@@ -141,13 +241,18 @@ function getDisplayStatus(entry: EntrySlip, item?: EntryItem) {
 }
 
 export default function BetHistoryPage() {
+  const searchParams = useSearchParams();
   const [entries, setEntries] = useState<EntrySlip[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(false);
   const [currentUserName, setCurrentUserName] = useState("User");
-  const [statusFilter, setStatusFilter] = useState("");
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>(() =>
+    getInitialStatusFilter(searchParams.get("status")),
+  );
+  const [rates, setRates] = useState<Rate[]>([]);
+  const [summaryEntries, setSummaryEntries] = useState<EntrySlip[]>([]);
 
   const fetchEntries = useCallback(async (p = 1, append = false) => {
     try {
@@ -158,7 +263,7 @@ export default function BetHistoryPage() {
         limit: 10,
         status: statusFilter || undefined,
       });
-      const data: EntrySlip[] = Array.isArray(res.data) ? res.data : [];
+      const data = getEntryList(res.data);
       setEntries((prev) => (append ? [...prev, ...data] : data));
       setHasMore(data.length === 10);
     } catch {
@@ -191,13 +296,44 @@ export default function BetHistoryPage() {
     void loadProfile();
   }, []);
 
+  useEffect(() => {
+    const loadRates = async () => {
+      try {
+        const rateRes = await KalyanUserService.getGameRates();
+        const nextRates = Array.isArray(rateRes?.data) ? (rateRes.data as Rate[]) : [];
+        setRates(nextRates);
+      } catch {
+        setRates([]);
+      }
+    };
+
+    void loadRates();
+  }, []);
+
+  useEffect(() => {
+    const loadSummary = async () => {
+      try {
+        const res = await KalyanUserService.getMyEntries({
+          page: 1,
+          limit: 1000,
+        });
+        const data = getEntryList(res.data);
+        setSummaryEntries(data);
+      } catch {
+        setSummaryEntries([]);
+      }
+    };
+
+    void loadSummary();
+  }, []);
+
   const loadMore = () => {
     const next = page + 1;
     setPage(next);
     fetchEntries(next, true);
   };
 
-  const selectStatusFilter = (value: string) => {
+  const selectStatusFilter = (value: StatusFilter) => {
     setPage(1);
     if (value === statusFilter) {
       fetchEntries(1, false);
@@ -207,57 +343,161 @@ export default function BetHistoryPage() {
     setStatusFilter(value);
   };
 
-  const rows = entries.flatMap((entry) => {
-    const items = Array.isArray(entry.items) ? entry.items : [];
+  const buildRows = useCallback((sourceEntries: EntrySlip[]) => {
+    return sourceEntries.flatMap((entry) => {
+      const items = Array.isArray(entry.items) ? entry.items : [];
 
-    const baseGameName =
-      entry.gameName?.trim() ||
-      entry.market?.name ||
-      `Market #${entry.marketId.slice(-6)}`;
-    const sessionLabel =
-      entry.sessionType === "CLOSE" ? "Close" : entry.sessionType === "OPEN" ? "Open" : "";
-    const gameName = baseGameName;
+      const baseGameName =
+        entry.gameName?.trim() ||
+        entry.market?.name ||
+        `Market #${entry.marketId.slice(-6)}`;
+      const sessionLabel =
+        entry.sessionType === "CLOSE" ? "Close" : entry.sessionType === "OPEN" ? "Open" : "";
+      const gameName = baseGameName;
 
-    if (items.length === 0) {
-      return [
-        {
-          key: `${entry.id}-empty`,
+      if (items.length === 0) {
+        return [
+          {
+            key: `${entry.id}-empty`,
+            userName:
+              entry.user?.name?.trim() ||
+              entry.user?.username?.trim() ||
+              currentUserName,
+            gameName,
+            sessionLabel,
+            category: resolveCategoryLabel(entry),
+            betNumber: "-",
+            amount: Number(entry.totalAmount ?? 0),
+            winAmount: calculateWinAmount(
+              Number(entry.totalAmount ?? 0),
+              (entry as EntrySlip & { playType?: PlayType }).playType,
+              rates,
+              getWinAmount(entry),
+            ),
+            gameStatus: getDisplayStatus(entry),
+            filterStatus: getFilterStatus(entry),
+            dateTime: entry.createdAt,
+          },
+        ];
+      }
+
+      return items.map((item, index) => {
+        const betAmount = Number(item.amount ?? 0);
+        const playType = item.playType ?? entry.playType ?? inferPlayType(item.selectedNumber);
+
+        return {
+          key: `${entry.id}-${item.id ?? index}`,
           userName:
             entry.user?.name?.trim() ||
             entry.user?.username?.trim() ||
             currentUserName,
           gameName,
           sessionLabel,
-          category: resolveCategoryLabel(entry),
-          betNumber: "-",
-          amount: entry.totalAmount,
-          gameStatus: getDisplayStatus(entry),
-          filterStatus: getFilterStatus(entry),
-          dateTime: entry.createdAt,
-        },
-      ];
-    }
+          category: resolveCategoryLabel(entry, item),
+          betNumber: item.selectedNumber,
+          amount: betAmount,
+          winAmount: calculateWinAmount(
+            betAmount,
+            playType,
+            rates,
+            getWinAmount(entry, item as unknown as Record<string, unknown>),
+          ),
+          gameStatus: getDisplayStatus(entry, item),
+          filterStatus: getFilterStatus(entry, item),
+          dateTime: item.createdAt ?? entry.createdAt,
+        };
+      });
+    });
+  }, [currentUserName, rates]);
 
-    return items.map((item, index) => ({
-      key: `${entry.id}-${item.id ?? index}`,
-      userName:
-        entry.user?.name?.trim() ||
-        entry.user?.username?.trim() ||
-        currentUserName,
-      gameName,
-      sessionLabel,
-      category: resolveCategoryLabel(entry, item),
-      betNumber: item.selectedNumber,
-      amount: item.amount,
-      gameStatus: getDisplayStatus(entry, item),
-      filterStatus: getFilterStatus(entry, item),
-      dateTime: item.createdAt ?? entry.createdAt,
-    }));
-  }).filter((row) => !statusFilter || row.filterStatus === statusFilter);
+  const rows = useMemo(
+    () => buildRows(entries).filter((row) => !statusFilter || row.filterStatus === statusFilter),
+    [buildRows, entries, statusFilter],
+  );
+  const currentRows = useMemo(() => buildRows(entries), [buildRows, entries]);
+  const summaryRows = useMemo(() => {
+    const allRows = buildRows(summaryEntries);
+    return allRows.length > 0 ? allRows : currentRows;
+  }, [buildRows, currentRows, summaryEntries]);
+  const summary = useMemo(() => {
+    const activeRows = summaryRows.filter((row) => row.filterStatus === "ACTIVE");
+    const wonRows = summaryRows.filter((row) => row.filterStatus === "WON");
+    const lostRows = summaryRows.filter((row) => row.filterStatus === "LOST");
+
+    return {
+      activeCount: activeRows.length,
+      wonCount: wonRows.length,
+      totalBetAmount: activeRows.reduce((sum, row) => sum + Number(row.amount ?? 0), 0),
+      totalWinAmount: wonRows.reduce((sum, row) => sum + Number(row.winAmount ?? 0), 0),
+      totalLossAmount: lostRows.reduce((sum, row) => sum + Number(row.amount ?? 0), 0),
+    };
+  }, [summaryRows]);
+
+  const isWinView = statusFilter === "WON";
+  const isLostView = statusFilter === "LOST";
+  const formatAmount = (value: number) => `Rs. ${value.toLocaleString("en-IN")}`;
+  const showDefaultSummary = statusFilter === "" || statusFilter === "ACTIVE";
 
   return (
     <div className="space-y-5 pb-6">
       <KalyanPageHeader title="Bet History" subtitle="All your placed bets" backHref="/kalyan" />
+
+      <div className="flex items-center gap-2">
+        {showDefaultSummary && (
+          <>
+            <button
+              type="button"
+              onClick={() => selectStatusFilter("ACTIVE")}
+              className={`flex h-8 flex-1 items-center justify-center gap-2 rounded-xl border px-2 text-left shadow-[0_8px_18px_rgba(15,23,42,0.08)] transition-colors dark:shadow-[0_10px_22px_rgba(0,0,0,0.2)] ${
+                statusFilter === "ACTIVE"
+                  ? "border-cyan-400 bg-cyan-500/15"
+                  : "border-slate-200 bg-white hover:bg-slate-50 dark:border-slate-700/70 dark:bg-slate-900/50 dark:hover:bg-slate-800/70"
+              }`}
+            >
+              <span className="text-[8px] font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400">Active Bet</span>
+              <span className="text-base font-extrabold leading-none text-cyan-600 dark:text-cyan-300">{summary.activeCount}</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => selectStatusFilter("")}
+              className={`flex h-8 flex-1 items-center justify-center gap-2 rounded-xl border px-2 text-left shadow-[0_8px_18px_rgba(15,23,42,0.08)] transition-colors dark:shadow-[0_10px_22px_rgba(0,0,0,0.2)] ${
+                statusFilter === ""
+                  ? "border-cyan-400 bg-cyan-500/15"
+                  : "border-slate-200 bg-white hover:bg-slate-50 dark:border-slate-700/70 dark:bg-slate-900/50 dark:hover:bg-slate-800/70"
+              }`}
+            >
+              <span className="text-[8px] font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400">Bet Amount</span>
+              <span className="text-sm font-extrabold leading-none text-emerald-600 dark:text-emerald-300">{formatAmount(summary.totalBetAmount)}</span>
+            </button>
+          </>
+        )}
+        {isWinView && (
+          <button
+            type="button"
+            onClick={() => selectStatusFilter("WON")}
+            className="flex h-8 flex-1 items-center justify-between gap-2 rounded-xl border border-cyan-400 bg-cyan-500/15 px-3 text-left shadow-[0_8px_18px_rgba(15,23,42,0.08)] transition-colors dark:shadow-[0_10px_22px_rgba(0,0,0,0.2)]"
+          >
+            <span className="flex items-center gap-2">
+              <span className="text-[8px] font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400">Win Game</span>
+              <span className="text-base font-extrabold leading-none text-cyan-600 dark:text-cyan-300">{summary.wonCount}</span>
+            </span>
+            <span className="flex items-center gap-2">
+              <span className="text-[8px] font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400">Win Amount</span>
+              <span className="text-sm font-extrabold leading-none text-emerald-600 dark:text-emerald-300">{formatAmount(summary.totalWinAmount)}</span>
+            </span>
+          </button>
+        )}
+        {isLostView && (
+          <button
+            type="button"
+            onClick={() => selectStatusFilter("LOST")}
+            className="flex h-8 flex-1 items-center justify-center gap-2 rounded-xl border border-cyan-400 bg-cyan-500/15 px-2 text-left shadow-[0_8px_18px_rgba(15,23,42,0.08)] transition-colors dark:shadow-[0_10px_22px_rgba(0,0,0,0.2)]"
+          >
+            <span className="text-[8px] font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400">Loss Amount</span>
+            <span className="text-sm font-extrabold leading-none text-red-600 dark:text-red-300">{formatAmount(summary.totalLossAmount)}</span>
+          </button>
+        )}
+      </div>
 
       <div className="flex gap-1.5 overflow-x-auto rounded-2xl border border-slate-200 bg-white p-1 shadow-[0_10px_26px_rgba(15,23,42,0.08)] dark:border-slate-700/70 dark:bg-slate-900/50">
         {STATUS_FILTERS.map((filter) => {
@@ -324,8 +564,14 @@ export default function BetHistoryPage() {
                       <span className="block leading-tight">Bet</span>
                       <span className="mt-1 block text-[9px] text-slate-500 dark:text-slate-500">Number</span>
                     </th>
+                    {isWinView && (
+                      <th className="border-b border-r border-slate-200 px-2 py-2 dark:border-slate-700/70 sm:px-3">
+                        <span className="block leading-tight">Bet</span>
+                        <span className="mt-1 block text-[9px] text-slate-500 dark:text-slate-500">Amount</span>
+                      </th>
+                    )}
                     <th className="border-b border-r border-slate-200 px-2 py-2 dark:border-slate-700/70 sm:px-3">
-                      <span className="block leading-tight">Bet</span>
+                      <span className="block leading-tight">{isWinView ? "Win" : "Bet"}</span>
                       <span className="mt-1 block text-[9px] text-slate-500 dark:text-slate-500">Amount</span>
                     </th>
                     <th className="border-b border-r border-slate-200 px-2 py-2 dark:border-slate-700/70 sm:px-3">
@@ -345,8 +591,8 @@ export default function BetHistoryPage() {
                       className="border-b border-slate-200 bg-white text-[9px] text-slate-700 transition-colors hover:bg-slate-50 dark:border-slate-800/80 dark:bg-slate-900/25 dark:text-slate-200 dark:hover:bg-slate-800/35 sm:text-[10px]"
                     >
                       <td className="w-[6%] whitespace-nowrap border-r border-slate-200 px-1 py-2 font-semibold text-slate-600 dark:border-slate-700/60 dark:text-slate-300 sm:px-2">{index + 1}</td>
-                      <td className="w-[13%] break-words border-r border-slate-200 px-1 py-2 text-[8px] font-medium leading-tight text-slate-950 dark:border-slate-700/60 dark:text-white sm:px-2">{row.userName}</td>
-                      <td className="w-[16%] break-words border-r border-slate-200 px-1 py-2 text-[8px] font-medium leading-tight text-slate-800 dark:border-slate-700/60 dark:text-slate-100 sm:px-2">
+                      <td className={`${isWinView ? "w-[12%]" : "w-[13%]"} break-words border-r border-slate-200 px-1 py-2 text-[8px] font-medium leading-tight text-slate-950 dark:border-slate-700/60 dark:text-white sm:px-2`}>{row.userName}</td>
+                      <td className={`${isWinView ? "w-[14%]" : "w-[16%]"} break-words border-r border-slate-200 px-1 py-2 text-[8px] font-medium leading-tight text-slate-800 dark:border-slate-700/60 dark:text-slate-100 sm:px-2`}>
                         {row.gameName}
                         {row.sessionLabel && (
                           <span className={`block font-semibold ${row.sessionLabel === "Open" ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}`}>
@@ -354,17 +600,26 @@ export default function BetHistoryPage() {
                           </span>
                         )}
                       </td>
-                      <td className="w-[13%] whitespace-nowrap border-r border-slate-200 px-1 py-2 text-[7px] leading-none text-slate-600 dark:border-slate-700/60 dark:text-slate-300 sm:px-2 sm:text-[8px]">
-                        {row.category}
+                      <td className={`${isWinView ? "w-[11%]" : "w-[13%]"} whitespace-nowrap border-r border-slate-200 px-1 py-2 text-[7px] leading-none text-slate-600 dark:border-slate-700/60 dark:text-slate-300 sm:px-2 sm:text-[8px]`}>
+                        {renderCategoryLabel(row.category)}
                       </td>
-                      <td className="w-[12%] break-all border-r border-slate-200 px-1 py-2 text-[8px] font-semibold leading-tight tracking-[0.03em] text-cyan-700 dark:border-slate-700/60 dark:text-cyan-300 sm:px-2">{row.betNumber}</td>
-                      <td className="w-[12%] break-words border-r border-slate-200 px-1 py-2 text-[8px] font-semibold leading-tight text-emerald-700 dark:border-slate-700/60 dark:text-emerald-300 sm:px-2">Rs. {Number(row.amount ?? 0).toLocaleString("en-IN")}</td>
-                      <td className="w-[12%] border-r border-slate-200 px-1 py-2 dark:border-slate-700/60 sm:px-2">
+                      <td className={`${isWinView ? "w-[11%]" : "w-[12%]"} break-all border-r border-slate-200 px-1 py-2 text-[8px] font-semibold leading-tight tracking-[0.03em] text-cyan-700 dark:border-slate-700/60 dark:text-cyan-300 sm:px-2`}>{row.betNumber}</td>
+                      {isWinView && (
+                        <td className="w-[11%] break-words border-r border-slate-200 px-1 py-2 text-[8px] font-semibold leading-tight text-emerald-700 dark:border-slate-700/60 dark:text-emerald-300 sm:px-2">
+                          Rs. {Number(row.amount ?? 0).toLocaleString("en-IN")}
+                        </td>
+                      )}
+                      <td className={`${isWinView ? "w-[12%]" : "w-[12%]"} break-words border-r border-slate-200 px-1 py-2 text-[8px] font-semibold leading-tight text-emerald-700 dark:border-slate-700/60 dark:text-emerald-300 sm:px-2`}>Rs. {Number(isWinView ? row.winAmount : row.amount ?? 0).toLocaleString("en-IN")}</td>
+                      <td className={`${isWinView ? "w-[11%]" : "w-[12%]"} border-r border-slate-200 px-1 py-2 dark:border-slate-700/60 sm:px-2`}>
                         <div className="flex justify-center">
-                          <StatusBadge status={row.gameStatus} className="px-1.5 py-0 text-[8px]" />
+                          <StatusBadge
+                            status={isWinView ? "WON" : row.gameStatus}
+                            label={isLostView ? "LOS" : undefined}
+                            className="px-1.5 py-0 text-[8px]"
+                          />
                         </div>
                       </td>
-                      <td className="w-[16%] break-words px-1 py-2 text-[8px] leading-tight text-slate-600 dark:text-slate-300 sm:px-2">{formatDateTime(row.dateTime)}</td>
+                      <td className={`${isWinView ? "w-[12%]" : "w-[16%]"} break-words px-1 py-2 text-[8px] leading-tight text-slate-600 dark:text-slate-300 sm:px-2`}>{formatDateTime(row.dateTime)}</td>
                     </tr>
                   ))}
                 </tbody>

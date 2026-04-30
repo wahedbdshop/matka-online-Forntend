@@ -191,6 +191,10 @@ export const AdminService = {
   loginAsUser: async (userId: string) => {
     const res = await api.post<ApiResponse<any>>(
       `/admin/users/${userId}/login-as`,
+      undefined,
+      {
+        skipAuthRedirect: true,
+      } as any,
     );
     return res.data;
   },
@@ -889,8 +893,18 @@ export const AdminService = {
   // ata add kor kris
   // ✅ এখন
   getPublicSettings: async () => {
-    const res = await api.get<ApiResponse<any>>("/admin/settings/public");
-    return res.data;
+    try {
+      const res = await api.get<ApiResponse<any>>("/admin/settings/public", {
+        skipAuthRedirect: true,
+        skipAuthRefresh: true,
+      } as any);
+      return res.data;
+    } catch (error: any) {
+      if (error?.response?.status === 401 || error?.response?.status === 403) {
+        return { data: [] };
+      }
+      throw error;
+    }
   },
 
   // with

@@ -56,7 +56,9 @@ import { cn } from "@/lib/utils";
 import { FloatingAdminChatButton } from "@/components/admin/floating-admin-chat-button";
 import { AdminChatNotificationPopup } from "@/components/admin/admin-chat-notification-popup";
 import { AuthService } from "@/services/auth.service";
+import { AdminService } from "@/services/admin.service";
 import { clearClientAuthCookies } from "@/lib/auth-cookie";
+import { resetClientSession } from "@/lib/auth-session";
 import {
   ADMIN_CHAT_SEEN_MESSAGES_EVENT,
   getAdminUnreadChatCount,
@@ -78,6 +80,57 @@ interface NavItem {
   children?: NavChild[];
   section?: string; // section divider label above this item
   color?: "purple" | "blue"; // accent color override
+}
+
+function pickSessionValue(session: any, paths: string[]) {
+  for (const path of paths) {
+    const value = path.split(".").reduce<any>((acc, key) => acc?.[key], session);
+    if (value !== undefined && value !== null && value !== "") return value;
+  }
+
+  return undefined;
+}
+
+function normalizeBoolean(value: unknown) {
+  if (typeof value === "boolean") return value;
+  if (typeof value === "number") return value === 1;
+  if (typeof value === "string") {
+    const normalized = value.trim().toLowerCase();
+    return normalized === "true" || normalized === "1" || normalized === "current";
+  }
+
+  return false;
+}
+
+function normalizeSessionList(source: any): any[] {
+  if (Array.isArray(source)) return source;
+
+  const candidates = [
+    source?.data,
+    source?.sessions,
+    source?.items,
+    source?.results,
+    source?.list,
+    source?.rows,
+  ];
+
+  for (const candidate of candidates) {
+    if (Array.isArray(candidate)) return candidate;
+  }
+
+  return [];
+}
+
+function isCurrentSession(session: any) {
+  return normalizeBoolean(
+    pickSessionValue(session, [
+      "isCurrent",
+      "is_current",
+      "current",
+      "isThisDevice",
+      "device.isCurrent",
+    ]),
+  );
 }
 
 // ─── Nav Data ─────────────────────────────────────────────────
@@ -794,6 +847,42 @@ function Sidebar({ onClose }: { onClose?: () => void }) {
 }
 
 // ─── Layout ───────────────────────────────────────────────────
+function AdminSessionGuard() {
+  const router = useRouter();
+  const queryClient = useQueryClient();
+  const { user, isAuthenticated } = useAuthStore();
+  const [isForcingLogout, setIsForcingLogout] = useState(false);
+
+  const { data: sessionsData } = useQuery({
+    queryKey: ["admin-active-sessions"],
+    queryFn: AdminService.getActiveSessions,
+    enabled: Boolean(user && isAuthenticated && !isForcingLogout),
+    refetchInterval: 15000,
+    refetchOnWindowFocus: true,
+    retry: false,
+  });
+
+  useEffect(() => {
+    if (isForcingLogout) return;
+
+    const sessions = normalizeSessionList(sessionsData);
+    if (sessions.length === 0) return;
+    if (sessions.some(isCurrentSession)) return;
+
+    setIsForcingLogout(true);
+
+    void (async () => {
+      await resetClientSession();
+      clearClientAuthCookies();
+      queryClient.clear();
+      useAuthStore.getState().clearAuth();
+      router.replace("/admin/login");
+    })();
+  }, [isForcingLogout, queryClient, router, sessionsData]);
+
+  return null;
+}
+
 export default function AdminLayout({
   children,
 }: {
@@ -843,6 +932,7 @@ export default function AdminLayout({
 
   return (
     <ThemeProvider>
+      <AdminSessionGuard />
       <div className="flex h-screen overflow-hidden bg-slate-100 dark:bg-slate-950">
         <div className="hidden w-56 shrink-0 lg:flex">
           <div className="w-full">

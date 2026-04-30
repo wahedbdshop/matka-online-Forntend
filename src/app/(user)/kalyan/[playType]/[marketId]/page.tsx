@@ -358,7 +358,7 @@ export default function GamePlayPage() {
       if (res.success) {
         toast.success("Bet placed successfully!");
         reset();
-        router.push("/kalyan/bet-history");
+        router.push("/kalyan/bet-history?status=ACTIVE");
       } else {
         toast.error(res.message ?? "Submission failed. Try again.");
       }

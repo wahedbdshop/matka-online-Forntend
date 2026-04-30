@@ -28,6 +28,8 @@ import { ResetUserPasswordAction } from "@/components/admin/reset-user-password-
 import { AdminService } from "@/services/admin.service";
 import { useAuthStore } from "@/store/auth.store";
 import { ADMIN_LOGIN_AS_CHANNEL_PREFIX } from "@/lib/admin-login-as";
+import { getClientAccessTokenCookie } from "@/lib/auth-cookie";
+import { isAdminPortalRole } from "@/lib/auth-role";
 
 export default function UserDetailPage({
   params,
@@ -172,10 +174,14 @@ export default function UserDetailPage({
         flowId,
       })),
     onSuccess: ({ res, popup, flowId }) => {
-      const token = res.data.token;
+      const token = res.data.accessToken ?? res.data.token;
       const userData = res.data.user;
+      const backendAdminBackup = res.data.adminBackup ?? {};
+      const resolvedAdminToken = adminToken ?? getClientAccessTokenCookie();
+      const adminSessionToken =
+        backendAdminBackup.sessionToken ?? backendAdminBackup.token;
 
-      if (!token || !userData || !adminToken || adminUser?.role !== "ADMIN") {
+      if (!token || !userData || !resolvedAdminToken || !isAdminPortalRole(adminUser?.role)) {
         popup?.close();
         toast.error("Could not prepare a secure admin session handoff");
         return;
@@ -191,8 +197,6 @@ export default function UserDetailPage({
         return;
       }
 
-      popup.location.href = `/admin-login-as?flow=${encodeURIComponent(flowId)}`;
-
       const timeout = window.setTimeout(() => {
         channel.close();
         if (!popup.closed && popup.location.pathname === "/blank") {
@@ -206,11 +210,21 @@ export default function UserDetailPage({
         channel.postMessage({
           type: "auth-payload",
           payload: {
-            token,
+            accessToken: token,
+            token: res.data.token ?? token,
+            refreshToken: res.data.refreshToken,
+            sessionToken: res.data.token,
+            sessionMaxAgeMs: res.data.sessionMaxAgeMs,
+            refreshTokenMaxAgeMs: res.data.refreshTokenMaxAgeMs,
             user: userData,
             createdAt: Date.now(),
             adminBackup: {
-              token: adminToken,
+              accessToken: resolvedAdminToken,
+              token: adminSessionToken ?? resolvedAdminToken,
+              refreshToken: backendAdminBackup.refreshToken,
+              sessionToken: adminSessionToken,
+              sessionMaxAgeMs: backendAdminBackup.sessionMaxAgeMs,
+              refreshTokenMaxAgeMs: backendAdminBackup.refreshTokenMaxAgeMs,
               user: adminUser,
             },
           },
@@ -220,6 +234,8 @@ export default function UserDetailPage({
         channel.close();
         toast.success("Opening the user account in a new tab...");
       };
+
+      popup.location.href = `/login-as-user?flow=${encodeURIComponent(flowId)}`;
     },
     onError: (e: any, variables) => {
       variables.popup?.close();
@@ -503,7 +519,6 @@ export default function UserDetailPage({
               { key: "country", label: "Country", value: user.country ?? "" },
             ] as { key: keyof typeof editForm; label: string; value: string }[]
           ).map((item) => {
-            const isEditing = editOpen && item.key in editForm;
             return (
               <div
                 key={item.label}

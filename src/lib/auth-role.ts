@@ -15,6 +15,10 @@ export function isBackofficeRole(role?: string | null) {
   return isAdminPortalRole(role) || isSupportAgentRole(role);
 }
 
+export function pathnameMatchesRoute(pathname: string, route: string) {
+  return pathname === route || pathname.startsWith(`${route}/`);
+}
+
 export function resolveHomePathByRole(role?: string | null) {
   if (isAdminPortalRole(role)) {
     return "/admin";
@@ -28,11 +32,11 @@ export function resolveHomePathByRole(role?: string | null) {
 }
 
 export function resolveLoginPathByPathname(pathname: string) {
-  if (pathname.startsWith("/admin")) {
+  if (pathnameMatchesRoute(pathname, "/admin")) {
     return "/admin/login";
   }
 
-  if (pathname.startsWith("/agent")) {
+  if (pathnameMatchesRoute(pathname, "/agent")) {
     return "/agent/login";
   }
 
