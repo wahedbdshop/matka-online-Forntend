@@ -1,5 +1,6 @@
 export const ADMIN_LOGIN_AS_CHANNEL_PREFIX = "admin-login-as";
 export const ADMIN_BACKUP_SESSION_KEY = "admin_backup_session";
+export const ADMIN_LOGIN_AS_BACKUP_PREFIX = "admin_login_as_backup";
 export const ADMIN_LOGIN_AS_MAX_AGE_MS = 60 * 1000;
 
 export type LoginAsTransferUser = {

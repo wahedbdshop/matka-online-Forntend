@@ -27,7 +27,10 @@ import {
 import { ResetUserPasswordAction } from "@/components/admin/reset-user-password-action";
 import { AdminService } from "@/services/admin.service";
 import { useAuthStore } from "@/store/auth.store";
-import { ADMIN_LOGIN_AS_CHANNEL_PREFIX } from "@/lib/admin-login-as";
+import {
+  ADMIN_LOGIN_AS_BACKUP_PREFIX,
+  ADMIN_LOGIN_AS_MAX_AGE_MS,
+} from "@/lib/admin-login-as";
 import { getClientAccessTokenCookie } from "@/lib/auth-cookie";
 import { isAdminPortalRole } from "@/lib/auth-role";
 
@@ -161,81 +164,52 @@ export default function UserDetailPage({
   });
 
   const { mutate: loginAsUser, isPending: loggingIn } = useMutation({
-    mutationFn: ({
-      popup,
-      flowId,
-    }: {
-      popup: Window | null;
-      flowId: string;
-    }) =>
+    mutationFn: ({ popup }: { popup: Window | null; flowId: string }) =>
       AdminService.loginAsUser(id).then((res) => ({
         res,
         popup,
-        flowId,
       })),
-    onSuccess: ({ res, popup, flowId }) => {
-      const token = res.data.accessToken ?? res.data.token;
-      const userData = res.data.user;
+    onSuccess: ({ res, popup }, { flowId }) => {
+      const impersonationCode = res.data.code;
       const backendAdminBackup = res.data.adminBackup ?? {};
       const resolvedAdminToken = adminToken ?? getClientAccessTokenCookie();
       const adminSessionToken =
         backendAdminBackup.sessionToken ?? backendAdminBackup.token;
 
-      if (!token || !userData || !resolvedAdminToken || !isAdminPortalRole(adminUser?.role)) {
+      if (
+        !impersonationCode ||
+        !resolvedAdminToken ||
+        !isAdminPortalRole(adminUser?.role)
+      ) {
         popup?.close();
         toast.error("Could not prepare a secure admin session handoff");
         return;
       }
 
-      const channel = new BroadcastChannel(
-        `${ADMIN_LOGIN_AS_CHANNEL_PREFIX}:${flowId}`,
-      );
-
       if (!popup || popup.closed) {
-        channel.close();
         toast.error("Pop-up blocked. Please allow pop-ups and try again.");
         return;
       }
 
-      const timeout = window.setTimeout(() => {
-        channel.close();
-        if (!popup.closed && popup.location.pathname === "/blank") {
-          popup.close();
-        }
-      }, 15_000);
+      localStorage.setItem(
+        `${ADMIN_LOGIN_AS_BACKUP_PREFIX}:${flowId}`,
+        JSON.stringify({
+          accessToken: resolvedAdminToken,
+          token: adminSessionToken ?? resolvedAdminToken,
+          refreshToken: backendAdminBackup.refreshToken,
+          sessionToken: adminSessionToken,
+          sessionMaxAgeMs: backendAdminBackup.sessionMaxAgeMs,
+          refreshTokenMaxAgeMs: backendAdminBackup.refreshTokenMaxAgeMs,
+          user: adminUser,
+          createdAt: Date.now(),
+          maxAgeMs: ADMIN_LOGIN_AS_MAX_AGE_MS,
+        }),
+      );
 
-      channel.onmessage = (event: MessageEvent<{ type?: string }>) => {
-        if (event.data?.type !== "ready") return;
-
-        channel.postMessage({
-          type: "auth-payload",
-          payload: {
-            accessToken: token,
-            token: res.data.token ?? token,
-            refreshToken: res.data.refreshToken,
-            sessionToken: res.data.token,
-            sessionMaxAgeMs: res.data.sessionMaxAgeMs,
-            refreshTokenMaxAgeMs: res.data.refreshTokenMaxAgeMs,
-            user: userData,
-            createdAt: Date.now(),
-            adminBackup: {
-              accessToken: resolvedAdminToken,
-              token: adminSessionToken ?? resolvedAdminToken,
-              refreshToken: backendAdminBackup.refreshToken,
-              sessionToken: adminSessionToken,
-              sessionMaxAgeMs: backendAdminBackup.sessionMaxAgeMs,
-              refreshTokenMaxAgeMs: backendAdminBackup.refreshTokenMaxAgeMs,
-              user: adminUser,
-            },
-          },
-        });
-
-        window.clearTimeout(timeout);
-        channel.close();
-        toast.success("Opening the user account in a new tab...");
-      };
-
-      popup.location.href = `/login-as-user?flow=${encodeURIComponent(flowId)}`;
+      popup.location.href = `/login-as-user?code=${encodeURIComponent(
+        impersonationCode,
+      )}&flow=${encodeURIComponent(flowId)}`;
+      toast.success("Opening the user account in a new tab...");
     },
     onError: (e: any, variables) => {
       variables.popup?.close();
