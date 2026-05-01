@@ -9,6 +9,8 @@ export interface RegisterPayload {
   phone: string;
   password: string;
   username: string;
+  country: string;
+  referralCode?: string;
 }
 
 export interface LoginPayload {
@@ -154,7 +156,10 @@ export const AuthService = {
   },
 
   register: async (payload: RegisterPayload) => {
-    const res = await publicApi.post<ApiResponse<any>>("/auth/register", payload);
+    const res = await publicApi.post<ApiResponse<AuthenticatedLoginResponse>>(
+      "/auth/register",
+      payload,
+    );
     return res.data;
   },
 

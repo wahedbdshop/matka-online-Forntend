@@ -35,6 +35,24 @@ export const publicApi = axios.create({
   },
 });
 
+const SESSION_EXPIRED_FALLBACK = "Your session has expired (12h for users / 4d for admins). Please log in again.";
+let sessionExpiredToastShown = false;
+
+function getErrorMessage(error: unknown) {
+  const data = (error as { response?: { data?: { message?: unknown } } })?.response?.data;
+  return typeof data?.message === "string" ? data.message : null;
+}
+
+function isSessionExpiredMessage(message: string | null) {
+  return Boolean(message?.toLowerCase().includes("session") && message.toLowerCase().includes("expired"));
+}
+
+function showSessionExpiredToast(message: string | null) {
+  if (sessionExpiredToastShown) return;
+  sessionExpiredToastShown = true;
+  toast.error(isSessionExpiredMessage(message) ? message! : SESSION_EXPIRED_FALLBACK);
+}
+
 function getLoginPath() {
   if (typeof window === "undefined") {
     return "/login";
@@ -88,6 +106,7 @@ api.interceptors.response.use(
     const skipAuthRefresh = Boolean(requestConfig.skipAuthRefresh);
 
     const isUnauthorized = error.response?.status === 401;
+    const errorMessage = getErrorMessage(error);
     const isRefreshRequest =
       requestConfig.url?.includes("/auth/refresh-token");
     const isAuthLoginRequest =
@@ -120,6 +139,7 @@ api.interceptors.response.use(
       ) {
         await clearServerSession();
         useAuthStore.getState().clearAuth();
+        showSessionExpiredToast(errorMessage);
 
         if (typeof window !== "undefined") {
           const loginPath = getLoginPath();
@@ -136,6 +156,7 @@ api.interceptors.response.use(
     if (isUnauthorized && isRefreshRequest) {
       await clearServerSession();
       useAuthStore.getState().clearAuth();
+      showSessionExpiredToast(errorMessage);
 
       if (typeof window !== "undefined") {
         const loginPath = getLoginPath();
@@ -170,6 +191,16 @@ api.interceptors.response.use(
       });
     }
 
+    if (
+      error.response?.status === 403 &&
+      error.response?.data?.message ===
+        "Your email is not verified! Please verify your email first to unlock all features." &&
+      typeof window !== "undefined"
+    ) {
+      window.dispatchEvent(new Event("email-verification-required"));
+    }
+
     return Promise.reject(error);
   },
 );
+

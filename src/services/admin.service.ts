@@ -163,6 +163,17 @@ export const AdminService = {
     return res.data;
   },
 
+  updateUserContact: async (
+    id: string,
+    payload: { email?: string; phone?: string },
+  ) => {
+    const res = await api.patch<ApiResponse<any>>(
+      `/admin/users/${id}/contact`,
+      payload,
+    );
+    return res.data;
+  },
+
   banUser: async (id: string, reason?: string) => {
     const res = await api.patch<ApiResponse<any>>(`/admin/users/${id}/ban`, {
       reason,

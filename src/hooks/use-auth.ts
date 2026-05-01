@@ -93,12 +93,16 @@ function isDeviceLoginConflict(error: any) {
 
 export const useRegister = () => {
   const router = useRouter();
+  const setAuth = useAuthStore((s) => s.setAuth);
 
   return useMutation({
     mutationFn: AuthService.register,
-    onSuccess: (_, variables) => {
-      toast.success("Registration successful! Please verify your email.");
-      router.push(`/verify-email?email=${encodeURIComponent(variables.email)}`);
+    onSuccess: async (data) => {
+      const user = await completeLogin(data.data, setAuth);
+      if (!user) return;
+
+      toast.success("Registration successful!");
+      router.push("/dashboard");
     },
     onError: (error: any) => {
       toast.error(error.response?.data?.message || "Registration failed");
@@ -377,11 +381,19 @@ export const useResendAdminLoginOtp = () => {
 
 export const useVerifyEmail = () => {
   const router = useRouter();
+  const user = useAuthStore((s) => s.user);
+  const updateUser = useAuthStore((s) => s.updateUser);
 
   return useMutation({
     mutationFn: AuthService.verifyEmail,
     onSuccess: () => {
       toast.success("Email verified successfully!");
+      if (user) {
+        updateUser({ emailVerified: true, status: "ACTIVE" });
+        router.push("/dashboard");
+        return;
+      }
+
       router.push("/login");
     },
     onError: (error: any) => {

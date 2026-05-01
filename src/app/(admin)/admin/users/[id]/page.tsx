@@ -47,7 +47,10 @@ export default function UserDetailPage({
 
   // edit user info
   const [editOpen, setEditOpen] = useState(false);
-  const [editForm, setEditForm] = useState({ name: "", username: "", phone: "", country: "" });
+  const [editForm, setEditForm] = useState({
+    email: "",
+    phone: "",
+  });
 
   // balance modal
   const [balanceOpen, setBalanceOpen] = useState(false);
@@ -90,7 +93,20 @@ export default function UserDetailPage({
 
   // ── Mutations ──
   const { mutate: updateUser, isPending: updating } = useMutation({
-    mutationFn: () => AdminService.updateUser(id, editForm),
+    mutationFn: async () => {
+      const email = editForm.email.trim();
+      const phone = editForm.phone.trim();
+
+      const shouldUpdateContact =
+        email !== (user.email ?? "") || phone !== (user.phone ?? "");
+
+      if (!shouldUpdateContact) return null;
+      const contactPayload: { email?: string; phone?: string } = {};
+      if (email !== (user.email ?? "")) contactPayload.email = email;
+      if (phone !== (user.phone ?? "")) contactPayload.phone = phone;
+
+      return AdminService.updateUserContact(id, contactPayload);
+    },
     onSuccess: () => {
       toast.success("User updated successfully");
       setEditOpen(false);
@@ -487,10 +503,8 @@ export default function UserDetailPage({
           {/* Editable fields */}
           {(
             [
-              { key: "name",    label: "Name",    value: user.name },
-              { key: "username",label: "Username",value: user.username },
+              { key: "email",   label: "Email",   value: user.email },
               { key: "phone",   label: "Phone",   value: user.phone ?? "" },
-              { key: "country", label: "Country", value: user.country ?? "" },
             ] as { key: keyof typeof editForm; label: string; value: string }[]
           ).map((item) => {
             return (
@@ -517,10 +531,8 @@ export default function UserDetailPage({
                     <button
                       onClick={() => {
                         setEditForm({
-                          name: user.name ?? "",
-                          username: user.username ?? "",
+                          email: user.email ?? "",
                           phone: user.phone ?? "",
-                          country: user.country ?? "",
                         });
                         setEditOpen(true);
                       }}
@@ -536,7 +548,9 @@ export default function UserDetailPage({
 
           {/* Readonly fields */}
           {[
-            { label: "Email", value: user.email },
+            { label: "Name", value: user.name },
+            { label: "Username", value: user.username },
+            { label: "Country", value: user.country ?? "-" },
             { label: "Referral Code", value: user.referralCode },
             {
               label: "Email Verified",

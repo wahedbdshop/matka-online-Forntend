@@ -4,6 +4,7 @@ import { BottomNav } from "@/components/user/bottom-nav";
 import { BackToAdminBar } from "@/components/admin/BackToAdminBar";
 import { ChatReplyPopup } from "@/components/user/chat-reply-popup";
 import { NotificationPopup } from "@/components/user/notification-popup";
+import { EmailVerificationGate } from "@/components/user/email-verification-gate";
 
 export default async function UserLayout({
   children,
@@ -26,6 +27,7 @@ export default async function UserLayout({
       <BackToAdminBar />
       <ChatReplyPopup />
       <NotificationPopup />
+      <EmailVerificationGate />
     </div>
   );
 }

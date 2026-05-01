@@ -65,45 +65,6 @@ function lastMsgPreview(msg: any): string {
   return msg.message ?? "";
 }
 
-function getResponderThread(role?: string): "AI" | "AGENT" | null {
-  if (role === "AI") return "AI";
-  if (role === "AGENT") return "AGENT";
-  return null;
-}
-
-function getMessageThread(list: any[], index: number): "AI" | "AGENT" {
-  const msg = list[index];
-  const explicitThread = msg?.thread ?? msg?.mode;
-  if (explicitThread === "AI" || explicitThread === "AGENT") return explicitThread;
-
-  const ownResponderThread = getResponderThread(msg?.role);
-  if (ownResponderThread) return ownResponderThread;
-
-  for (let i = index + 1; i < list.length; i += 1) {
-    const nextThread =
-      list[i]?.thread ?? list[i]?.mode ?? getResponderThread(list[i]?.role);
-    if (nextThread === "AI" || nextThread === "AGENT") return nextThread;
-  }
-
-  for (let i = index - 1; i >= 0; i -= 1) {
-    const prevThread =
-      list[i]?.thread ?? list[i]?.mode ?? getResponderThread(list[i]?.role);
-    if (prevThread === "AI" || prevThread === "AGENT") return prevThread;
-  }
-
-  return "AI";
-}
-
-function getAgentMessages(list: any[]) {
-  return list
-    .map((msg, index) => ({
-      ...msg,
-      originalIndex: index,
-      thread: getMessageThread(list, index),
-    }))
-    .filter((msg) => msg.thread === "AGENT");
-}
-
 function AdminChatPageInner() {
   const [selectedSession, setSelectedSession] = useState<any>(null);
   const [messages, setMessages] = useState<any[]>([]);
@@ -295,12 +256,11 @@ function AdminChatPageInner() {
   );
 
   const lastMsg = (session: any) => {
-    const msgs = getAgentMessages(session.messages ?? []);
+    const msgs = session.messages ?? [];
     return msgs[msgs.length - 1];
   };
 
   const isBusy = isSendingMedia || isRecording;
-  const agentMessages = getAgentMessages(messages);
 
   return (
     <div
@@ -476,22 +436,22 @@ function AdminChatPageInner() {
               }}
             >
               <div className="space-y-1.5">
-                {agentMessages.length === 0 && (
+                {messages.length === 0 && (
                   <div className="flex min-h-[45vh] items-center justify-center text-center">
                     <div className="space-y-2 text-slate-500">
                       <Headphones className="mx-auto h-9 w-9 opacity-40" />
-                      <p className="text-sm text-slate-600 dark:text-slate-300">No agent messages yet</p>
+                      <p className="text-sm text-slate-600 dark:text-slate-300">No messages yet</p>
                     </div>
                   </div>
                 )}
 
-                {agentMessages.map((msg: any, i: number) => {
+                {messages.map((msg: any, i: number) => {
                   const isUser = msg.role === "USER";
                   const isAgent = msg.role === "AGENT";
                   const isAI = msg.role === "AI";
                   const time = formatTime(msg.createdAt);
 
-                  const prevMsg = agentMessages[i - 1];
+                  const prevMsg = messages[i - 1];
                   const showDate =
                     !prevMsg ||
                     new Date(msg.createdAt).toDateString() !==

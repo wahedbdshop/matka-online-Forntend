@@ -16,8 +16,8 @@ export const metadata: Metadata = {
   title: "Matka Online 24",
   description: "Online Lottery Platform",
   icons: {
-    icon: "/logo.png",
-    apple: "/logo.png",
+    icon: "/faveicon.png",
+    apple: "/faveicon.png",
   },
 };
 
