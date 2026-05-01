@@ -32,7 +32,10 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { ChatService } from "@/services/chat.service";
 import { useAuthStore } from "@/store/auth.store";
 import { useSocket } from "@/hooks/use-socket";
-import { useVoiceRecorder } from "@/hooks/use-voice-recorder";
+import {
+  getVoiceRecordingFilename,
+  useVoiceRecorder,
+} from "@/hooks/use-voice-recorder";
 import { cn } from "@/lib/utils";
 import {
   AudioBubble,
@@ -502,10 +505,31 @@ export default function ChatPage() {
     const blob = await stopRecording();
     if (!blob || !sessionId) return;
     const fd = new FormData();
-    fd.append("file", blob, "voice.webm");
+    fd.append("file", blob, getVoiceRecordingFilename(blob));
     fd.append("mode", supportMode);
     sendMedia({ sid: sessionId, fd });
   }, [stopRecording, sessionId, sendMedia, supportMode]);
+
+  const handleRetryMicrophone = async () => {
+    if (supportMode === "AI") {
+      setShowMicDeniedDialog(false);
+      toast.info("Voice messages are available in live agent chat.");
+      return;
+    }
+
+    const ok = await startRecording();
+    if (ok) {
+      setShowMicDeniedDialog(false);
+      toast.success("Microphone is ready. Hold the mic button to send a voice message.");
+      const blob = await stopRecording();
+      if (blob) {
+        // This permission check recording is discarded intentionally.
+      }
+      return;
+    }
+
+    toast.error("Microphone is still blocked. Allow it from browser site settings.");
+  };
 
   const handleRequestAgent = () => {
     if (!sessionId) {
@@ -862,7 +886,6 @@ export default function ChatPage() {
               disabled={
                 !sessionId ||
                 isSendingMedia ||
-                micPermission === "unsupported" ||
                 supportMode === "AI"
               }
               className={cn(
@@ -921,33 +944,47 @@ export default function ChatPage() {
         )}
       </div>
 
-      {/* Microphone Permission Denied Dialog */}
+      {/* Microphone Permission Dialog */}
       <Dialog open={showMicDeniedDialog} onOpenChange={setShowMicDeniedDialog}>
         <DialogContent className="max-w-sm border-slate-200 bg-white text-slate-900 dark:border-slate-700 dark:bg-slate-800 dark:text-white">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-slate-950 dark:text-white">
               <MicOff className="h-5 w-5 text-red-400" />
-              Microphone Access Blocked
+              Microphone Access Needed
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <p className="text-sm text-slate-600 dark:text-slate-300">
-              Voice messages need microphone access. Please allow it in your browser settings.
+              Voice messages need microphone access. Tap try again, then choose Allow if your browser asks.
             </p>
             <div className="space-y-2 rounded-lg bg-slate-50 p-3 text-xs text-slate-500 dark:bg-slate-700/50 dark:text-slate-400">
-              <p className="font-semibold text-slate-700 dark:text-slate-300">How to allow microphone:</p>
-              <ol className="list-decimal list-inside space-y-1">
-                <li>Click the <span className="text-white font-medium">🔒 lock icon</span> in the browser address bar</li>
-                <li>Find <span className="text-white font-medium">Microphone</span> and set it to <span className="text-green-400 font-medium">Allow</span></li>
-                <li>Reload the page and try again</li>
+              <p className="font-semibold text-slate-700 dark:text-slate-300">If it is already blocked:</p>
+              <ol className="list-inside list-decimal space-y-1">
+                <li>Open the browser address bar site settings.</li>
+                <li>
+                  Set <span className="font-medium text-slate-900 dark:text-white">Microphone</span> to{" "}
+                  <span className="font-medium text-emerald-600 dark:text-emerald-400">Allow</span>.
+                </li>
+                <li>Reload the page and try again.</li>
               </ol>
             </div>
-            <Button
-              onClick={() => setShowMicDeniedDialog(false)}
-              className="w-full bg-violet-600 text-white hover:bg-violet-700 dark:bg-purple-600 dark:hover:bg-purple-700"
-            >
-              Got it
-            </Button>
+            <div className="grid grid-cols-2 gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setShowMicDeniedDialog(false)}
+                className="border-slate-200 bg-white text-slate-700 hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
+              >
+                Close
+              </Button>
+              <Button
+                type="button"
+                onClick={handleRetryMicrophone}
+                className="bg-violet-600 text-white hover:bg-violet-700 dark:bg-purple-600 dark:hover:bg-purple-700"
+              >
+                Try again
+              </Button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>

@@ -184,9 +184,8 @@ export function AdminChatNotificationPopup() {
           <button
             type="button"
             onClick={() => {
-              window.localStorage.setItem("admin_chat_session", popup.sessionId);
               setPopup(null);
-              router.push("/admin/chat");
+              router.push(`/admin/chat?session=${encodeURIComponent(popup.sessionId)}`);
             }}
             className="mt-3 inline-flex items-center gap-2 rounded-xl bg-cyan-600 px-3 py-2 text-xs font-semibold text-white transition-colors hover:bg-cyan-700"
           >

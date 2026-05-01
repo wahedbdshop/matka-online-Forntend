@@ -338,7 +338,7 @@ export function HomeGameHub({ popularGames }: { popularGames: any[] }) {
                     "flex min-w-[76px] shrink-0 flex-col items-center rounded-lg border px-3 py-3 text-center transition-all duration-200",
                     isActive
                       ? "border-[#f0bf38]/80 bg-amber-50 text-slate-950 shadow-[0_10px_24px_rgba(240,191,56,0.18),inset_0_1px_0_rgba(255,255,255,0.5)] dark:bg-[linear-gradient(180deg,#445186_0%,#37406c_55%,#2d355b_100%)] dark:text-white dark:shadow-[0_10px_24px_rgba(240,191,56,0.18),inset_0_1px_0_rgba(255,255,255,0.14)]"
-                      : "border-slate-200 bg-slate-50 text-slate-700 hover:border-[#d69d18] hover:bg-amber-50 hover:text-slate-950 dark:border-[#485483] dark:bg-[#36406b] dark:text-[#d5b969] dark:hover:border-[#7b6a2f] dark:hover:bg-[#3b4774] dark:hover:text-white",
+                      : "border-slate-200 bg-white text-slate-800 hover:border-[#d69d18] hover:bg-amber-50 hover:text-slate-950 dark:border-[#485483] dark:bg-[#36406b] dark:text-[#d5b969] dark:hover:border-[#7b6a2f] dark:hover:bg-[#3b4774] dark:hover:text-white",
                   )}
                 >
                   {tab.logoSrc ? (
@@ -362,14 +362,18 @@ export function HomeGameHub({ popularGames }: { popularGames: any[] }) {
                     <Icon
                       className={cn(
                         "mx-auto mb-1.5 h-4 w-4",
-                        isActive && "text-[#ffd75e] drop-shadow-[0_0_6px_rgba(255,215,94,0.55)]",
+                        isActive
+                          ? "text-[#b77905] drop-shadow-[0_0_6px_rgba(255,215,94,0.35)] dark:text-[#ffd75e] dark:drop-shadow-[0_0_6px_rgba(255,215,94,0.55)]"
+                          : "text-slate-700 dark:text-[#d5b969]",
                       )}
                     />
                   )}
                   <span
                     className={cn(
                       "text-[11px] font-semibold",
-                      isActive && "text-slate-950 dark:text-[#fff4cc]",
+                      isActive
+                        ? "text-slate-950 dark:text-[#fff4cc]"
+                        : "text-slate-800 dark:text-[#d5b969]",
                     )}
                   >
                     {tab.label}

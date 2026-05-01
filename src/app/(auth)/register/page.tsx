@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -19,6 +19,7 @@ import {
   Globe,
   Gift,
   ArrowLeft,
+  ChevronDown,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -37,13 +38,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { useRegister } from "@/hooks/use-auth";
 import { hasClientAuthCookie } from "@/lib/auth-cookie";
 import { COUNTRIES } from "@/lib/countries";
@@ -87,7 +81,9 @@ export default function RegisterPage() {
   const { mutate: register, isPending } = useRegister();
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [countryOpen, setCountryOpen] = useState(false);
   const [countrySearch, setCountrySearch] = useState("");
+  const countryDropdownRef = useRef<HTMLDivElement>(null);
 
   const form = useForm<RegisterForm>({
     resolver: zodResolver(registerSchema),
@@ -110,6 +106,21 @@ export default function RegisterPage() {
     }
   }, [form]);
 
+  useEffect(() => {
+    const handlePointerDown = (event: PointerEvent) => {
+      if (
+        countryDropdownRef.current &&
+        !countryDropdownRef.current.contains(event.target as Node)
+      ) {
+        setCountryOpen(false);
+        setCountrySearch("");
+      }
+    };
+
+    document.addEventListener("pointerdown", handlePointerDown);
+    return () => document.removeEventListener("pointerdown", handlePointerDown);
+  }, []);
+
   const filteredCountries = countrySearch.trim()
     ? COUNTRIES.filter(
         (c) =>
@@ -124,6 +135,8 @@ export default function RegisterPage() {
     register(
       {
         ...rest,
+        username: rest.username.trim().toLowerCase(),
+        email: rest.email.trim().toLowerCase(),
         ...(referralCode?.trim()
           ? { referralCode: referralCode.trim().toLowerCase() }
           : {}),
@@ -214,7 +227,13 @@ export default function RegisterPage() {
                         <Input
                           {...field}
                           placeholder="johndoe"
+                          autoCapitalize="none"
+                          autoCorrect="off"
+                          spellCheck={false}
                           className="h-8 pl-8 text-xs bg-slate-700/50 border-slate-600 text-white placeholder:text-slate-500"
+                          onChange={(e) =>
+                            field.onChange(e.target.value.toLowerCase())
+                          }
                         />
                       </div>
                     </FormControl>
@@ -236,12 +255,18 @@ export default function RegisterPage() {
                   <FormControl>
                     <div className="relative">
                       <Mail className="absolute left-2.5 top-2 h-3.5 w-3.5 text-slate-400" />
-                      <Input
-                        {...field}
-                        type="email"
-                        placeholder="your@email.com"
-                        className="h-8 pl-8 text-xs bg-slate-700/50 border-slate-600 text-white placeholder:text-slate-500"
-                      />
+                        <Input
+                          {...field}
+                          type="email"
+                          placeholder="your@email.com"
+                          autoCapitalize="none"
+                          autoCorrect="off"
+                          spellCheck={false}
+                          className="h-8 pl-8 text-xs bg-slate-700/50 border-slate-600 text-white placeholder:text-slate-500"
+                          onChange={(e) =>
+                            field.onChange(e.target.value.toLowerCase())
+                          }
+                        />
                     </div>
                   </FormControl>
                   <FormMessage className="text-xs" />
@@ -253,51 +278,74 @@ export default function RegisterPage() {
             <FormField
               control={form.control}
               name="country"
-              render={({ field }) => (
+              render={({ field }) => {
+                const selectedCountry = COUNTRIES.find(
+                  (country) => country.name === field.value,
+                );
+
+                return (
                 <FormItem className="space-y-1">
                   <FormLabel className="text-slate-300 text-xs">
                     Country
                   </FormLabel>
-                  <Select
-                    value={field.value}
-                    onValueChange={field.onChange}
-                    onOpenChange={(open) => {
-                      if (!open) setCountrySearch("");
-                    }}
-                  >
+                  <div ref={countryDropdownRef} className="relative">
                     <FormControl>
-                      <SelectTrigger className="h-8 w-full text-xs bg-slate-700/50 border-slate-600 text-white pl-8 relative">
+                      <button
+                        type="button"
+                        onClick={() => setCountryOpen((open) => !open)}
+                        className="relative flex h-8 w-full items-center justify-between rounded-md border border-slate-600 bg-slate-700/50 pl-8 pr-3 text-left text-xs text-white outline-none transition-colors focus:border-purple-400 focus:ring-2 focus:ring-purple-500/25"
+                        aria-expanded={countryOpen}
+                      >
                         <Globe className="absolute left-2.5 top-2 h-3.5 w-3.5 text-slate-400 pointer-events-none" />
-                        <SelectValue
-                          placeholder="Select country"
-                          className="text-slate-500"
-                        />
-                      </SelectTrigger>
+                        <span
+                          className={
+                            selectedCountry ? "truncate text-white" : "truncate text-slate-400"
+                          }
+                        >
+                          {selectedCountry
+                            ? `${selectedCountry.name} (${selectedCountry.dialCode})`
+                            : "Select country"}
+                        </span>
+                        <ChevronDown className="ml-2 h-3.5 w-3.5 shrink-0 text-slate-400" />
+                      </button>
                     </FormControl>
-                    <SelectContent
-                      position="popper"
-                      sideOffset={4}
-                      className="bg-slate-800 border-slate-600 text-white w-[--radix-select-trigger-width]"
-                    >
-                      {/* Search inside dropdown */}
-                      <div className="px-2 py-1.5 sticky top-0 bg-slate-800 border-b border-slate-600">
+                    {countryOpen && (
+                      <div className="absolute left-0 right-0 top-full z-50 mt-1 overflow-hidden rounded-lg border border-slate-600 bg-slate-800 shadow-xl">
+                        <div className="border-b border-slate-600 bg-slate-800 px-2 py-1.5">
                         <Input
                           value={countrySearch}
                           onChange={(e) => setCountrySearch(e.target.value)}
+                          autoFocus
+                          autoCapitalize="none"
+                          autoCorrect="off"
+                          spellCheck={false}
                           placeholder="Search country..."
                           className="h-7 text-xs bg-slate-700/50 border-slate-600 text-white placeholder:text-slate-500"
-                          onKeyDown={(e) => e.stopPropagation()}
+                          onKeyDown={(e) => {
+                            if (e.key === "Escape") {
+                              setCountryOpen(false);
+                              setCountrySearch("");
+                            }
+                          }}
                         />
                       </div>
-                      <div className="max-h-40 overflow-y-auto">
+                        <div className="max-h-[min(14rem,45vh)] overflow-y-auto overscroll-contain py-1">
                         {filteredCountries.map((c) => (
-                          <SelectItem
+                          <button
                             key={c.name}
-                            value={c.name}
-                            className="text-xs focus:bg-slate-700 focus:text-white"
+                            type="button"
+                            onClick={() => {
+                              field.onChange(c.name);
+                              setCountrySearch("");
+                              setCountryOpen(false);
+                            }}
+                            className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-xs text-white transition-colors hover:bg-slate-700 focus:bg-slate-700 focus:outline-none"
                           >
-                            {c.name} ({c.dialCode})
-                          </SelectItem>
+                            <span className="truncate">{c.name}</span>
+                            <span className="shrink-0 text-slate-400">
+                              {c.dialCode}
+                            </span>
+                          </button>
                         ))}
                         {filteredCountries.length === 0 && (
                           <div className="px-3 py-2 text-xs text-slate-400">
@@ -305,11 +353,13 @@ export default function RegisterPage() {
                           </div>
                         )}
                       </div>
-                    </SelectContent>
-                  </Select>
+                      </div>
+                    )}
+                  </div>
                   <FormMessage className="text-xs" />
                 </FormItem>
-              )}
+                );
+              }}
             />
 
             {/* Phone */}

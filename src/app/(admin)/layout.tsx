@@ -982,7 +982,7 @@ export default function AdminLayout({
             className={cn(
               "hide-scrollbar flex-1",
               pathname === "/admin/chat"
-                ? "overflow-hidden bg-slate-50 p-2 dark:bg-slate-950 lg:p-3"
+                ? "overflow-hidden bg-slate-50 p-0 dark:bg-slate-950 md:p-2 lg:p-3"
                 : "overflow-y-auto bg-slate-100 p-4 dark:bg-slate-950 lg:p-6",
             )}
           >

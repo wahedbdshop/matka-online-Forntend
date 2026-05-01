@@ -377,18 +377,18 @@ export default function ReferralPage() {
 
       {/* Monthly Login Bonus */}
       {monthlyLoginBonus?.isActive && Number(monthlyLoginBonus?.amount) > 0 && (
-        <Card className="border-amber-200 bg-amber-50 dark:border-amber-500/30 dark:bg-gradient-to-r dark:from-amber-600/20 dark:to-amber-800/20">
+        <Card className="border-amber-200 bg-gradient-to-r from-amber-50 to-orange-50 shadow-sm dark:border-amber-400/25 dark:from-[#3a2409] dark:to-[#221406] dark:shadow-none">
           <CardContent className="p-4 flex items-center justify-between">
             <div>
-              <p className="text-amber-400 text-xs font-medium">Monthly Login Bonus</p>
-              <p className="text-xl font-bold text-slate-950 dark:text-white">
+              <p className="text-xs font-semibold text-amber-700 dark:text-amber-300">Monthly Login Bonus</p>
+              <p className="text-xl font-bold text-slate-950 dark:text-amber-50">
                 ৳{Number(monthlyLoginBonus.amount).toLocaleString()}
               </p>
-              <p className="text-xs text-slate-600 dark:text-slate-400">
+              <p className="text-xs text-slate-700 dark:text-amber-100/80">
                 ৩০ দিন active থাকলে প্রতি মাসে পাবেন
               </p>
               {alreadyClaimed && (
-                <p className="text-green-400 text-xs mt-1 font-medium">✓ এই মাসে claim করা হয়েছে</p>
+                <p className="mt-1 text-xs font-medium text-emerald-700 dark:text-emerald-300">✓ এই মাসে claim করা হয়েছে</p>
               )}
             </div>
             <button
@@ -404,11 +404,11 @@ export default function ReferralPage() {
               aria-label="Claim monthly bonus"
             >
               {claimMutation.isPending ? (
-                <Loader2 className="h-8 w-8 text-amber-400 animate-spin" />
+                <Loader2 className="h-8 w-8 animate-spin text-amber-600 dark:text-amber-300" />
               ) : (
-                <Gift className="h-8 w-8 text-amber-400" />
+                <Gift className="h-8 w-8 text-amber-600 dark:text-amber-300" />
               )}
-              <span className="text-amber-400 text-[10px] font-semibold">
+              <span className="text-[10px] font-semibold text-amber-700 dark:text-amber-300">
                 {alreadyClaimed ? "Claimed" : "Claim"}
               </span>
             </button>

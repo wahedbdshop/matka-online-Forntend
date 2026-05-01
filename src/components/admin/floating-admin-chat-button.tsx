@@ -124,8 +124,6 @@ export function FloatingAdminChatButton() {
     window.addEventListener("touchend", onTouchEnd);
   };
 
-  if (waitingCount <= 0) return null;
-
   return (
     <div
       ref={btnRef}
@@ -136,9 +134,11 @@ export function FloatingAdminChatButton() {
       aria-label="Open waiting chat sessions"
     >
       <MessageCircle className="h-5 w-5 text-purple-200 transition-transform duration-300 group-hover:scale-110" />
-      <span className="absolute -right-1.5 -top-1.5 flex h-5 min-w-5 items-center justify-center rounded-full border border-[#0d1327] bg-rose-500 px-1 text-[10px] font-bold text-white">
-        {waitingCount > 9 ? "9+" : waitingCount}
-      </span>
+      {waitingCount > 0 ? (
+        <span className="absolute -right-1.5 -top-1.5 flex h-5 min-w-5 items-center justify-center rounded-full border border-[#0d1327] bg-rose-500 px-1 text-[10px] font-bold text-white">
+          {waitingCount > 9 ? "9+" : waitingCount}
+        </span>
+      ) : null}
     </div>
   );
 }

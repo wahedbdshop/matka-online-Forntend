@@ -84,7 +84,7 @@ function buildSecurityHeaders(): Record<string, string> {
       `form-action ${Array.from(formActionSources).join(" ")}`,
     ].join("; "),
     "Permissions-Policy":
-      "camera=(), microphone=(), geolocation=(), payment=(), usb=()",
+      "camera=(), microphone=(self), geolocation=(), payment=(), usb=()",
     "Referrer-Policy": "strict-origin-when-cross-origin",
     "X-Content-Type-Options": "nosniff",
     "X-Frame-Options": "DENY",

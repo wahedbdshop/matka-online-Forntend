@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
@@ -21,7 +22,9 @@ function matchesGameType(
   winner: Record<string, unknown>,
   target: "thai" | "kalyan",
 ) {
-  const source = String(winner?.source ?? "").trim().toUpperCase();
+  const source = String(winner?.source ?? "")
+    .trim()
+    .toUpperCase();
   return target === "kalyan" ? source === "KALYAN" : source === "THAI";
 }
 
@@ -67,20 +70,12 @@ function filterLatestDraw(winners: Record<string, unknown>[]) {
 
 function AndroidAppLogo() {
   return (
-    <svg
-      viewBox="0 0 48 48"
-      aria-hidden="true"
-      className="h-7 w-7"
-      fill="none"
-    >
+    <svg viewBox="0 0 48 48" aria-hidden="true" className="h-7 w-7" fill="none">
       <path
         d="M15 18h18v14a7 7 0 0 1-7 7h-4a7 7 0 0 1-7-7V18Z"
         fill="currentColor"
       />
-      <path
-        d="M15 17c.7-5.2 4.3-9 9-9s8.3 3.8 9 9H15Z"
-        fill="currentColor"
-      />
+      <path d="M15 17c.7-5.2 4.3-9 9-9s8.3 3.8 9 9H15Z" fill="currentColor" />
       <path
         d="M16.5 9.5 13 5.5M31.5 9.5 35 5.5"
         stroke="currentColor"
@@ -131,8 +126,7 @@ export default function DashboardPage() {
       referralSubtitle: "প্রতিটি ডিপোজিটে - লাইফটাইম · লেভেল ১~৫",
       invite: "ইনভাইট",
       quickAccess: "দ্রুত প্রবেশ",
-      quickAccessSubtitle:
-        "থাই ও কল্যাণ লাইভ আছে। আরও সেকশন প্রস্তুত হচ্ছে।",
+      quickAccessSubtitle: "থাই ও কল্যাণ লাইভ আছে। আরও সেকশন প্রস্তুত হচ্ছে।",
       viewAll: "সব দেখুন",
       topBetting: "শীর্ষ বেটিং এক্সচেঞ্জ",
       topBettingBody:
@@ -180,7 +174,9 @@ export default function DashboardPage() {
 
   const home = homeData?.data;
   const banners = Array.isArray(home?.banners) ? home.banners : [];
-  const popularGames = Array.isArray(home?.popularGames) ? home.popularGames : [];
+  const popularGames = Array.isArray(home?.popularGames)
+    ? home.popularGames
+    : [];
   const popup = home?.popup ?? null;
   const paymentMethods = Array.isArray(home?.paymentMethods)
     ? home.paymentMethods
@@ -275,7 +271,7 @@ export default function DashboardPage() {
 
         <div className="rounded-xl border border-green-200 bg-linear-to-br from-green-50 to-white p-4 shadow-sm dark:border-green-500/20 dark:from-green-900/20 dark:to-slate-800/60 dark:shadow-none">
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-xl bg-green-500/10 border border-green-500/20 flex items-center justify-center text-2xl shrink-0">
+            <div className="w-12 h-12 rounded-xl bg-emerald-100 border border-emerald-300 flex items-center justify-center text-2xl font-black text-emerald-700 shrink-0 dark:bg-green-500/10 dark:border-green-500/20 dark:text-emerald-300">
               G
             </div>
             <div>
@@ -337,7 +333,7 @@ export default function DashboardPage() {
 
         <div className="rounded-xl border border-amber-200 bg-white p-4 shadow-sm dark:border-[#35507f] dark:bg-[linear-gradient(180deg,#182849_0%,#121d35_100%)] dark:shadow-none">
           <div className="flex items-start gap-3">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-emerald-300 bg-emerald-50 text-[#3ddc84] shadow-sm shadow-emerald-500/10 dark:border-[#3ddc84]/45 dark:bg-[#3ddc84]/12 dark:text-[#3ddc84]">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-emerald-400 bg-emerald-100 text-emerald-800 shadow-sm shadow-emerald-500/10 dark:border-emerald-400/45 dark:bg-emerald-950/30 dark:text-emerald-300">
               <AndroidAppLogo />
             </div>
             <div className="min-w-0 flex-1">
@@ -356,7 +352,7 @@ export default function DashboardPage() {
                 ].map((site) => (
                   <span
                     key={site}
-                    className="rounded-full border border-sky-200 bg-sky-50 px-2.5 py-1 text-[10px] font-semibold text-sky-700 dark:border-[#3b5f92] dark:bg-[#10213d] dark:text-[#9fd2ff]"
+                    className="rounded-full border border-sky-500 bg-sky-200 px-2.5 py-1 text-[10px] font-black text-slate-950 shadow-sm dark:border-sky-700 dark:bg-sky-950 dark:text-sky-100 dark:shadow-none"
                   >
                     {site}
                   </span>
