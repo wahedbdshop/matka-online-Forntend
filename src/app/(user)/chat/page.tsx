@@ -87,6 +87,13 @@ const getDisplayMessage = (message?: string | null) => {
   return message;
 };
 
+const getMessageText = (msg: any) => {
+  const value = msg.message ?? msg.content ?? msg.text ?? msg.body ?? "";
+  if (typeof value === "string") return value;
+  if (value == null) return "";
+  return String(value);
+};
+
 const createAiGreeting = (): Message => ({
   role: "AI",
   message: "Hello! I'm your AI assistant. How can I help you today?",
@@ -740,7 +747,7 @@ export default function ChatPage() {
 
                   <div
                     className={cn("rounded-2xl px-4 py-2.5", {
-                      "rounded-tr-sm bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white shadow-[0_10px_24px_rgba(139,92,246,0.26)] dark:from-violet-600 dark:to-purple-600 dark:shadow-none":
+                      "rounded-tr-sm bg-violet-700 text-white shadow-[0_10px_24px_rgba(109,40,217,0.28)] dark:bg-purple-600 dark:shadow-none":
                         msg.role === "USER",
                       "rounded-tl-sm border border-slate-200 bg-white text-slate-700 shadow-sm dark:border-transparent dark:bg-slate-700 dark:text-slate-100 dark:shadow-none":
                         msg.role === "AI" && !isUnavailableAiMessage(msg.message),
@@ -769,7 +776,7 @@ export default function ChatPage() {
                         )}
                         <p
                           className={cn("whitespace-pre-wrap text-sm leading-relaxed", {
-                            "text-white": msg.role === "USER",
+                            "font-medium text-white": msg.role === "USER",
                             "text-slate-700 dark:text-slate-100":
                               msg.role === "AI" && !isUnavailableAiMessage(msg.message),
                             "text-amber-900 dark:text-amber-100":
@@ -777,7 +784,7 @@ export default function ChatPage() {
                             "text-emerald-900 dark:text-white": msg.role === "AGENT",
                           })}
                         >
-                          {getDisplayMessage(msg.message)}
+                          {getDisplayMessage(getMessageText(msg))}
                         </p>
                         {msg.role === "AI" &&
                           isUnavailableAiMessage(msg.message) &&

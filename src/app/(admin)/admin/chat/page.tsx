@@ -67,7 +67,14 @@ function lastMsgPreview(msg: any): string {
   if (!msg) return "";
   if (msg.imageUrl) return "Image";
   if (msg.voiceUrl) return "Voice";
-  return msg.message ?? "";
+  return getMessageText(msg);
+}
+
+function getMessageText(msg: any): string {
+  const value = msg?.message ?? msg?.content ?? msg?.text ?? msg?.body ?? "";
+  if (typeof value === "string") return value;
+  if (value == null) return "";
+  return String(value);
 }
 
 type ChatListFilter = "all" | "unread" | "groups";
@@ -338,7 +345,7 @@ function AdminChatPageInner() {
       >
         <div className="flex min-h-14 shrink-0 items-center justify-between px-4 py-2 md:bg-[#f8fafc] dark:md:bg-[#111827]">
           <div className="flex items-center gap-2">
-            <span className="text-2xl font-bold leading-none text-[#7c3aed] md:text-xl md:text-white">
+            <span className="text-2xl font-bold leading-none text-[#6d28d9] md:text-xl dark:text-white">
               Matka Online
             </span>
           </div>
@@ -549,7 +556,9 @@ function AdminChatPageInner() {
                   const isUser = msg.role === "USER";
                   const isAgent = msg.role === "AGENT";
                   const isAI = msg.role === "AI";
+                  const isSystem = !isUser && !isAgent && !isAI;
                   const time = formatTime(msg.createdAt);
+                  const messageText = getMessageText(msg);
 
                   const prevMsg = messages[i - 1];
                   const showDate =
@@ -561,7 +570,7 @@ function AdminChatPageInner() {
                     <div key={msg.id ?? `${msg.originalIndex}-${msg.createdAt ?? ""}`}>
                       {showDate && msg.createdAt && (
                         <div className="my-3 flex items-center justify-center">
-                          <span className="rounded-lg bg-white/90 px-3 py-1 text-xs text-slate-500 shadow-sm dark:bg-[#111827]/90 dark:text-slate-300">
+                          <span className="inline-flex min-w-24 items-center justify-center rounded-full border border-slate-300 bg-slate-100 px-3.5 py-1 text-xs font-semibold !text-slate-800 shadow-sm dark:border-slate-700 dark:bg-[#111827] dark:!text-slate-100">
                             {new Date(msg.createdAt).toLocaleDateString([], {
                               weekday: "short",
                               day: "2-digit",
@@ -574,6 +583,7 @@ function AdminChatPageInner() {
                         className={cn("flex items-end gap-2", {
                           "justify-start": isUser || isAI,
                           "justify-end": isAgent,
+                          "justify-center": isSystem,
                         })}
                       >
                         {(isUser || isAI) && <div className="hidden md:block md:w-7" />}
@@ -586,11 +596,12 @@ function AdminChatPageInner() {
                         >
                           <div
                             className={cn(
-                              "relative rounded-lg px-3 py-2 text-[14px] leading-relaxed text-slate-950 shadow-sm md:text-[14.5px]",
+                              "relative rounded-lg px-3 py-2 text-[14px] leading-relaxed shadow-sm md:text-[14.5px]",
                               {
-                                "rounded-tl-sm bg-white dark:bg-[#1e293b] dark:text-slate-100": isUser,
-                                "rounded-tl-sm bg-cyan-50 dark:bg-cyan-500/15 dark:text-cyan-50": isAI,
-                                "rounded-tr-sm bg-violet-100 dark:bg-violet-600 dark:text-white": isAgent,
+                                "rounded-tl-sm border border-slate-300 bg-white !text-slate-950 shadow-[0_1px_3px_rgba(15,23,42,0.16)] dark:border-slate-700 dark:bg-[#1e293b] dark:!text-slate-100": isUser,
+                                "rounded-tl-sm border border-cyan-200 bg-cyan-50 !text-slate-950 dark:border-cyan-500/20 dark:bg-cyan-500/15 dark:!text-cyan-50": isAI,
+                                "rounded-tr-sm bg-violet-100 !text-slate-950 dark:bg-violet-600 dark:!text-white": isAgent,
+                                "border border-slate-300 bg-slate-100 !text-slate-800 dark:border-slate-700 dark:bg-[#111827] dark:!text-slate-100": isSystem,
                               },
                             )}
                           >
@@ -600,11 +611,19 @@ function AdminChatPageInner() {
                               <AudioBubble url={msg.voiceUrl} />
                             ) : (
                               <>
-                                {msg.message}
+                                <span
+                                  className={cn("whitespace-pre-wrap break-words", {
+                                    "!text-slate-950 dark:!text-slate-100": isUser || isAI,
+                                    "!text-slate-950 dark:!text-white": isAgent,
+                                    "!text-slate-800 dark:!text-slate-100": isSystem,
+                                  })}
+                                >
+                                  {messageText}
+                                </span>
                                 <span
                                   className={cn("ml-2 inline-block align-bottom text-[10px]", {
-                                    "text-slate-500 dark:text-slate-400": isUser || isAI,
-                                    "text-violet-700/70 dark:text-violet-100/70": isAgent,
+                                    "!text-slate-600 dark:!text-slate-400": isUser || isAI || isSystem,
+                                    "!text-violet-700 dark:!text-violet-100/80": isAgent,
                                   })}
                                 >
                                   {time}
