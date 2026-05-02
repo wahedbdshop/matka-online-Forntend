@@ -7,6 +7,7 @@ import {
   formatUtcScheduleTimeForLocalDisplay,
   hasUtcScheduleTimePassed,
 } from "@/lib/timezone";
+import { formatKalyanMarketTitle } from "@/lib/kalyan-market-display";
 
 interface SessionCardProps {
   title: string;
@@ -131,6 +132,7 @@ export function SessionCard({
   const state = resolveCardState(marketStatus, timing, currentDate);
   const isOpen = state === "OPEN";
   const config = STATE_CONFIG[state];
+  const displayTitle = formatKalyanMarketTitle(title);
 
   const handlePlay = () => {
     if (!isOpen) return;
@@ -158,7 +160,7 @@ export function SessionCard({
     >
       <div className="flex flex-col items-center gap-1.5">
         <p className="text-center text-[16px] font-extrabold leading-snug tracking-[0.01em] text-slate-950 dark:text-white">
-          {title}
+          {displayTitle}
         </p>
 
         {/* Session type badge */}

@@ -4,7 +4,35 @@ export function normalizeKalyanMarketText(value?: string | null) {
     .trim();
 }
 
-export function getKalyanMarketBaseName(market: any) {
+type KalyanMarketSessionType = "OPEN" | "CLOSE" | string | null;
+
+interface KalyanMarketDisplaySource {
+  name?: string | null;
+  marketName?: string | null;
+  title?: string | null;
+  gameName?: string | null;
+  openName?: string | null;
+  openMarketName?: string | null;
+  closeName?: string | null;
+  closeMarketName?: string | null;
+  sessionType?: KalyanMarketSessionType;
+  timings?: Array<{
+    sessionType?: KalyanMarketSessionType;
+  }> | null;
+}
+
+export function formatKalyanMarketTitle(value?: string | null) {
+  const normalized = normalizeKalyanMarketText(value)
+    .replace(/(\bclose\b)(\s+\bclose\b)+/gi, "Close");
+
+  if (!normalized) return "Kalyan Game";
+
+  return normalized
+    .toLowerCase()
+    .replace(/\b[a-z0-9]/g, (char) => char.toUpperCase());
+}
+
+export function getKalyanMarketBaseName(market?: KalyanMarketDisplaySource | null) {
   return normalizeKalyanMarketText(
     market?.name ??
       market?.marketName ??
@@ -14,8 +42,8 @@ export function getKalyanMarketBaseName(market: any) {
 }
 
 export function getKalyanMarketSessionName(
-  market: any,
-  sessionType?: "OPEN" | "CLOSE" | string | null,
+  market?: KalyanMarketDisplaySource | null,
+  sessionType?: KalyanMarketSessionType,
 ) {
   const normalizedSession = String(sessionType ?? "")
     .trim()
@@ -38,11 +66,11 @@ export function getKalyanMarketSessionName(
   return getKalyanMarketBaseName(market);
 }
 
-export function getKalyanMarketOptionLabel(market: any) {
+export function getKalyanMarketOptionLabel(market?: KalyanMarketDisplaySource | null) {
   return getKalyanMarketBaseName(market) || "-";
 }
 
-export function getKalyanMarketSessionOptionLabel(market: any) {
+export function getKalyanMarketSessionOptionLabel(market?: KalyanMarketDisplaySource | null) {
   const baseName = getKalyanMarketBaseName(market) || "-";
   const sessionType = String(market?.sessionType ?? market?.timings?.[0]?.sessionType ?? "").toUpperCase();
   if (sessionType === "CLOSE") return `${baseName} — Close`;
@@ -51,8 +79,8 @@ export function getKalyanMarketSessionOptionLabel(market: any) {
 }
 
 export function getKalyanMarketSessionLabel(
-  market: any,
-  sessionType?: "OPEN" | "CLOSE" | string | null,
+  market?: KalyanMarketDisplaySource | null,
+  sessionType?: KalyanMarketSessionType,
 ) {
   const baseName = getKalyanMarketBaseName(market);
   const sessionName = getKalyanMarketSessionName(market, sessionType);

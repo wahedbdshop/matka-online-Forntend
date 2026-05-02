@@ -16,6 +16,7 @@ import { SessionCard } from "@/components/kalyan/user/SessionCard";
 import { ErrorState } from "@/components/kalyan/user/ErrorState";
 import { EmptyState } from "@/components/kalyan/user/EmptyState";
 import { useServerTime } from "@/hooks/use-server-time";
+import { formatKalyanMarketTitle } from "@/lib/kalyan-market-display";
 
 const MARKET_LIST_LIMIT = 1000;
 
@@ -40,17 +41,6 @@ function sortMarketsByOldest<T extends { createdAt?: string; id?: string }>(item
 
     return String(left?.id ?? "").localeCompare(String(right?.id ?? ""));
   });
-}
-
-function formatGameTitle(value?: string | null) {
-  if (!value) return "Kalyan Game";
-
-  const normalized = value
-    .replace(/\s+/g, " ")
-    .replace(/(\bclose\b)(\s+\bclose\b)+/gi, "Close")
-    .trim();
-
-  return normalized.replace(/\b\w/g, (char) => char.toUpperCase());
 }
 
 function formatLoadError(error: unknown) {
@@ -172,19 +162,19 @@ export default function MarketSelectionPage() {
             playTypeEnum === "JORI" ? timing.sessionType === "OPEN" : true,
           )
           .forEach((timing) => {
-          const rawTitle =
-            timing.sessionType === "CLOSE"
-              ? market.closeName ?? `${market.name} Close`
-              : market.openName ?? market.name;
+            const rawTitle =
+              timing.sessionType === "CLOSE"
+                ? market.closeName ?? `${market.name} Close`
+                : market.openName ?? market.name;
 
-          flat.push({
-            key: `${market.id}-${timing.sessionType}`,
-            marketId: market.id,
-            title: formatGameTitle(rawTitle),
-            sessionType: timing.sessionType,
-            timing,
-            marketStatus: market.status,
-          });
+            flat.push({
+              key: `${market.id}-${timing.sessionType}`,
+              marketId: market.id,
+              title: formatKalyanMarketTitle(rawTitle),
+              sessionType: timing.sessionType,
+              timing,
+              marketStatus: market.status,
+            });
           });
 
         // If no timings returned, still show both sessions as TIME OVER
@@ -198,7 +188,7 @@ export default function MarketSelectionPage() {
             flat.push({
               key: `${market.id}-${st}`,
               marketId: market.id,
-              title: formatGameTitle(rawTitle),
+              title: formatKalyanMarketTitle(rawTitle),
               sessionType: st,
               timing: undefined,
               marketStatus: market.status,
