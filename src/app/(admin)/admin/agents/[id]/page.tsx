@@ -23,9 +23,11 @@ type AgentForm = {
   bkashNumber: string;
   nagadNumber: string;
   rocketNumber: string;
+  upayNumber: string;
   bkashLogo: string;
   nagadLogo: string;
   rocketLogo: string;
+  upayLogo: string;
   whatsappNumber: string;
   whatsappIcon: string;
   country: string;
@@ -36,6 +38,8 @@ type AgentForm = {
   nagadMax: number;
   rocketMin: number;
   rocketMax: number;
+  upayMin: number;
+  upayMax: number;
   whatsappMin: number;
   whatsappMax: number;
 };
@@ -48,9 +52,11 @@ const EMPTY_BD: AgentForm = {
   bkashNumber: "",
   nagadNumber: "",
   rocketNumber: "",
+  upayNumber: "",
   bkashLogo: "",
   nagadLogo: "",
   rocketLogo: "",
+  upayLogo: "",
   whatsappNumber: "",
   whatsappIcon: "",
   country: "",
@@ -61,6 +67,8 @@ const EMPTY_BD: AgentForm = {
   nagadMax: 30000,
   rocketMin: 500,
   rocketMax: 30000,
+  upayMin: 500,
+  upayMax: 30000,
   whatsappMin: 500,
   whatsappMax: 30000,
 };
@@ -95,6 +103,8 @@ function normalizeAgentForm(agent?: AgentResponse): AgentForm {
     nagadMax: Number(agent?.nagadMax ?? base.nagadMax),
     rocketMin: Number(agent?.rocketMin ?? base.rocketMin),
     rocketMax: Number(agent?.rocketMax ?? base.rocketMax),
+    upayMin: Number(agent?.upayMin ?? base.upayMin),
+    upayMax: Number(agent?.upayMax ?? base.upayMax),
     whatsappMin: Number(agent?.whatsappMin ?? base.whatsappMin),
     whatsappMax: Number(agent?.whatsappMax ?? base.whatsappMax),
   };
@@ -132,7 +142,12 @@ export default function EditAgentPage() {
       toast.error(e?.response?.data?.message || "Failed"),
   });
 
-  const field = (label: string, key: keyof AgentForm, placeholder = "") => (
+  const field = (
+    label: string,
+    key: keyof AgentForm,
+    placeholder = "",
+    maxLength?: number,
+  ) => (
     <div key={String(key)}>
       <label className="mb-1 block text-[11px] text-slate-400">{label}</label>
       <input
@@ -141,6 +156,7 @@ export default function EditAgentPage() {
           setForm((prev) => ({ ...prev, [key]: e.target.value }))
         }
         placeholder={placeholder}
+        maxLength={maxLength}
         className="w-full rounded-lg border border-slate-600 bg-slate-700 px-3 py-2 text-sm text-white outline-none focus:border-blue-500"
       />
     </div>
@@ -230,7 +246,7 @@ export default function EditAgentPage() {
                       <X className="h-3.5 w-3.5" />
                     </button>
                   </div>
-                  {field("Number", "bkashNumber", "01XXXXXXXXX")}
+                  {field("Number", "bkashNumber", "01XXXXXXXXX", 11)}
                   {field("Logo URL", "bkashLogo", "https://...")}
                   <div className="grid grid-cols-2 gap-2">
                     <div>
@@ -289,7 +305,7 @@ export default function EditAgentPage() {
                       <X className="h-3.5 w-3.5" />
                     </button>
                   </div>
-                  {field("Number", "nagadNumber", "01XXXXXXXXX")}
+                  {field("Number", "nagadNumber", "01XXXXXXXXX", 11)}
                   {field("Logo URL", "nagadLogo", "https://...")}
                   <div className="grid grid-cols-2 gap-2">
                     <div>
@@ -348,7 +364,7 @@ export default function EditAgentPage() {
                       <X className="h-3.5 w-3.5" />
                     </button>
                   </div>
-                  {field("Number", "rocketNumber", "01XXXXXXXXX")}
+                  {field("Number", "rocketNumber", "01XXXXXXXXX", 11)}
                   {field("Logo URL", "rocketLogo", "https://...")}
                   <div className="grid grid-cols-2 gap-2">
                     <div>
@@ -381,6 +397,65 @@ export default function EditAgentPage() {
                           }))
                         }
                         className="w-full rounded-lg border border-slate-600 bg-slate-700 px-3 py-2 text-xs text-white outline-none focus:border-purple-400"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-3 rounded-xl border border-sky-500/20 bg-slate-800/50 p-4">
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs font-semibold text-sky-400">
+                      Upay
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setForm((prev) => ({
+                          ...prev,
+                          upayNumber: "",
+                          upayLogo: "",
+                          upayMin: 500,
+                          upayMax: 30000,
+                        }))
+                      }
+                      className="text-slate-500 hover:text-red-400"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                  {field("Number", "upayNumber", "01XXXXXXXXX", 11)}
+                  {field("Logo URL", "upayLogo", "https://...")}
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="mb-1 block text-[10px] text-slate-500">
+                        Min (৳)
+                      </label>
+                      <input
+                        type="number"
+                        value={form.upayMin}
+                        onChange={(e) =>
+                          setForm((prev) => ({
+                            ...prev,
+                            upayMin: Number(e.target.value),
+                          }))
+                        }
+                        className="w-full rounded-lg border border-slate-600 bg-slate-700 px-3 py-2 text-xs text-white outline-none focus:border-sky-400"
+                      />
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-[10px] text-slate-500">
+                        Max (৳)
+                      </label>
+                      <input
+                        type="number"
+                        value={form.upayMax}
+                        onChange={(e) =>
+                          setForm((prev) => ({
+                            ...prev,
+                            upayMax: Number(e.target.value),
+                          }))
+                        }
+                        className="w-full rounded-lg border border-slate-600 bg-slate-700 px-3 py-2 text-xs text-white outline-none focus:border-sky-400"
                       />
                     </div>
                   </div>
@@ -467,6 +542,7 @@ export default function EditAgentPage() {
                                   updateExtra(i, "number", e.target.value)
                                 }
                                 placeholder="01XXXXXXXXX"
+                                maxLength={11}
                                 className={`w-full rounded-lg border border-slate-600 bg-slate-700 px-2 py-1.5 text-xs text-white outline-none ${getCustomMethodTheme().focus}`}
                               />
                             </div>

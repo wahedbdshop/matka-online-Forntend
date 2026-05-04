@@ -5,9 +5,9 @@
  *
  * Grid layout (0-indexed):
  *   Rows 0-5 , cols 0-5  → RED home    (top-left)
- *   Rows 0-5 , cols 9-14 → GREEN home  (top-right)
+ *   Rows 0-5 , cols 9-14 → YELLOW home (top-right)
  *   Rows 9-14, cols 0-5  → BLUE home   (bottom-left)
- *   Rows 9-14, cols 9-14 → YELLOW home (bottom-right)
+ *   Rows 9-14, cols 9-14 → GREEN home  (bottom-right)
  *   Cols 6-8 (all rows)  → vertical path arm
  *   Rows 6-8 (all cols)  → horizontal path arm
  *   Rows 6-8, cols 6-8   → center (3×3)
@@ -15,7 +15,7 @@
  * All positions satisfy: mirror(r,c) = (14-r, 14-c) for 4-fold symmetry.
  */
 
-import { useMemo } from "react";
+import { createContext, useContext, useMemo } from "react";
 import { cn } from "@/lib/utils";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -34,7 +34,25 @@ export type LudoBoardProps = {
   /** Map keyed by "row-col" (e.g. "6-1") → tokens on that cell. */
   tokenPositions?: Map<string, LudoToken[]>;
   onMoveToken?: (tokenId: string) => void;
+  /**
+   * The color of the player viewing the board.
+   * The board rotates so this color always appears at the bottom-left,
+   * and the opponent always appears at the top-right.
+   *
+   * Rotation map (CSS transform):
+   *   BLUE   →   0° (already bottom-left, no rotation)
+   *   GREEN  →  90° CW (bottom-right → bottom-left)
+   *   YELLOW → 180°    (top-right   → bottom-left)
+   *   RED    → 270° CW (top-left    → bottom-left)
+   */
+  viewerColor?: LudoColor;
 };
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Board rotation context — shared with TokenPin for counter-rotation so that
+// pins always point downward regardless of the board's CSS rotation angle.
+// ─────────────────────────────────────────────────────────────────────────────
+const BoardRotationContext = createContext<0 | 90 | 180 | 270>(0);
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Color palette
@@ -54,27 +72,27 @@ const PALETTE = {
 // All four are derived from RED = [1,4,1,4] by applying (r→14-r) and/or (c→14-c).
 const HOME_INNER_BOUNDS: Record<LudoColor, readonly [number, number, number, number]> = {
   RED:    [1,  4,  1,  4],
-  GREEN:  [1,  4,  10, 13],  // c → 14-c: 1→13, 4→10
+  GREEN:  [10, 13, 10, 13],
   BLUE:   [10, 13, 1,  4],   // r → 14-r: 1→13, 4→10
-  YELLOW: [10, 13, 10, 13],  // both
+  YELLOW: [1,  4,  10, 13],
 };
 
 /**
  * Home-circle positions.
  * RED base: (1,1),(1,3),(3,1),(3,3)
- * GREEN:  c → 14-c  → (1,13),(1,11),(3,13),(3,11)
+ * YELLOW: c → 14-c  → (1,13),(1,11),(3,13),(3,11)
  * BLUE:   r → 14-r  → (13,1),(13,3),(11,1),(11,3)
- * YELLOW: both      → (13,13),(13,11),(11,13),(11,11)
+ * GREEN:  both      → (13,13),(13,11),(11,13),(11,11)
  */
 const HOME_CIRCLE_MAP = new Map<string, LudoColor>([
   // RED
   ["1-1", "RED"],  ["1-3", "RED"],  ["3-1", "RED"],  ["3-3", "RED"],
-  // GREEN  (c → 14-c)
-  ["1-11","GREEN"],["1-13","GREEN"],["3-11","GREEN"],["3-13","GREEN"],
+  // YELLOW (c → 14-c)
+  ["1-11","YELLOW"],["1-13","YELLOW"],["3-11","YELLOW"],["3-13","YELLOW"],
   // BLUE   (r → 14-r)
   ["11-1","BLUE"], ["11-3","BLUE"], ["13-1","BLUE"], ["13-3","BLUE"],
-  // YELLOW (r → 14-r, c → 14-c)
-  ["11-11","YELLOW"],["11-13","YELLOW"],["13-11","YELLOW"],["13-13","YELLOW"],
+  // GREEN  (r → 14-r, c → 14-c)
+  ["11-11","GREEN"],["11-13","GREEN"],["13-11","GREEN"],["13-13","GREEN"],
 ]);
 
 /**
@@ -96,16 +114,16 @@ const SAFE_SET = new Set([
  * Colored run-up lanes — the final stretch each color travels before reaching
  * the center. Symmetric about both axes.
  *
- *   RED    → col 7, rows 1-5   (enters center from top)
- *   YELLOW → col 7, rows 9-13  (enters center from bottom) ← mirror RED
- *   BLUE   → row 7, cols 1-5   (enters center from left)
- *   GREEN  → row 7, cols 9-13  (enters center from right)  ← mirror BLUE
+ *   YELLOW → col 7, rows 1-5   (enters center from top)
+ *   BLUE   → col 7, rows 9-13  (enters center from bottom)
+ *   RED    → row 7, cols 1-5   (enters center from left)
+ *   GREEN  → row 7, cols 9-13  (enters center from right)
  */
 const RUN_UP_MAP = ((): Map<string, LudoColor> => {
   const m = new Map<string, LudoColor>();
-  for (let r = 1; r <= 5;  r++) m.set(`${r}-7`, "RED");
-  for (let r = 9; r <= 13; r++) m.set(`${r}-7`, "YELLOW");
-  for (let c = 1; c <= 5;  c++) m.set(`7-${c}`, "BLUE");
+  for (let r = 1; r <= 5;  r++) m.set(`${r}-7`, "YELLOW");
+  for (let r = 9; r <= 13; r++) m.set(`${r}-7`, "BLUE");
+  for (let c = 1; c <= 5;  c++) m.set(`7-${c}`, "RED");
   for (let c = 9; c <= 13; c++) m.set(`7-${c}`, "GREEN");
   return m;
 })();
@@ -113,8 +131,8 @@ const RUN_UP_MAP = ((): Map<string, LudoColor> => {
 /** Token entry cells (where each color exits its home and enters the shared path). */
 const START_MAP = new Map<string, LudoColor>([
   ["6-1",  "RED"],
-  ["1-8",  "GREEN"],
-  ["8-13", "YELLOW"],
+  ["1-8",  "YELLOW"],
+  ["8-13", "GREEN"],
   ["13-6", "BLUE"],
 ]);
 
@@ -123,9 +141,9 @@ const START_MAP = new Map<string, LudoColor>([
  * and are tinted with the adjacent home color.
  */
 const DIRECTION_MAP = new Map<string, { arrow: string; color: LudoColor }>([
-  ["0-7",  { arrow: "↓", color: "GREEN" }],
+  ["0-7",  { arrow: "↓", color: "YELLOW" }],
   ["6-0",  { arrow: "→", color: "RED" }],
-  ["8-14", { arrow: "←", color: "YELLOW" }],
+  ["8-14", { arrow: "←", color: "GREEN" }],
   ["14-7", { arrow: "↑", color: "BLUE" }],
 ]);
 
@@ -188,11 +206,16 @@ function classify(row: number, col: number): CellKind {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Token pin (SVG, Ludo-King style)
+// Token pin — location-pin (map marker) style, matching the Ludo King aesthetic.
+//
+// Shape: teardrop — circle head (centre 20,16 r=14) tapering to a downward tip.
+// Square 40×40 viewBox ensures counter-rotation never clips the content.
+// Reads BoardRotationContext to rotate itself opposite to the board so it
+// always appears upright (pointing down) regardless of the board's CSS rotation.
 //
 // Interactive tokens: button covers the full parent (absolute inset-0) so the
-// entire cell is tappable on mobile; the SVG is centred at `fill` size inside.
-// Non-interactive tokens: simple centred div at `fill` size.
+// entire cell is tappable on mobile.
+// Non-interactive tokens: simple centred div.
 // ─────────────────────────────────────────────────────────────────────────────
 function TokenPin({
   token,
@@ -203,74 +226,72 @@ function TokenPin({
   fill?: string;
   onMove?: (id: string) => void;
 }) {
+  const boardRotation = useContext(BoardRotationContext);
   const hex  = PALETTE[token.color].main;
   const dark = PALETTE[token.color].dark;
-  const gid  = token.color.toLowerCase(); // unique per color, safe as SVG id prefix
+  const gid  = token.color.toLowerCase();
+
+  // Teardrop path — arc flag 0,1 = clockwise → upper semicircle via top ✓
+  const pinPath = "M 20,38 Q 6,29 6,16 A 14,14 0 0,1 34,16 Q 34,29 20,38 Z";
+  // Slightly enlarged dark rim path for depth/outline
+  const rimPath = "M 20,39.5 Q 4.5,29.5 4.5,16 A 15.5,15.5 0 0,1 35.5,16 Q 35.5,29.5 20,39.5 Z";
 
   const svgEl = (
     <svg
-      viewBox="0 0 40 60"
-      style={{ width: fill, height: fill, flexShrink: 0 }}
-      className={cn(
-        token.available &&
-          "drop-shadow-[0_0_8px_rgba(253,224,71,1)] animate-bounce",
-      )}
+      viewBox="0 0 40 40"
+      style={{
+        width: fill,
+        height: fill,
+        flexShrink: 0,
+        // Counter-rotate so the pin tip always points downward toward the player
+        ...(boardRotation !== 0 && {
+          transform: `rotate(${-boardRotation}deg)`,
+          transformOrigin: "center",
+        }),
+      }}
+      className={cn(token.available && "drop-shadow-[0_0_8px_rgba(253,224,71,1)] animate-bounce")}
     >
       <defs>
-        {/* Sphere gradient — light from top-left → dark bottom-right */}
-        <radialGradient id={`sp-${gid}`} cx="30%" cy="25%" r="75%">
-          <stop offset="0%"   stopColor="white"   stopOpacity="0.65" />
-          <stop offset="35%"  stopColor={hex}     stopOpacity="1" />
-          <stop offset="100%" stopColor={dark}    stopOpacity="1" />
+        {/* 3-D radial gradient: bright white top-left → full colour → dark bottom-right */}
+        <radialGradient id={`pg-${gid}`} cx="36%" cy="27%" r="65%">
+          <stop offset="0%"   stopColor="white" stopOpacity="0.80" />
+          <stop offset="22%"  stopColor={hex}   stopOpacity="1" />
+          <stop offset="100%" stopColor={dark}  stopOpacity="1" />
         </radialGradient>
-        {/* Neck gradient — dark left, light right */}
-        <linearGradient id={`nk-${gid}`} x1="0%" y1="0%" x2="100%" y2="0%">
-          <stop offset="0%"   stopColor={dark} />
-          <stop offset="40%"  stopColor={hex} />
-          <stop offset="100%" stopColor={dark} />
-        </linearGradient>
       </defs>
 
-      {/* Ground shadow */}
-      <ellipse cx="20" cy="58" rx="10" ry="3" fill="rgba(0,0,0,.40)" />
+      {/* Ground shadow at pin tip */}
+      <ellipse cx="20" cy="39" rx="7.5" ry="2" fill="rgba(0,0,0,0.32)" />
 
-      {/* ── Neck / stem ── */}
-      <path d="M15,35 Q13,47 12,57 L20,53 L28,57 Q27,47 25,35 Z"
-            fill={`url(#nk-${gid})`} />
-      {/* Neck left-edge highlight */}
-      <path d="M16,36 Q15,46 15,54 L20,52 Z"
-            fill="rgba(255,255,255,.22)" />
+      {/* Dark outer rim — creates depth and outline */}
+      <path d={rimPath} fill={dark} />
 
-      {/* ── Head — dark rim (gives depth) ── */}
-      <circle cx="20" cy="19" r="19" fill={dark} />
+      {/* Main coloured body with 3-D gradient */}
+      <path d={pinPath} fill={`url(#pg-${gid})`} />
 
-      {/* ── Head — main sphere with 3-D radial gradient ── */}
-      <circle cx="20" cy="19" r="17" fill={`url(#sp-${gid})`} />
+      {/* Ambient shadow on the lower half of the body */}
+      <ellipse cx="21" cy="24" rx="11" ry="6" fill="rgba(0,0,0,0.15)" />
 
-      {/* Bottom ambient shadow on sphere */}
-      <ellipse cx="22" cy="28" rx="13" ry="8"
-               fill="rgba(0,0,0,.18)" />
+      {/* White outline stroke — makes pin visible on same-coloured backgrounds */}
+      <path d={pinPath} fill="none" stroke="rgba(255,255,255,0.55)" strokeWidth="1.8" />
 
-      {/* White rim (separates head from rim) */}
-      <circle cx="20" cy="19" r="17"
-              fill="none" stroke="rgba(255,255,255,.70)" strokeWidth="1.8" />
+      {/* White rim around the circular head */}
+      <circle cx="20" cy="16" r="13.5"
+              fill="none" stroke="rgba(255,255,255,0.62)" strokeWidth="1.5" />
 
-      {/* ── Specular highlight — large soft zone ── */}
-      <ellipse cx="13" cy="11" rx="7" ry="5"
-               fill="rgba(255,255,255,.55)"
-               transform="rotate(-20,13,11)" />
+      {/* Inner white ring — Ludo King style detail */}
+      <circle cx="20" cy="16" r="5.5" fill="rgba(255,255,255,0.28)" />
+
+      {/* Specular highlight — large soft zone, top-left */}
+      <ellipse cx="13.5" cy="9" rx="6" ry="4.5"
+               fill="rgba(255,255,255,0.55)" transform="rotate(-20,13.5,9)" />
       {/* Specular core — tiny bright spot */}
-      <ellipse cx="11" cy="9"  rx="3" ry="2"
-               fill="white" opacity="0.92"
-               transform="rotate(-20,11,9)" />
-
-      {/* ── Inner circle (Ludo King style dot) ── */}
-      <circle cx="20" cy="19" r="5.5" fill="rgba(255,255,255,.30)" />
+      <ellipse cx="11.5" cy="7" rx="2.5" ry="1.8"
+               fill="white" opacity="0.93" transform="rotate(-20,11.5,7)" />
 
       {/* Available glow ring */}
       {token.available && (
-        <circle cx="20" cy="19" r="19"
-                fill="none" stroke="#fbbf24" strokeWidth="3" opacity="0.95" />
+        <path d={pinPath} fill="none" stroke="#fbbf24" strokeWidth="3" opacity="0.95" />
       )}
     </svg>
   );
@@ -571,13 +592,26 @@ function CenterOverlay() {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Perspective rotation — maps each player's color to the CSS rotation angle
+// that brings their home quadrant to the bottom-left of the board.
+// ─────────────────────────────────────────────────────────────────────────────
+const VIEWER_ROTATION: Record<LudoColor, 0 | 90 | 180 | 270> = {
+  BLUE:   0,    // already bottom-left
+  GREEN:  90,   // bottom-right → rotate 90° CW → bottom-left
+  YELLOW: 180,  // top-right    → rotate 180°   → bottom-left
+  RED:    270,  // top-left     → rotate 270° CW → bottom-left
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
 // LudoBoard — main export
 // ─────────────────────────────────────────────────────────────────────────────
 export function LudoBoard({
   tokenPositions = new Map(),
   onMoveToken,
+  viewerColor,
 }: LudoBoardProps) {
   const GRID = 15;
+  const rotation = viewerColor != null ? VIEWER_ROTATION[viewerColor] : 0;
 
   // Pre-compute all 225 cell classifications once (never changes).
   const cells = useMemo(
@@ -591,27 +625,32 @@ export function LudoBoard({
   );
 
   return (
-    <div className="relative w-full aspect-square select-none">
-      {/* ── 15×15 CSS Grid ──────────────────────────────────────────────── */}
+    <BoardRotationContext.Provider value={rotation}>
       <div
-        className="absolute inset-0 grid"
-        style={{ gridTemplateColumns: `repeat(${GRID}, 1fr)` }}
+        className="relative w-full aspect-square select-none"
+        style={rotation !== 0 ? { transform: `rotate(${rotation}deg)` } : undefined}
       >
-        {cells.map(({ row, col, kind }) => (
-          <Cell
-            key={`${row}-${col}`}
-            kind={kind}
-            tokens={tokenPositions.get(`${row}-${col}`) ?? []}
-            onMove={onMoveToken}
-          />
-        ))}
+        {/* ── 15×15 CSS Grid ──────────────────────────────────────────────── */}
+        <div
+          className="absolute inset-0 grid"
+          style={{ gridTemplateColumns: `repeat(${GRID}, 1fr)` }}
+        >
+          {cells.map(({ row, col, kind }) => (
+            <Cell
+              key={`${row}-${col}`}
+              kind={kind}
+              tokens={tokenPositions.get(`${row}-${col}`) ?? []}
+              onMove={onMoveToken}
+            />
+          ))}
+        </div>
+
+        {/* ── Center triangle overlay ──────────────────────────────────────── */}
+        <CenterOverlay />
+
+        {/* ── Board outer border ───────────────────────────────────────────── */}
+        <div className="absolute inset-0 border-2 border-[#888] pointer-events-none" />
       </div>
-
-      {/* ── Center triangle overlay ──────────────────────────────────────── */}
-      <CenterOverlay />
-
-      {/* ── Board outer border ───────────────────────────────────────────── */}
-      <div className="absolute inset-0 border-2 border-[#888] pointer-events-none" />
-    </div>
+    </BoardRotationContext.Provider>
   );
 }

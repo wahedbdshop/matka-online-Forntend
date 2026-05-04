@@ -12,6 +12,8 @@ export const LudoAdminService = {
 
   updateSettings: async (payload: {
     isEnabled?: boolean;
+    isFreeMode?: boolean;
+    freeMode?: boolean;
     allowedStakes?: number[];
     commissionPct?: number;
     queueTimeoutMin?: number;

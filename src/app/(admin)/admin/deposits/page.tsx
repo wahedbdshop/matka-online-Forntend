@@ -41,6 +41,7 @@ function getAgentNumbers(deposit: any) {
   push("Bkash", deposit?.agent?.bkashNumber);
   push("Nagad", deposit?.agent?.nagadNumber);
   push("Rocket", deposit?.agent?.rocketNumber);
+  push("Upay", deposit?.agent?.upayNumber);
   push("RL", deposit?.agent?.rlNumber);
   push("WhatsApp", deposit?.agent?.whatsappNumber);
 

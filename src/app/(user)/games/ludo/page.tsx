@@ -2,18 +2,20 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import Image from "next/image";
-import { Loader2, Users, Crown, Swords, Clock } from "lucide-react";
+import { Loader2, Users, Crown, Swords, Clock, Gift } from "lucide-react";
 import { toast } from "sonner";
 import { useSocket } from "@/hooks/use-socket";
 import { AdminService } from "@/services/admin.service";
 import { getLudoConfig } from "@/lib/ludo-settings";
 import { hasClientAuthCookie } from "@/lib/auth-cookie";
+import { useAuthStore } from "@/store/auth.store";
 import {
   LudoService,
   type JoinLudoQueuePayload,
+  type LudoMatchOpponent,
   type LudoStakeAmount,
 } from "@/services/ludo.service";
 
@@ -31,6 +33,15 @@ type MatchFoundPayload = {
   matchId?: string | null;
   amount?: LudoStakeAmount | null;
   yourColor?: "RED" | "GREEN" | null;
+  opponent?: LudoMatchOpponent | null;
+};
+
+type MatchmakingState = {
+  status: "searching" | "matched";
+  stake: LudoStakeAmount;
+  roomId?: string | null;
+  matchId?: string | null;
+  opponentName?: string | null;
 };
 
 const STALE_LUDO_STATE_ERROR =
@@ -66,6 +77,9 @@ const getStateRoomId = (state?: {
   state?.activeMatch?.roomId ??
   state?.activeMatch?.room?.id ??
   null;
+
+const getOpponentDisplayName = (opponent?: LudoMatchOpponent | null) =>
+  opponent?.name?.trim() || opponent?.username?.trim() || "Opponent";
 
 const stakeColors = [
   {
@@ -245,15 +259,30 @@ function LudoPreviewBoard() {
 
 export default function LudoPage() {
   const router = useRouter();
+  const currentUser = useAuthStore((state) => state.user);
   const [authChecked, setAuthChecked] = useState(false);
+  const [matchmaking, setMatchmaking] = useState<MatchmakingState | null>(null);
+  const roomRedirectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    if (!hasClientAuthCookie()) {
-      router.replace("/");
-    } else {
+    queueMicrotask(() => {
+      if (!hasClientAuthCookie()) {
+        router.replace("/");
+        return;
+      }
+
       setAuthChecked(true);
-    }
+    });
   }, [router]);
+
+  useEffect(
+    () => () => {
+      if (roomRedirectTimerRef.current) {
+        clearTimeout(roomRedirectTimerRef.current);
+      }
+    },
+    [],
+  );
 
   const { isConnected, emitEvent, onEvent } = useSocket();
   const [selectedColor] = useState<"RED" | "GREEN">("RED");
@@ -272,6 +301,7 @@ export default function LudoPage() {
     [globalSettings],
   );
   const isLudoEnabled = ludoConfig.enabled;
+  const publicFreeMode = ludoConfig.freeMode;
 
   const { data: lobbyData, refetch: refetchLobby } = useQuery({
     queryKey: ["ludo-lobby"],
@@ -288,6 +318,7 @@ export default function LudoPage() {
   });
 
   const lobby = lobbyData?.data;
+  const isFreeMode = publicFreeMode || Boolean(lobby?.isFreeMode ?? lobby?.freeMode);
   const myState = myStateData?.data;
   const stateRoomId = getStateRoomId(myState);
   const effectiveQueueState = useMemo<QueueStatus | null>(() => {
@@ -306,8 +337,19 @@ export default function LudoPage() {
   const searchingStakeAmount = effectiveQueueState?.stake ?? null;
   const isQueueSearching = effectiveQueueState?.status === "SEARCHING";
 
+  const openRoomAfterMatch = useCallback((roomId: string) => {
+    if (roomRedirectTimerRef.current) {
+      clearTimeout(roomRedirectTimerRef.current);
+    }
+
+    roomRedirectTimerRef.current = setTimeout(() => {
+      router.replace(`/games/ludo/room/${roomId}`);
+    }, 1600);
+  }, [router]);
+
   const clearActiveLudoState = async () => {
     setQueueState(null);
+    setMatchmaking(null);
 
     if (stateRoomId) {
       try {
@@ -345,8 +387,15 @@ export default function LudoPage() {
         }));
 
         if (roomId) {
+          setMatchmaking({
+            status: "matched",
+            stake: payload?.amount ?? ludoConfig.freeStake,
+            roomId,
+            matchId: payload?.matchId ?? null,
+            opponentName: getOpponentDisplayName(payload?.opponent),
+          });
           toast.success("Opponent matched");
-          router.replace(`/games/ludo/room/${roomId}`);
+          openRoomAfterMatch(roomId);
         }
       },
     );
@@ -358,6 +407,7 @@ export default function LudoPage() {
 
     const offCancelled = onEvent("match:cancelled", () => {
       setQueueState(null);
+      setMatchmaking(null);
       toast("Match cancelled");
       void refetchLobby();
       void refetchMyState();
@@ -368,7 +418,16 @@ export default function LudoPage() {
       offQueueUpdate();
       offCancelled();
     };
-  }, [emitEvent, isConnected, onEvent, refetchLobby, refetchMyState, router]);
+  }, [
+    emitEvent,
+    isConnected,
+    ludoConfig.freeStake,
+    onEvent,
+    openRoomAfterMatch,
+    refetchLobby,
+    refetchMyState,
+    router,
+  ]);
 
   const joinQueueMutation = useMutation({
     mutationFn: async (payload: JoinLudoQueuePayload) => {
@@ -398,21 +457,43 @@ export default function LudoPage() {
       });
 
       if (data.roomId) {
+        setMatchmaking({
+          status: "matched",
+          stake: data.stake ?? data.amount ?? ludoConfig.freeStake,
+          roomId: data.roomId,
+          matchId: data.matchId ?? null,
+          opponentName: getOpponentDisplayName(data.opponent),
+        });
         toast.success("Match found");
-        router.replace(`/games/ludo/room/${data.roomId}`);
+        openRoomAfterMatch(data.roomId);
         return;
       }
 
+      setMatchmaking({
+        status: "searching",
+        stake: data.stake ?? data.amount ?? ludoConfig.freeStake,
+      });
       toast.success("Searching for opponent");
       void refetchLobby();
       void refetchMyState();
     },
     onError: (error: unknown) => {
+      setMatchmaking(null);
       toast.error(getErrorMessage(error, "Failed to join Ludo queue"));
     },
   });
 
+  const startJoinQueue = (payload: JoinLudoQueuePayload) => {
+    setMatchmaking({
+      status: "searching",
+      stake: payload.stake,
+    });
+    joinQueueMutation.mutate(payload);
+  };
+
   const mergedStakes = useMemo(() => {
+    if (isFreeMode) return [];
+
     const live = lobby?.stakes ?? [];
     const stakeOptions =
       ludoConfig.stakes.length > 0
@@ -435,7 +516,25 @@ export default function LudoPage() {
         onlinePlayers: match?.onlinePlayers ?? 0,
       };
     });
-  }, [isQueueSearching, lobby, ludoConfig.stakes, searchingStakeAmount]);
+  }, [isFreeMode, isQueueSearching, lobby, ludoConfig.stakes, searchingStakeAmount]);
+
+  const freeStakeStatus = useMemo(() => {
+    const liveFreeStake = lobby?.stakes?.find(
+      (item) => Number(item.amount) === ludoConfig.freeStake,
+    );
+    const includesCurrentUser =
+      isQueueSearching && Number(searchingStakeAmount) === ludoConfig.freeStake;
+    const waitingPlayers = Math.max(
+      0,
+      (liveFreeStake?.waitingPlayers ?? 0) - (includesCurrentUser ? 1 : 0),
+    );
+
+    return {
+      waitingPlayers,
+      activeMatches: liveFreeStake?.activeMatches ?? 0,
+      onlinePlayers: liveFreeStake?.onlinePlayers ?? 0,
+    };
+  }, [isQueueSearching, lobby?.stakes, ludoConfig.freeStake, searchingStakeAmount]);
 
   const getStakeStatusLabel = (stake: (typeof mergedStakes)[number]) => {
     const isCurrentStakeSearching =
@@ -458,6 +557,16 @@ export default function LudoPage() {
 
   const isSearching = isQueueSearching;
   const livePlayerCount = lobby?.activePlayerCount ?? 2;
+  const playerDisplayName =
+    currentUser?.name?.trim() || currentUser?.username?.trim() || "You";
+  const activeMatchmaking =
+    matchmaking ??
+    (isSearching && searchingStakeAmount !== null
+      ? ({
+          status: "searching",
+          stake: searchingStakeAmount,
+        } satisfies MatchmakingState)
+      : null);
   if (!authChecked) return null;
 
   if (settingsLoading) {
@@ -542,7 +651,7 @@ export default function LudoPage() {
         <div className="mb-5 flex items-center justify-center gap-3">
           <Crown className="h-7 w-7 text-[#ffd700] drop-shadow-[0_0_8px_rgba(255,215,0,0.8)]" />
           <h1 className="text-3xl font-black tracking-wide text-white drop-shadow-[0_0_12px_rgba(160,120,255,0.6)]">
-            LUDO KING
+            LUDO MATKA
           </h1>
           <Crown className="h-7 w-7 text-[#ffd700] drop-shadow-[0_0_8px_rgba(255,215,0,0.8)]" />
         </div>
@@ -566,7 +675,7 @@ export default function LudoPage() {
           <div className="flex items-center gap-2">
             <Swords className="h-4 w-4 text-purple-300" />
             <span className="text-sm font-bold uppercase tracking-widest text-purple-200">
-              Select Stake
+              {isFreeMode ? "Free Play" : "Select Stake"}
             </span>
             <Swords className="h-4 w-4 text-purple-300" />
           </div>
@@ -574,6 +683,43 @@ export default function LudoPage() {
         </div>
 
         {/* Stake buttons */}
+        {isFreeMode ? (
+          <button
+            type="button"
+            disabled={joinQueueMutation.isPending || isSearching}
+            onClick={() =>
+              startJoinQueue({
+                stake: ludoConfig.freeStake,
+                preferredColor: selectedColor,
+                pieceMode: "FOUR",
+                isFree: true,
+                freeMode: true,
+              })
+            }
+            className="group relative w-full overflow-hidden rounded-2xl border border-cyan-300 bg-gradient-to-b from-cyan-400 to-emerald-500 p-0 shadow-[0_6px_28px_rgba(34,211,238,0.42)] transition-all duration-200 active:scale-95 hover:scale-[1.02] disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            <div className="absolute inset-x-0 top-0 h-1/2 bg-gradient-to-b from-white/25 to-transparent" />
+            <div className="absolute inset-x-2 bottom-0 h-[3px] rounded-full bg-black/30" />
+
+            <div className="relative px-4 py-5">
+              <div className="mb-2 flex items-center justify-center gap-2 text-2xl font-black tracking-tight text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.45)]">
+                <Gift className="h-6 w-6" />
+                Free Play
+              </div>
+              <div className="mx-auto mb-2 h-px w-3/4 bg-white/35" />
+              <div className="flex items-center justify-center gap-1.5">
+                <Users className="h-3.5 w-3.5 text-white/85" />
+                <span className="text-xs font-semibold text-white/95">
+                  {isQueueSearching && Number(searchingStakeAmount) === ludoConfig.freeStake
+                    ? "Searching..."
+                    : freeStakeStatus.waitingPlayers === 1
+                      ? "Opponent available"
+                      : "Join free match"}
+                </span>
+              </div>
+            </div>
+          </button>
+        ) : (
         <div className="grid grid-cols-2 gap-3">
           {mergedStakes.map((stake, idx) => {
             const color = stakeColors[idx % stakeColors.length];
@@ -581,12 +727,12 @@ export default function LudoPage() {
               <button
                 key={stake.amount}
                 type="button"
-                disabled={joinQueueMutation.isPending || isSearching}
-                onClick={() =>
-                  joinQueueMutation.mutate({
-                    stake: stake.amount,
-                    preferredColor: selectedColor,
-                    pieceMode: "FOUR",
+                  disabled={joinQueueMutation.isPending || isSearching}
+                  onClick={() =>
+                    startJoinQueue({
+                      stake: stake.amount,
+                      preferredColor: selectedColor,
+                      pieceMode: "FOUR",
                   })
                 }
                 className={`group relative overflow-hidden rounded-2xl border ${color.border} bg-gradient-to-b ${color.gradient} ${color.shadow} p-0 transition-all duration-200 active:scale-95 hover:scale-[1.03] disabled:cursor-not-allowed disabled:opacity-60`}
@@ -615,16 +761,59 @@ export default function LudoPage() {
             );
           })}
         </div>
+        )}
 
-        {/* Searching status */}
-        {(joinQueueMutation.isPending || isSearching) && (
-          <div className="mt-4 flex items-center justify-center gap-3 rounded-2xl border border-purple-500/30 bg-[#1a1040] px-4 py-3.5 shadow-[0_0_20px_rgba(120,80,255,0.2)]">
-            <Loader2 className="h-5 w-5 animate-spin text-purple-400" />
-            <span className="text-sm font-bold text-purple-200">
-              {joinQueueMutation.isPending
-                ? "Joining room..."
-                : "Searching for opponent..."}
-            </span>
+        {/* Matchmaking list */}
+        {(activeMatchmaking || joinQueueMutation.isPending) && (
+          <div className="mt-4 rounded-2xl border border-purple-500/30 bg-[#1a1040] px-4 py-4 shadow-[0_0_20px_rgba(120,80,255,0.2)]">
+            <div className="mb-3 flex items-center justify-center gap-2 text-sm font-black text-purple-100">
+              {activeMatchmaking?.status === "matched" ? (
+                <span className="h-2.5 w-2.5 rounded-full bg-[#2dc653] shadow-[0_0_8px_#2dc653]" />
+              ) : (
+                <Loader2 className="h-4 w-4 animate-spin text-purple-300" />
+              )}
+              {activeMatchmaking?.status === "matched"
+                ? "Match found - starting game"
+                : "Searching for opponent"}
+            </div>
+
+            <div className="grid gap-2">
+              <div className="flex items-center justify-between rounded-xl border border-white/10 bg-white/5 px-3 py-2.5">
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-black text-white">
+                    {playerDisplayName}
+                  </p>
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-purple-200/60">
+                    Player 1
+                  </p>
+                </div>
+                <span className="rounded-full bg-emerald-500/15 px-2.5 py-1 text-[10px] font-black text-emerald-300">
+                  Ready
+                </span>
+              </div>
+
+              <div className="flex items-center justify-between rounded-xl border border-white/10 bg-white/5 px-3 py-2.5">
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-black text-white">
+                    {activeMatchmaking?.status === "matched"
+                      ? activeMatchmaking.opponentName || "Opponent"
+                      : "Searching..."}
+                  </p>
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-purple-200/60">
+                    Player 2
+                  </p>
+                </div>
+                <span
+                  className={`rounded-full px-2.5 py-1 text-[10px] font-black ${
+                    activeMatchmaking?.status === "matched"
+                      ? "bg-emerald-500/15 text-emerald-300"
+                      : "bg-amber-500/15 text-amber-300"
+                  }`}
+                >
+                  {activeMatchmaking?.status === "matched" ? "Matched" : "Waiting"}
+                </span>
+              </div>
+            </div>
           </div>
         )}
 

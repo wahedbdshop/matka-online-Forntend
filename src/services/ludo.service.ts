@@ -11,6 +11,8 @@ export type LudoStakeSlot = {
 };
 
 export type LudoLobby = {
+  isFreeMode?: boolean;
+  freeMode?: boolean;
   activePlayerCount: number;
   disabledColors: Array<"RED" | "GREEN" | "YELLOW" | "BLUE">;
   stakes: LudoStakeSlot[];
@@ -20,13 +22,15 @@ export type JoinLudoQueuePayload = {
   stake: LudoStakeAmount;
   preferredColor: "RED" | "GREEN";
   pieceMode: "FOUR";
+  isFree?: boolean;
+  freeMode?: boolean;
 };
 
 export type LudoToken = {
   id: string;
   label: string;
   position: number;
-  status: "HOME" | "TRACK" | "GOAL" | "FINISHED";
+  status: "HOME" | "TRACK" | "PLAYING" | "GOAL" | "FINISHED";
   canMove?: boolean;
   userId?: string;
   color?: "RED" | "GREEN" | "YELLOW" | "BLUE";
@@ -85,6 +89,12 @@ export type LudoMyState = {
   } | null;
 };
 
+export type LudoMatchOpponent = {
+  id?: string | null;
+  name?: string | null;
+  username?: string | null;
+};
+
 type LudoRoomResponse = ApiResponse<
   LudoRoom | { room?: LudoRoom; snapshot?: LudoRoom; diceValue?: number }
 >;
@@ -92,6 +102,7 @@ type LudoRoomResponse = ApiResponse<
 const normalizeLudoTokenStatus = (status?: string): LudoToken["status"] => {
   switch (String(status ?? "").toUpperCase()) {
     case "ACTIVE":
+    case "PLAYING":
     case "TRACK":
       return "TRACK";
     case "GOAL":
@@ -171,6 +182,7 @@ export const LudoService = {
         matchId?: string;
         preferredColor?: "RED" | "GREEN";
         yourColor?: "RED" | "GREEN";
+        opponent?: LudoMatchOpponent;
         pieceMode?: "FOUR";
         status: "SEARCHING" | "MATCHED";
         roomId?: string;

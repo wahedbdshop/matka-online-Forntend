@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
+import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { Download, TrendingUp, Trophy, Users } from "lucide-react";
@@ -68,6 +69,24 @@ function filterLatestDraw(winners: Record<string, unknown>[]) {
   return winners.filter((w) => getDrawKey(w) === latestKey);
 }
 
+const ACTIVITY_STATS = [
+  {
+    popular: "10K+",
+    winners: "Rs 100K+",
+    thaiRates: "8",
+  },
+  {
+    popular: "12K+",
+    winners: "Rs 185K+",
+    thaiRates: "10",
+  },
+  {
+    popular: "15K+",
+    winners: "Rs 250K+",
+    thaiRates: "12",
+  },
+];
+
 function AndroidAppLogo() {
   return (
     <svg viewBox="0 0 48 48" aria-hidden="true" className="h-7 w-7" fill="none">
@@ -96,6 +115,7 @@ function AndroidAppLogo() {
 
 export default function DashboardPage() {
   const { language } = useLanguage();
+  const [activityStatsIndex, setActivityStatsIndex] = useState(0);
   const text = {
     en: {
       kalyanWinners: "Last Kalyan Winners",
@@ -159,10 +179,6 @@ export default function DashboardPage() {
     queryKey: ["home-data"],
     queryFn: () => HomeService.getHomeData(),
   });
-  const { data: thaiRatesData } = useQuery({
-    queryKey: ["thai-rates"],
-    queryFn: () => ThaiLotteryUserService.getRates(),
-  });
   const { data: thaiWinnersData } = useQuery({
     queryKey: ["thai-winners"],
     queryFn: () => ThaiLotteryUserService.getRecentWinners(),
@@ -181,7 +197,6 @@ export default function DashboardPage() {
   const paymentMethods = Array.isArray(home?.paymentMethods)
     ? home.paymentMethods
     : [];
-  const thaiRatesCount = thaiRatesData?.data?.length ?? 0;
   const allThaiWinners = extractList(thaiWinnersData);
   const filteredThaiWinners = filterLatestDraw(allThaiWinners);
   const thaiWinners = sortByAmountDesc(
@@ -193,6 +208,15 @@ export default function DashboardPage() {
       matchesGameType(winner, "kalyan"),
     ),
   );
+  const activityStats = ACTIVITY_STATS[activityStatsIndex];
+
+  useEffect(() => {
+    const intervalId = window.setInterval(() => {
+      setActivityStatsIndex((current) => (current + 1) % ACTIVITY_STATS.length);
+    }, 2600);
+
+    return () => window.clearInterval(intervalId);
+  }, []);
 
   return (
     <>
@@ -216,7 +240,7 @@ export default function DashboardPage() {
             {
               icon: TrendingUp,
               label: text.popular,
-              value: String(popularGames.length || 0),
+              value: activityStats.popular,
               color: "text-blue-600 dark:text-blue-400",
               bg: "from-blue-50 to-white dark:from-blue-500/10 dark:to-blue-600/5",
               border: "border-blue-200 dark:border-blue-500/20",
@@ -224,7 +248,7 @@ export default function DashboardPage() {
             {
               icon: Trophy,
               label: text.winners,
-              value: "Rs 0",
+              value: activityStats.winners,
               color: "text-green-600 dark:text-green-400",
               bg: "from-green-50 to-white dark:from-green-500/10 dark:to-green-600/5",
               border: "border-green-200 dark:border-green-500/20",
@@ -232,7 +256,7 @@ export default function DashboardPage() {
             {
               icon: Users,
               label: text.thaiRates,
-              value: String(thaiRatesCount),
+              value: activityStats.thaiRates,
               color: "text-purple-600 dark:text-purple-400",
               bg: "from-purple-50 to-white dark:from-purple-500/10 dark:to-purple-600/5",
               border: "border-purple-200 dark:border-purple-500/20",

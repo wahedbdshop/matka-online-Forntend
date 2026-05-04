@@ -39,9 +39,11 @@ const EMPTY_BD = {
   bkashNumber: "",
   nagadNumber: "",
   rocketNumber: "",
+  upayNumber: "",
   bkashLogo: "",
   nagadLogo: "",
   rocketLogo: "",
+  upayLogo: "",
   extraMethods: [] as {
     name: string;
     number: string;
@@ -56,19 +58,8 @@ const EMPTY_BD = {
   nagadMax: 30000,
   rocketMin: 500,
   rocketMax: 30000,
-};
-
-const EMPTY_GLOBAL = {
-  type: "GLOBAL_AGENT",
-  name: "",
-  email: "",
-  phone: "",
-  whatsappNumber: "",
-  whatsappIcon: "",
-  // âœ… Deposit limits + country
-  country: "",
-  whatsappMin: 500,
-  whatsappMax: 30000,
+  upayMin: 500,
+  upayMax: 30000,
 };
 
 function getAgentDisplayNumbers(agent: any) {
@@ -81,6 +72,7 @@ function getAgentDisplayNumbers(agent: any) {
   push("Bkash", agent?.bkashNumber);
   push("Nagad", agent?.nagadNumber);
   push("Rocket", agent?.rocketNumber);
+  push("Upay", agent?.upayNumber);
   push("WA", agent?.whatsappNumber);
 
   if (Array.isArray(agent?.extraMethods)) {
@@ -196,13 +188,6 @@ export default function AgentsPage() {
     setFormType("BD_AGENT");
   };
 
-  const openCreate = (type: "BD_AGENT" | "GLOBAL_AGENT") => {
-    setFormType(type);
-    setForm(type === "BD_AGENT" ? { ...EMPTY_BD } : { ...EMPTY_GLOBAL });
-    setEditTarget(null);
-    setFormOpen(true);
-  };
-
   const handleSubmit = () => {
     if (editTarget) updateAgent({ id: editTarget.id, payload: form });
     else createAgent(form);
@@ -213,13 +198,19 @@ export default function AgentsPage() {
     setPage(1);
   };
 
-  const field = (label: string, key: string, placeholder = "") => (
+  const field = (
+    label: string,
+    key: string,
+    placeholder = "",
+    maxLength?: number,
+  ) => (
     <div key={key}>
       <label className="text-[11px] text-slate-400 mb-1 block">{label}</label>
       <input
         value={form[key] ?? ""}
         onChange={(e) => setForm((p: any) => ({ ...p, [key]: e.target.value }))}
         placeholder={placeholder}
+        maxLength={maxLength}
         className="w-full rounded-lg border border-slate-600 bg-slate-700 px-3 py-2 text-sm text-white outline-none focus:border-blue-500"
       />
     </div>
@@ -242,18 +233,18 @@ export default function AgentsPage() {
           </p>
         </div>
         <div className="flex gap-2">
-          <button
-            onClick={() => openCreate("BD_AGENT")}
+          <Link
+            href="/admin/agents/create/bd"
             className="flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-2 text-xs font-semibold text-white hover:bg-blue-700"
           >
             <Plus className="h-3.5 w-3.5" /> BD Agent
-          </button>
-          <button
-            onClick={() => openCreate("GLOBAL_AGENT")}
+          </Link>
+          <Link
+            href="/admin/agents/create/global"
             className="flex items-center gap-1.5 rounded-lg bg-purple-600 px-3 py-2 text-xs font-semibold text-white hover:bg-purple-700"
           >
             <Plus className="h-3.5 w-3.5" /> Global Agent
-          </button>
+          </Link>
         </div>
       </div>
 
@@ -540,6 +531,7 @@ export default function AgentsPage() {
                       ["Bkash", detailTarget.bkashNumber],
                       ["Nagad", detailTarget.nagadNumber],
                       ["Rocket", detailTarget.rocketNumber],
+                      ["Upay", detailTarget.upayNumber],
                     ]
                   : [
                       ["WhatsApp", detailTarget.whatsappNumber],
@@ -624,7 +616,7 @@ export default function AgentsPage() {
                         <X className="h-3.5 w-3.5" />
                       </button>
                     </div>
-                    {field("Number", "bkashNumber", "01XXXXXXXXX")}
+                    {field("Number", "bkashNumber", "01XXXXXXXXX", 11)}
                     {field("Logo URL", "bkashLogo", "https://...")}
                   </div>
 
@@ -649,7 +641,7 @@ export default function AgentsPage() {
                         <X className="h-3.5 w-3.5" />
                       </button>
                     </div>
-                    {field("Number", "nagadNumber", "01XXXXXXXXX")}
+                    {field("Number", "nagadNumber", "01XXXXXXXXX", 11)}
                     {field("Logo URL", "nagadLogo", "https://...")}
                   </div>
 
@@ -674,7 +666,7 @@ export default function AgentsPage() {
                         <X className="h-3.5 w-3.5" />
                       </button>
                     </div>
-                    {field("Number", "rocketNumber", "01XXXXXXXXX")}
+                    {field("Number", "rocketNumber", "01XXXXXXXXX", 11)}
                     {field("Logo URL", "rocketLogo", "https://...")}
                   </div>
 
@@ -752,6 +744,7 @@ export default function AgentsPage() {
                                 updateExtra(i, "number", e.target.value)
                               }
                               placeholder="01XXXXXXXXX"
+                              maxLength={11}
                               className={`w-full rounded-lg border border-slate-600 bg-slate-700 px-2 py-1.5 text-xs text-white outline-none ${getCustomMethodTheme().focus}`}
                             />
                           </div>

@@ -8,6 +8,8 @@ export const DEFAULT_LUDO_STAKES = [250, 500, 1000, 2000];
 export const DEFAULT_LUDO_DISABLED_MESSAGE =
   "Ludo is currently unavailable. Please try again later.";
 
+export const DEFAULT_LUDO_FREE_STAKE = 0;
+
 export function getSettingValue(
   settings: SettingLike[] | undefined,
   key: string,
@@ -26,6 +28,7 @@ export function parseStakeList(value?: string | null) {
 
 export function getLudoConfig(settings: SettingLike[] | undefined) {
   const enabled = getSettingValue(settings, "global_ludo") !== "false";
+  const freeMode = getSettingValue(settings, "ludo_free_mode") === "true";
   const message =
     getSettingValue(settings, "global_ludo_message") ||
     DEFAULT_LUDO_DISABLED_MESSAGE;
@@ -43,6 +46,8 @@ export function getLudoConfig(settings: SettingLike[] | undefined) {
 
   return {
     enabled,
+    freeMode,
+    freeStake: DEFAULT_LUDO_FREE_STAKE,
     message,
     stakes: stakes.length > 0 ? stakes : DEFAULT_LUDO_STAKES,
     bannerImage,

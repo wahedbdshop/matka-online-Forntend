@@ -32,6 +32,7 @@ import { PaymentMethodsRow } from "./(user)/dashboard/_components/payment-method
 import { AuthPopupProvider } from "@/components/shared/auth-popup";
 import { FloatingChatButton } from "@/components/user/floating-chat-button";
 import { GlobalNoticeBar } from "@/components/shared/global-notice-bar";
+import { ThemeToggle } from "@/components/shared/theme-toggle";
 import { SITE_LOGO_SRC } from "@/lib/branding";
 
 function matchesGameType(
@@ -169,10 +170,10 @@ export default function LandingPage() {
 
   return (
     <AuthPopupProvider>
-      <div className="min-h-screen flex flex-col bg-[radial-gradient(circle_at_top,#1f2d59_0%,#0d1327_42%,#090d1a_100%)] text-white">
-        <header className="sticky top-0 z-50 border-b border-[#2b3962] bg-[#131a31]/95 backdrop-blur">
+      <div className="flex min-h-screen flex-col bg-[radial-gradient(circle_at_top,#fff7da_0%,#edf4ff_40%,#f8fafc_100%)] text-slate-950 dark:bg-[radial-gradient(circle_at_top,#1f2d59_0%,#0d1327_42%,#090d1a_100%)] dark:text-white">
+        <header className="sticky top-0 z-50 border-b border-amber-200 bg-white/92 backdrop-blur dark:border-[#2b3962] dark:bg-[#131a31]/95">
           <div className="mx-auto flex max-w-lg flex-col">
-            <div className="relative flex items-center justify-between gap-3 bg-[linear-gradient(90deg,#10182d_0%,#182441_52%,#10182d_100%)] px-4 py-3">
+            <div className="relative flex items-center justify-between gap-3 bg-[linear-gradient(90deg,#fff7df_0%,#eef6ff_52%,#fff7df_100%)] px-4 py-3 dark:bg-[linear-gradient(90deg,#10182d_0%,#182441_52%,#10182d_100%)]">
               <div className="flex min-w-0 items-center gap-2">
                 <Image
                   src={SITE_LOGO_SRC}
@@ -182,17 +183,20 @@ export default function LandingPage() {
                   priority
                   className="h-8 w-auto object-contain"
                 />
-                <div className="rounded-full border border-[#2e6a95] bg-[#16314d] px-2.5 py-1 text-[9px] font-bold uppercase tracking-[0.18em] text-[#8edbff]">
+                <div className="rounded-full border border-sky-300 bg-sky-50 px-2.5 py-1 text-[9px] font-bold uppercase tracking-[0.18em] text-sky-700 dark:border-[#2e6a95] dark:bg-[#16314d] dark:text-[#8edbff]">
                   Trusted Play
                 </div>
               </div>
 
-              <Link
-                href="/register"
-                className="inline-flex shrink-0 items-center rounded-md border border-[#42608f] bg-[linear-gradient(180deg,#29456d_0%,#203759_100%)] px-4 py-2 text-sm font-bold text-[#d9ecff] shadow-[0_8px_18px_rgba(5,12,24,0.24),inset_0_1px_0_rgba(255,255,255,0.08)] transition-transform hover:scale-[1.02] hover:bg-[#28466f]"
-              >
-                Join
-              </Link>
+              <div className="flex shrink-0 items-center gap-2">
+                <ThemeToggle className="h-9 w-9 rounded-md border border-slate-200 bg-white/80 text-slate-700 shadow-sm hover:bg-slate-50 dark:border-[#42608f] dark:bg-[#16213a] dark:text-slate-200 dark:hover:bg-[#203759]" />
+                <Link
+                  href="/register"
+                  className="inline-flex items-center rounded-md border border-[#42608f] bg-[linear-gradient(180deg,#29456d_0%,#203759_100%)] px-4 py-2 text-sm font-bold text-[#d9ecff] shadow-[0_8px_18px_rgba(5,12,24,0.24),inset_0_1px_0_rgba(255,255,255,0.08)] transition-transform hover:scale-[1.02] hover:bg-[#28466f]"
+                >
+                  Join
+                </Link>
+              </div>
             </div>
           </div>
         </header>
@@ -562,13 +566,13 @@ export default function LandingPage() {
           </div>
         </main>
 
-        <footer className="border-t border-[#2e3a5c] bg-[#0d1120] px-4 pb-24 pt-6">
+        <footer className="border-t border-slate-200 bg-white px-4 pb-24 pt-6 dark:border-[#2e3a5c] dark:bg-[#0d1120]">
           <div className="mx-auto max-w-lg space-y-2 text-center">
             <div className="mb-3 flex items-center justify-center gap-2">
               <div className="flex h-7 w-7 items-center justify-center rounded-xl bg-linear-to-br from-[#f0bf38] to-[#d18e09] text-xs font-black text-[#1a1f39]">
                 M
               </div>
-              <span className="text-sm font-black text-white">
+              <span className="text-sm font-black text-slate-950 dark:text-white">
                 Matka Online 24
               </span>
             </div>
@@ -581,7 +585,7 @@ export default function LandingPage() {
           </div>
         </footer>
 
-        <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-[#2c3f69] bg-[linear-gradient(180deg,#121a30_0%,#0d1528_100%)] text-[#c2cee5] shadow-[0_-8px_24px_rgba(0,0,0,0.3)]">
+        <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-[linear-gradient(180deg,#ffffff_0%,#edf4ff_100%)] text-slate-600 shadow-[0_-8px_24px_rgba(15,23,42,0.12)] dark:border-[#2c3f69] dark:bg-[linear-gradient(180deg,#121a30_0%,#0d1528_100%)] dark:text-[#c2cee5] dark:shadow-[0_-8px_24px_rgba(0,0,0,0.3)]">
           <div className="mx-auto flex max-w-lg items-center justify-between px-2 py-1.5">
             {publicBottomNavItems.map((item) => {
               const Icon = item.icon;
@@ -592,8 +596,8 @@ export default function LandingPage() {
               const sharedClassName = cn(
                 "flex min-w-0 flex-1 flex-col items-center gap-1 rounded-2xl px-1 py-2 text-[11px] font-semibold transition-colors",
                 activeBottomTab === item.label
-                  ? "mx-1 border border-[#6f5b24] bg-[#35456c] text-[#ffe170] shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]"
-                  : "text-[#9ca9c5] hover:text-white",
+                  ? "mx-1 border border-amber-300 bg-amber-100 text-amber-700 shadow-[inset_0_1px_0_rgba(255,255,255,0.6)] dark:border-[#6f5b24] dark:bg-[#35456c] dark:text-[#ffe170] dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]"
+                  : "text-slate-500 hover:text-slate-950 dark:text-[#9ca9c5] dark:hover:text-white",
               );
 
               return (

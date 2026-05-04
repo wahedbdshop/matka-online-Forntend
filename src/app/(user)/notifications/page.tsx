@@ -2,12 +2,13 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Bell, CheckCheck } from "lucide-react";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { NotificationService } from "@/services/notification.service";
+import { UserService } from "@/services/user.service";
 import { cn } from "@/lib/utils";
 import type { Notification } from "@/types";
 import { toast } from "sonner";
@@ -18,10 +19,49 @@ type NotificationsResponse = {
   unreadCount: number;
 };
 
+type BonusHistoryItem = {
+  id: string;
+  type?: string;
+  title?: string;
+  description?: string;
+  amount?: number | string;
+  createdAt?: string;
+};
+
+const BONUS_NOTIFICATION_READ_KEY = "read-bonus-notification-ids";
+
+function getBonusNotificationLabel(type?: string) {
+  if (type === "DEPOSIT_BONUS") return "Deposit Bonus";
+  if (type === "MANUAL_DEPOSIT_BONUS") return "Manual Deposit Bonus";
+  if (type === "REFERRAL_DEPOSIT_BONUS") return "Referral Bonus";
+  if (type === "JOIN_BONUS") return "Join Bonus";
+  return "Bonus";
+}
+
+function readStoredBonusNotificationIds() {
+  if (typeof window === "undefined") return [];
+
+  try {
+    const stored = window.localStorage.getItem(BONUS_NOTIFICATION_READ_KEY);
+    const parsed = stored ? JSON.parse(stored) : [];
+    return Array.isArray(parsed) ? parsed.filter((id) => typeof id === "string") : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveStoredBonusNotificationIds(ids: string[]) {
+  if (typeof window === "undefined") return;
+  window.localStorage.setItem(BONUS_NOTIFICATION_READ_KEY, JSON.stringify(ids));
+}
+
 export default function NotificationsPage() {
   const { language } = useLanguage();
   const queryClient = useQueryClient();
   const [pendingReadIds, setPendingReadIds] = useState<string[]>([]);
+  const [readBonusIds, setReadBonusIds] = useState<string[]>(
+    readStoredBonusNotificationIds,
+  );
   const text = {
     en: {
       title: "Notifications",
@@ -48,6 +88,11 @@ export default function NotificationsPage() {
     queryFn: () => NotificationService.getAll(1, 50),
   });
 
+  const { data: bonusData, isLoading: isBonusLoading } = useQuery({
+    queryKey: ["bonus-history"],
+    queryFn: UserService.getBonusHistory,
+  });
+
   const { mutate: markAllRead } = useMutation({
     mutationFn: NotificationService.markAllAsRead,
     onSuccess: () => {
@@ -64,8 +109,46 @@ export default function NotificationsPage() {
   });
 
   const notificationsData = data?.data as NotificationsResponse | undefined;
-  const notifications = notificationsData?.notifications ?? [];
-  const unreadCount = notificationsData?.unreadCount ?? 0;
+  const notifications = useMemo(
+    () => notificationsData?.notifications ?? [],
+    [notificationsData?.notifications],
+  );
+  const bonusHistory: BonusHistoryItem[] = useMemo(
+    () => bonusData?.data?.history ?? [],
+    [bonusData?.data?.history],
+  );
+  const bonusNotifications: Notification[] = useMemo(
+    () =>
+      bonusHistory.map((item) => {
+        const label = getBonusNotificationLabel(item.type);
+        const amount = Number(item.amount ?? 0).toLocaleString("en-BD");
+        const id = `bonus-${item.id}`;
+
+        return {
+          id,
+          type: item.type ?? "BONUS",
+          title: item.title || label,
+          message:
+            item.description ||
+            `You received ${label.toLowerCase()} of ৳${amount}.`,
+          status: readBonusIds.includes(id) ? "READ" : "UNREAD",
+          isRead: readBonusIds.includes(id),
+          link: "/profile/bonus",
+          createdAt: item.createdAt ?? new Date().toISOString(),
+        };
+      }),
+    [bonusHistory, readBonusIds],
+  );
+  const mergedNotifications = useMemo(
+    () =>
+      [...notifications, ...bonusNotifications].sort(
+        (a, b) =>
+          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+      ),
+    [bonusNotifications, notifications],
+  );
+  const bonusUnreadCount = bonusNotifications.filter((item) => !item.isRead).length;
+  const unreadCount = (notificationsData?.unreadCount ?? 0) + bonusUnreadCount;
 
   const getNotificationColor = (type: string) => {
     if (type.includes("APPROVED") || type.includes("WON"))
@@ -79,6 +162,15 @@ export default function NotificationsPage() {
 
   const handleNotificationClick = async (notification: Notification) => {
     if (notification.isRead || pendingReadIds.includes(notification.id)) {
+      return;
+    }
+
+    if (notification.id.startsWith("bonus-")) {
+      setReadBonusIds((current) => {
+        const next = Array.from(new Set([...current, notification.id]));
+        saveStoredBonusNotificationIds(next);
+        return next;
+      });
       return;
     }
 
@@ -101,7 +193,19 @@ export default function NotificationsPage() {
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => markAllRead()}
+          onClick={() => {
+            const allBonusIds = bonusNotifications.map((item) => item.id);
+            setReadBonusIds((current) => {
+              const next = Array.from(new Set([...current, ...allBonusIds]));
+              saveStoredBonusNotificationIds(next);
+              return next;
+            });
+            if ((notificationsData?.unreadCount ?? 0) > 0) {
+              markAllRead();
+            } else {
+              toast.success(text.markedAllRead);
+            }
+          }}
             className="text-violet-600 hover:text-violet-700 dark:text-purple-400 dark:hover:text-purple-300"
           >
             <CheckCheck className="mr-1 h-4 w-4" />
@@ -110,17 +214,17 @@ export default function NotificationsPage() {
         )}
       </div>
 
-      {isLoading ? (
+      {isLoading || isBonusLoading ? (
         Array.from({ length: 5 }).map((_, i) => (
           <Skeleton key={i} className="h-24 w-full rounded-2xl bg-slate-200 dark:bg-slate-700" />
         ))
-      ) : notifications.length === 0 ? (
+      ) : mergedNotifications.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-16 text-slate-500 dark:text-slate-400">
           <Bell className="h-12 w-12 mb-3 opacity-50" />
           <p>{text.empty}</p>
         </div>
       ) : (
-        notifications.map((notification) => {
+        mergedNotifications.map((notification) => {
           const isRead = notification.isRead || pendingReadIds.includes(notification.id);
 
           return (

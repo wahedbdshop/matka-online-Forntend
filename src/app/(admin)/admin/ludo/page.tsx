@@ -16,6 +16,7 @@ import {
   CheckSquare,
   Square,
   Image as ImageIcon,
+  Gift,
 } from "lucide-react";
 import { toast } from "sonner";
 import { LudoAdminService } from "@/services/ludoAdmin.service";
@@ -133,6 +134,9 @@ export default function LudoAdminPage() {
 
   const publicSettings = publicSettingsData?.data ?? [];
   const bannerConfig = getLudoConfig(publicSettings);
+  const isFreeMode = Boolean(
+    settings.isFreeMode ?? settings.freeMode ?? bannerConfig.freeMode,
+  );
 
   const [bannerImageInput, setBannerImageInput] = useState("");
   const [bannerTitleInput, setBannerTitleInput] = useState("");
@@ -141,6 +145,27 @@ export default function LudoAdminPage() {
   const [commissionInput, setCommissionInput] = useState<string>("");
   const [queueInput, setQueueInput] = useState<string>("");
   const [turnInput, setTurnInput] = useState<string>("");
+
+  const { mutate: toggleFreeMode, isPending: savingFreeMode } = useMutation({
+    mutationFn: async (nextValue: boolean) => {
+      await AdminService.updateSetting(
+        "ludo_free_mode",
+        nextValue ? "true" : "false",
+      );
+
+      await LudoAdminService.updateSettings({
+        isFreeMode: nextValue,
+        freeMode: nextValue,
+        ...(nextValue ? { commissionPct: 0 } : {}),
+      });
+    },
+    onSuccess: () => {
+      toast.success("Free mode updated");
+      queryClient.invalidateQueries({ queryKey: ["ludo-admin-settings"] });
+      queryClient.invalidateQueries({ queryKey: ["public-settings"] });
+    },
+    onError: () => toast.error("Failed to update free mode"),
+  });
 
   const allowedStakes: number[] = Array.isArray(settings.allowedStakes)
     ? settings.allowedStakes
@@ -382,8 +407,63 @@ export default function LudoAdminPage() {
                 </button>
               </div>
 
+              {/* Free Mode Toggle */}
+              <div
+                className={cn(
+                  "flex items-center justify-between rounded-xl border px-4 py-3 transition-colors duration-300",
+                  isFreeMode
+                    ? "border-cyan-500/40 bg-cyan-500/10"
+                    : "border-slate-700 bg-slate-900/60",
+                )}
+              >
+                <div className="flex items-center gap-2">
+                  <Gift
+                    className={cn(
+                      "h-4 w-4 transition-colors duration-300",
+                      isFreeMode ? "text-cyan-300" : "text-slate-400",
+                    )}
+                  />
+                  <div>
+                    <p className="text-sm font-medium text-slate-200">Free Mode</p>
+                    <p
+                      className={cn(
+                        "text-xs font-semibold",
+                        isFreeMode ? "text-cyan-300" : "text-slate-500",
+                      )}
+                    >
+                      {isFreeMode
+                        ? "Users only see Free Play"
+                        : "Users see stake options"}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => toggleFreeMode(!isFreeMode)}
+                  disabled={saving || savingFreeMode}
+                  className={cn(
+                    "flex items-center gap-2 rounded-lg px-4 py-2 text-xs font-bold transition-all duration-200 disabled:opacity-50",
+                    isFreeMode
+                      ? "bg-cyan-500 text-slate-950 shadow-lg shadow-cyan-500/25 hover:bg-cyan-400"
+                      : "bg-slate-700 text-slate-200 hover:bg-slate-600",
+                  )}
+                >
+                  <span
+                    className={cn(
+                      "h-2 w-2 rounded-full",
+                      isFreeMode ? "bg-slate-950 animate-pulse" : "bg-slate-400",
+                    )}
+                  />
+                  {isFreeMode ? "Free ON" : "Free OFF"}
+                </button>
+              </div>
+
               {/* Allowed Stakes */}
-              <div className="rounded-xl border border-slate-700 bg-slate-900/60 px-4 py-3 space-y-2">
+              <div
+                className={cn(
+                  "rounded-xl border border-slate-700 bg-slate-900/60 px-4 py-3 space-y-2",
+                  isFreeMode && "opacity-50",
+                )}
+              >
                 <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
                   Allowed Stakes (৳)
                 </p>
@@ -394,7 +474,7 @@ export default function LudoAdminPage() {
                       <button
                         key={stake}
                         onClick={() => toggleStake(stake)}
-                        disabled={saving}
+                        disabled={saving || isFreeMode}
                         className={cn(
                           "flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-bold transition-all",
                           active
@@ -415,7 +495,12 @@ export default function LudoAdminPage() {
               </div>
 
               {/* Commission */}
-              <div className="rounded-xl border border-slate-700 bg-slate-900/60 px-4 py-3 space-y-2">
+              <div
+                className={cn(
+                  "rounded-xl border border-slate-700 bg-slate-900/60 px-4 py-3 space-y-2",
+                  isFreeMode && "opacity-50",
+                )}
+              >
                 <div className="flex items-center gap-2">
                   <Percent className="h-3.5 w-3.5 text-slate-400" />
                   <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
@@ -430,6 +515,7 @@ export default function LudoAdminPage() {
                     value={commissionInput !== "" ? commissionInput : (settings.commissionPct ?? "")}
                     onChange={(e) => setCommissionInput(e.target.value)}
                     placeholder={String(settings.commissionPct ?? 10)}
+                    disabled={isFreeMode}
                     className="h-9 w-full rounded-lg border border-slate-600 bg-slate-800 px-3 text-sm text-white outline-none focus:border-purple-500"
                   />
                   <button
@@ -442,7 +528,7 @@ export default function LudoAdminPage() {
                       updateSettings({ commissionPct: v });
                       setCommissionInput("");
                     }}
-                    disabled={saving || commissionInput === ""}
+                    disabled={saving || isFreeMode || commissionInput === ""}
                     className="rounded-lg bg-purple-600 px-4 text-xs font-bold text-white hover:bg-purple-700 disabled:opacity-40"
                   >
                     Save
