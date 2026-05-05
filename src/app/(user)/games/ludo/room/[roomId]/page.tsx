@@ -354,6 +354,7 @@ function LudoResultOverlay({
   playerName,
   countdown,
   showActions,
+  stakeAmount,
   onPlayAgain,
   onHome,
 }: {
@@ -361,10 +362,13 @@ function LudoResultOverlay({
   playerName: string;
   countdown: number;
   showActions: boolean;
+  stakeAmount: number;
   onPlayAgain: () => void;
   onHome: () => void;
 }) {
   const isWin = result === "win";
+  const isPaidMatch = Number(stakeAmount) > 0;
+  const winAmount = isPaidMatch ? Number(stakeAmount) * 2 : 0;
   const particles = Array.from({ length: isWin ? 34 : 28 });
 
   return (
@@ -426,8 +430,24 @@ function LudoResultOverlay({
           {isWin ? "CONGRATULATIONS!" : "BETTER LUCK NEXT TIME"}
         </h1>
         <p className="mt-4 text-lg font-black text-white">
-          {isWin ? "Trophy for" : "Played by"} {playerName}
+          {isWin ? `${playerName}, you win!` : `Played by ${playerName}`}
         </p>
+        {isWin ? (
+          isPaidMatch ? (
+            <div className="mx-auto mt-5 max-w-[320px] rounded-[24px] border border-yellow-200/35 bg-[linear-gradient(180deg,rgba(255,220,120,0.26),rgba(255,184,0,0.14))] px-5 py-4 shadow-[0_12px_30px_rgba(0,0,0,0.28)]">
+              <p className="text-[11px] font-black uppercase tracking-[0.28em] text-yellow-100/80">
+                Prize Won
+              </p>
+              <p className="mt-2 text-3xl font-black text-yellow-200">
+                BDT {winAmount.toLocaleString()}
+              </p>
+            </div>
+          ) : (
+            <p className="mt-5 text-base font-black uppercase tracking-[0.24em] text-yellow-100/85">
+              Free Match Winner
+            </p>
+          )
+        ) : null}
 
         {!showActions ? (
           <div className="mt-8 inline-flex h-14 min-w-28 items-center justify-center rounded-full border border-white/20 bg-white/10 px-6 text-2xl font-black shadow-xl backdrop-blur">
@@ -499,6 +519,7 @@ export default function LudoRoomPage() {
   const router = useRouter();
   const { isConnected, emitEvent, onEvent } = useSocket();
   const authUserId = useAuthStore((state) => state.user?.id);
+  const [exitConfirmOpen, setExitConfirmOpen] = useState(false);
   const [roomState, setRoomState] = useState<LudoRoom | null>(null);
   const [lastVisibleDiceValue, setLastVisibleDiceValue] = useState(1);
   const [soundEnabled, setSoundEnabled] = useState(true);
@@ -745,7 +766,11 @@ export default function LudoRoomPage() {
   useEffect(() => {
     return () => {
       stopDiceSound();
-      void audioContextRef.current?.close();
+      const audioContext = audioContextRef.current;
+      audioContextRef.current = null;
+      if (audioContext && audioContext.state !== "closed") {
+        void audioContext.close();
+      }
     };
   }, [stopDiceSound]);
 
@@ -1141,9 +1166,27 @@ export default function LudoRoomPage() {
 
   const leaveMutation = useMutation({
     mutationFn: () => LudoService.leaveRoom(roomId),
-    onSuccess: () => { toast.success("Left room"); router.push("/games/ludo"); },
+    onSuccess: () => {
+      setExitConfirmOpen(false);
+      toast.success("Left room");
+      router.push("/games/ludo");
+    },
     onError: (err: unknown) => { toast.error(getErrorMessage(err, "Failed to leave room")); },
   });
+
+  const openExitConfirm = useCallback(() => {
+    if (leaveMutation.isPending) return;
+    setExitConfirmOpen(true);
+  }, [leaveMutation.isPending]);
+
+  const closeExitConfirm = useCallback(() => {
+    if (leaveMutation.isPending) return;
+    setExitConfirmOpen(false);
+  }, [leaveMutation.isPending]);
+
+  const confirmExitAndLeave = useCallback(() => {
+    leaveMutation.mutate();
+  }, [leaveMutation]);
 
   useEffect(() => {
     if (!isConnected || !roomId) return;
@@ -1366,6 +1409,12 @@ export default function LudoRoomPage() {
         : myTurn && availSet.size > 0
           ? "MOVE"
           : "WAIT";
+  const turnCountdownDanger = rollCountdown !== null && rollCountdown <= 2;
+  const turnCountdownColor = turnCountdownDanger ? "#ff5b57" : "#f5b414";
+  const turnCountdownProgress =
+    rollCountdown !== null
+      ? Math.max(0, Math.min(1, rollCountdown / ROLL_TIMEOUT_SEC))
+      : 0;
   const stakeLabel = Number(room.stakeAmount) <= 0 ? "FREE" : `BDT ${room.stakeAmount}`;
 
   return (
@@ -1382,7 +1431,7 @@ export default function LudoRoomPage() {
       <div className="relative z-10 flex items-center justify-between px-4 pt-3">
         <button
           type="button"
-          onClick={() => router.replace("/games/ludo")}
+          onClick={openExitConfirm}
           className="flex h-10 items-center gap-1.5 rounded-full border border-white/20 bg-white/12 px-3 text-xs font-black text-white shadow-sm"
         >
           <ArrowLeft className="h-3.5 w-3.5" /> Back
@@ -1429,7 +1478,7 @@ export default function LudoRoomPage() {
 
           <button
             type="button"
-            onClick={() => leaveMutation.mutate()}
+            onClick={openExitConfirm}
             disabled={leaveMutation.isPending}
             className="flex h-10 items-center gap-1.5 rounded-full border border-red-300/35 bg-red-500 px-3 text-xs font-black text-white shadow-sm disabled:opacity-60"
           >
@@ -1504,9 +1553,9 @@ export default function LudoRoomPage() {
 
       {/* ── You label ── */}
       {/* ── Bottom bar ── */}
-      <div className="relative z-10 mx-4 mb-2 mt-auto pt-3">
+      <div className="relative z-10 mx-4 mb-2 mt-auto pt-2">
         <div
-          className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 rounded-[18px] px-3 py-3"
+          className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-1.5 rounded-[16px] px-2 py-2"
           style={{
             background: "#2150d8",
             border: "3px solid #f5b414",
@@ -1514,70 +1563,45 @@ export default function LudoRoomPage() {
           }}
         >
           <div className={cn(
-            "translate-y-1 flex min-w-0 items-center gap-1.5 rounded-xl border px-2 py-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.14)]",
+            "relative flex min-w-0 items-center gap-1 rounded-xl border px-2 py-1.5",
             myTurn
-              ? "border-yellow-300 bg-yellow-300/16"
-              : "border-white/15 bg-white/10",
+              ? "border-yellow-300 bg-white/14"
+              : "border-white/15 bg-white/8",
           )}>
             <PlayerPin color={myColor} />
             <div className="min-w-0">
-              <p className="truncate text-[11px] font-black leading-tight text-white">
+              <p className="truncate text-[10px] font-black leading-tight text-white">
                 {me?.name ?? "You"}
               </p>
-              <p className="text-[8px] font-black uppercase tracking-wider text-white/55">
+              <p className="text-[7px] font-black uppercase tracking-wider text-white/55">
                 {myTurn ? "Your turn" : "You"}
               </p>
               <AutoMoveDots count={me?.autoMoveCount} />
             </div>
+            {myTurn && rollCountdown !== null && rollCountdown > 0 && (
+              <div className="pointer-events-none absolute inset-x-2 bottom-0.5">
+                <div
+                  className="flex items-center justify-between text-[7px] font-black uppercase tracking-[0.14em]"
+                  style={{ color: turnCountdownColor }}
+                >
+                  <span>Turn</span>
+                  <span>{rollCountdown}s</span>
+                </div>
+                <div className="mt-0.5 h-[2px] rounded-full bg-white/12">
+                  <div
+                    className="h-full rounded-full transition-[width,background-color] duration-1000 ease-linear"
+                    style={{
+                      width: `${turnCountdownProgress * 100}%`,
+                      backgroundColor: turnCountdownColor,
+                    }}
+                  />
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Dice + countdown ring */}
           <div className="relative flex shrink-0 flex-col items-center gap-1">
-
-            {/* SVG ring — drains over ROLL_TIMEOUT_SEC seconds */}
-            {canRoll && rollCountdown !== null && (() => {
-              const r = 42;
-              const circ = 2 * Math.PI * r;
-              const fraction = rollCountdown / ROLL_TIMEOUT_SEC;
-              const offset = circ * (1 - fraction);
-              const danger = rollCountdown <= 1;
-              return (
-                <svg
-                  aria-hidden
-                  className="pointer-events-none absolute z-10"
-                  style={{ top: -10, left: -10, width: 88, height: 88 }}
-                  viewBox="0 0 88 88"
-                >
-                  {/* Track */}
-                  <circle cx="44" cy="44" r={r} fill="none"
-                    stroke="rgba(255,255,255,0.12)" strokeWidth="4.5" />
-                  {/* Progress arc */}
-                  <circle cx="44" cy="44" r={r} fill="none"
-                    stroke={danger ? "#ef4444" : "#fbbf24"}
-                    strokeWidth="4.5"
-                    strokeLinecap="round"
-                    strokeDasharray={circ}
-                    strokeDashoffset={offset}
-                    transform="rotate(-90 44 44)"
-                    style={{ transition: "stroke-dashoffset 1s linear, stroke 0.3s" }}
-                  />
-                </svg>
-              );
-            })()}
-
-            {/* Countdown badge */}
-            {canRoll && rollCountdown !== null && rollCountdown > 0 && (
-              <div
-                className="pointer-events-none absolute -right-1 -top-2 z-20 flex h-[22px] w-[22px] items-center justify-center rounded-full text-[11px] font-black shadow-lg"
-                style={{
-                  background: rollCountdown <= 1 ? "#ef4444" : "#fbbf24",
-                  color: rollCountdown <= 1 ? "#fff" : "#1a1a1a",
-                }}
-              >
-                {rollCountdown}
-              </div>
-            )}
-
             <button
               type="button"
               onClick={() => {
@@ -1588,11 +1612,11 @@ export default function LudoRoomPage() {
               }}
               disabled={!canRoll}
               className={cn(
-                "relative h-[78px] w-[78px] rounded-[20px] transition-all duration-100 active:translate-y-1",
+                "relative h-[66px] w-[66px] rounded-[18px] transition-all duration-100 active:translate-y-1",
                 canRoll
                   ? "shadow-[0_7px_0_#b9919b,0_16px_24px_rgba(0,0,0,0.28)]"
                   : "opacity-60 shadow-[0_4px_0_#8f8f8f]",
-                diceAnimationState !== "idle" && "shadow-[0_7px_0_#b9919b,0_0_18px_rgba(255,255,255,0.42),0_18px_28px_rgba(0,0,0,0.28)]",
+                diceAnimationState !== "idle" && "shadow-[0_7px_0_#b9919b,0_0_16px_rgba(255,255,255,0.34),0_18px_28px_rgba(0,0,0,0.28)]",
               )}
               style={{
                 background: canRoll
@@ -1613,33 +1637,33 @@ export default function LudoRoomPage() {
               <div className="pointer-events-none absolute inset-[5%] rounded-[18px] border border-[#f6e8ec] shadow-[inset_0_1px_0_rgba(255,255,255,0.78),inset_0_-2px_0_rgba(133,90,103,0.22)]" />
               <div
                 className={cn(
-                  "relative flex h-full w-full items-center justify-center p-2",
+                  "relative flex h-full w-full items-center justify-center p-1.5",
                   diceAnimationState === "rolling" && "animate-[ludo-hand-dice-roll_.52s_ease-in-out_infinite]",
                   diceAnimationState === "settling" && "animate-[ludo-hand-dice-settle_.28s_ease-out]",
                   diceAnimationState !== "idle" && "drop-shadow-[0_0_16px_rgba(255,255,255,0.65)]",
                 )}
                 style={{ transformOrigin: "50% 58%" }}
               >
-                <DiceSVG value={renderedDiceValue} size={56} />
+                <DiceSVG value={renderedDiceValue} size={46} />
               </div>
             </button>
 
-            <p className="text-[10px] font-black uppercase tracking-widest text-white/70">
+            <p className="text-[9px] font-black uppercase tracking-[0.22em] text-white/70">
               {statusText}
             </p>
           </div>
 
           <div className={cn(
-            "translate-y-1 flex min-w-0 items-center justify-end gap-1.5 rounded-xl border px-2 py-2 text-right shadow-[inset_0_1px_0_rgba(255,255,255,0.14)]",
+            "relative flex min-w-0 items-center justify-end gap-1 rounded-xl border px-2 py-1.5 text-right",
             room.currentTurnUserId === opponent?.userId
-              ? "border-yellow-300 bg-yellow-300/16"
-              : "border-white/15 bg-white/10",
+              ? "border-yellow-300 bg-white/14"
+              : "border-white/15 bg-white/8",
           )}>
             <div className="min-w-0">
-              <p className="truncate text-[11px] font-black leading-tight text-white">
+              <p className="truncate text-[10px] font-black leading-tight text-white">
                 {opponent?.name ?? "Opponent"}
               </p>
-              <p className="text-[8px] font-black uppercase tracking-wider text-white/55">
+              <p className="text-[7px] font-black uppercase tracking-wider text-white/55">
                 {room.currentTurnUserId === opponent?.userId ? "Turn" : "Opponent"}
               </p>
               <div className="flex justify-end">
@@ -1647,6 +1671,26 @@ export default function LudoRoomPage() {
               </div>
             </div>
             <PlayerPin color={oppColor} />
+            {room.currentTurnUserId === opponent?.userId && rollCountdown !== null && rollCountdown > 0 && (
+              <div className="pointer-events-none absolute inset-x-2 bottom-0.5">
+                <div
+                  className="flex items-center justify-between text-[7px] font-black uppercase tracking-[0.14em]"
+                  style={{ color: turnCountdownColor }}
+                >
+                  <span>Turn</span>
+                  <span>{rollCountdown}s</span>
+                </div>
+                <div className="mt-0.5 h-[2px] rounded-full bg-white/12">
+                  <div
+                    className="h-full rounded-full transition-[width,background-color] duration-1000 ease-linear"
+                    style={{
+                      width: `${turnCountdownProgress * 100}%`,
+                      backgroundColor: turnCountdownColor,
+                    }}
+                  />
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -1668,9 +1712,39 @@ export default function LudoRoomPage() {
           playerName={me?.name ?? "Player"}
           countdown={resultCountdown}
           showActions={resultActionsVisible}
+          stakeAmount={Number(room?.stakeAmount ?? 0)}
           onPlayAgain={() => router.push("/games/ludo")}
           onHome={() => router.push("/dashboard")}
         />
+      )}
+
+      {exitConfirmOpen && (
+        <div className="absolute inset-0 z-40 flex items-center justify-center bg-[#020817]/72 px-5 backdrop-blur-[2px]">
+          <div className="w-full max-w-[320px] rounded-[22px] border border-white/15 bg-[#10245f] p-5 text-white shadow-[0_20px_45px_rgba(0,0,0,0.4)]">
+            <h2 className="text-base font-black">Cancel Game?</h2>
+            <p className="mt-2 text-sm leading-5 text-white/78">
+              Are you sure you want to cancel the game? If you leave now, you will lose and your opponent will win.
+            </p>
+            <div className="mt-5 flex gap-3">
+              <button
+                type="button"
+                onClick={confirmExitAndLeave}
+                disabled={leaveMutation.isPending}
+                className="flex-1 rounded-full bg-red-500 px-4 py-2.5 text-sm font-black text-white shadow-sm disabled:opacity-60"
+              >
+                {leaveMutation.isPending ? "Leaving..." : "Yes"}
+              </button>
+              <button
+                type="button"
+                onClick={closeExitConfirm}
+                disabled={leaveMutation.isPending}
+                className="flex-1 rounded-full border border-white/20 bg-white/10 px-4 py-2.5 text-sm font-black text-white disabled:opacity-60"
+              >
+                No
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       <style jsx global>{`

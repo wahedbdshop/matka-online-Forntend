@@ -675,21 +675,21 @@ function MultiTokens({
 }) {
   const visibleTokens = tokens.slice(0, 4);
   const positionsByCount: Record<number, Array<{ left: string; top: string; size: string }>> = {
-    1: [{ left: "50%", top: "50%", size: "100%" }],
+    1: [{ left: "50%", top: "50%", size: "80%" }],
     2: [
-      { left: "36%", top: "50%", size: "90%" },
-      { left: "64%", top: "50%", size: "90%" },
+      { left: "40%", top: "50%", size: "62%" },
+      { left: "60%", top: "50%", size: "62%" },
     ],
     3: [
-      { left: "50%", top: "31%", size: "84%" },
-      { left: "34%", top: "68%", size: "84%" },
-      { left: "66%", top: "68%", size: "84%" },
+      { left: "50%", top: "38%", size: "58%" },
+      { left: "38%", top: "62%", size: "58%" },
+      { left: "62%", top: "62%", size: "58%" },
     ],
     4: [
-      { left: "35%", top: "35%", size: "78%" },
-      { left: "65%", top: "35%", size: "78%" },
-      { left: "35%", top: "67%", size: "78%" },
-      { left: "65%", top: "67%", size: "78%" },
+      { left: "39%", top: "39%", size: "52%" },
+      { left: "61%", top: "39%", size: "52%" },
+      { left: "39%", top: "61%", size: "52%" },
+      { left: "61%", top: "61%", size: "52%" },
     ],
   };
   const positions = positionsByCount[visibleTokens.length] ?? positionsByCount[4];
@@ -984,6 +984,24 @@ function DirectionArrowIcon({
   );
 }
 
+function TrackTokenSlot({
+  token,
+  onMove,
+}: {
+  token: LudoToken;
+  onMove?: (id: string) => void;
+}) {
+  return (
+    <div className="relative flex h-[80%] w-[80%] items-center justify-center overflow-visible">
+      <ClassicTokenPin
+        token={token}
+        fill="100%"
+        onMove={token.available ? onMove : undefined}
+      />
+    </div>
+  );
+}
+
 function BoardCell({
   kind,
   tokens,
@@ -1057,13 +1075,7 @@ function BoardCell({
         className={trackCellClassName}
         style={premiumColoredCellStyle(PALETTE[kind.color].tint)}
       >
-        {!multi && first ? (
-          <ClassicTokenPin
-            token={first}
-            fill="100%"
-            onMove={first.available ? onMove : undefined}
-          />
-        ) : null}
+        {!multi && first ? <TrackTokenSlot token={first} onMove={onMove} /> : null}
         {multi && (
           <MultiTokens
             tokens={tokens}
@@ -1077,9 +1089,7 @@ function BoardCell({
   if (kind.t === "safe") {
     return (
       <div className={trackCellClassName} style={premiumWhiteCellStyle}>
-        {!multi && first && (
-          <ClassicTokenPin token={first} fill="100%" onMove={first.available ? onMove : undefined} />
-        )}
+        {!multi && first && <TrackTokenSlot token={first} onMove={onMove} />}
         {!first && (
           <svg viewBox="0 0 20 20" className="h-[78%] w-[78%] opacity-85" fill="none" stroke="#7a7a7a" strokeWidth="1.35">
             <polygon points="10,2 12.4,7.8 18.5,8.5 14,12.8 15.3,19 10,15.8 4.7,19 6,12.8 1.5,8.5 7.6,7.8" />
@@ -1093,9 +1103,7 @@ function BoardCell({
   if (kind.t === "direction") {
     return (
       <div className={trackCellClassName} style={premiumWhiteCellStyle}>
-        {!multi && first && (
-          <ClassicTokenPin token={first} fill="100%" onMove={first.available ? onMove : undefined} />
-        )}
+        {!multi && first && <TrackTokenSlot token={first} onMove={onMove} />}
         {!first && (
           <DirectionArrowIcon direction={kind.arrow} color={PALETTE[kind.color].main} />
         )}
@@ -1106,9 +1114,7 @@ function BoardCell({
 
   return (
     <div className={trackCellClassName} style={premiumWhiteCellStyle}>
-      {!multi && first && (
-        <ClassicTokenPin token={first} fill="100%" onMove={first.available ? onMove : undefined} />
-      )}
+      {!multi && first && <TrackTokenSlot token={first} onMove={onMove} />}
       {multi && <MultiTokens tokens={tokens} onMove={onMove} />}
     </div>
   );
