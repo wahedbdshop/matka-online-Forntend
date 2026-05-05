@@ -186,7 +186,10 @@ export default function ThaiWinHistoryPage() {
                 Win Amt
               </th>
               <th className="px-4 py-3 text-xs font-medium text-slate-400">
-                Date Time (BD)
+                Bet Play Time
+              </th>
+              <th className="px-4 py-3 text-xs font-medium text-slate-400">
+                Win Time
               </th>
             </tr>
           </thead>
@@ -194,7 +197,7 @@ export default function ThaiWinHistoryPage() {
             {isLoading ? (
               Array.from({ length: 8 }).map((_, i) => (
                 <tr key={i} className="border-b border-slate-700/50">
-                  {Array.from({ length: 8 }).map((_, j) => (
+                  {Array.from({ length: 9 }).map((_, j) => (
                     <td key={j} className="px-4 py-3">
                       <div className="h-4 w-20 animate-pulse rounded bg-slate-700" />
                     </td>
@@ -204,7 +207,7 @@ export default function ThaiWinHistoryPage() {
             ) : bets.length === 0 ? (
               <tr>
                 <td
-                  colSpan={8}
+                  colSpan={9}
                   className="px-4 py-8 text-center text-slate-500"
                 >
                   No win history found
@@ -249,10 +252,16 @@ export default function ThaiWinHistoryPage() {
                     {fmtUsd(Number(bet.actualWin ?? 0))}
                   </td>
                   <td className="px-4 py-3 text-xs text-slate-400">
-                    {formatBangladeshDateTime(
-                      bet.settledAt ?? bet.placedAt,
-                      { timeZone: bet.round?.scheduleTimeZone },
-                    )}
+                    {formatBangladeshDateTime(bet.placedAt, {
+                      timeZone: bet.round?.scheduleTimeZone,
+                    })}
+                  </td>
+                  <td className="px-4 py-3 text-xs text-slate-400">
+                    {bet.settledAt
+                      ? formatBangladeshDateTime(bet.settledAt, {
+                          timeZone: bet.round?.scheduleTimeZone,
+                        })
+                      : "-"}
                   </td>
                 </tr>
               ))

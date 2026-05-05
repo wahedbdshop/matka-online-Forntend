@@ -26,7 +26,7 @@ const STATUS_CONFIG: Record<
   { label: string; cls: string; dot: string }
 > = {
   PENDING: {
-    label: "Pending",
+    label: "Active",
     cls: "border-amber-500/30 bg-amber-500/10 text-amber-400",
     dot: "bg-amber-400 animate-pulse",
   },
@@ -101,7 +101,7 @@ export default function ThaiLotteryHistoryPage() {
     { label: "All", value: "" },
     { label: "Won", value: "WON" },
     { label: "Lost", value: "LOST" },
-    { label: "Pending", value: "PENDING" },
+    { label: "Active", value: "PENDING" },
     { label: "Cancelled", value: "CANCELLED" },
   ];
 
@@ -192,7 +192,7 @@ export default function ThaiLotteryHistoryPage() {
             {
               icon: <Clock className="h-3.5 w-3.5" />,
               val: fmtUsd(pendingCount),
-              lbl: "Pending",
+              lbl: "Active",
               color: "text-amber-400",
             },
           ].map((s) => (

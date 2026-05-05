@@ -147,8 +147,8 @@ function LudoPreviewBoard() {
   const getCellClassName = (row: number, col: number) => {
     if (row <= 5 && col <= 5) return "bg-[#ff434c] border-white/50";
     if (row <= 5 && col >= 9) return "bg-[#2fd15c] border-white/50";
-    if (row >= 9 && col <= 5) return "bg-[#ffc91f] border-white/50";
-    if (row >= 9 && col >= 9) return "bg-[#4285ff] border-white/50";
+    if (row >= 9 && col <= 5) return "bg-[#4285ff] border-white/50";
+    if (row >= 9 && col >= 9) return "bg-[#ffc91f] border-white/50";
 
     if (col >= 6 && col <= 8) {
       if (col === 7 && row >= 1 && row <= 5)
@@ -171,7 +171,7 @@ function LudoPreviewBoard() {
 
   const homeTokenGroups = [
     {
-      color: "bg-white",
+      color: "bg-[#ff434c]",
       positions: [
         "col-start-2 row-start-2",
         "col-start-5 row-start-2",
@@ -180,7 +180,7 @@ function LudoPreviewBoard() {
       ],
     },
     {
-      color: "bg-white",
+      color: "bg-[#2fd15c]",
       positions: [
         "col-start-11 row-start-2",
         "col-start-14 row-start-2",
@@ -189,7 +189,7 @@ function LudoPreviewBoard() {
       ],
     },
     {
-      color: "bg-white",
+      color: "bg-[#4285ff]",
       positions: [
         "col-start-2 row-start-11",
         "col-start-5 row-start-11",
@@ -198,7 +198,7 @@ function LudoPreviewBoard() {
       ],
     },
     {
-      color: "bg-white",
+      color: "bg-[#ffc91f]",
       positions: [
         "col-start-11 row-start-11",
         "col-start-14 row-start-11",
@@ -237,10 +237,10 @@ function LudoPreviewBoard() {
           gridTemplateRows: `repeat(${LUDO_GRID_SIZE}, minmax(0, 1fr))`,
         }}
       >
-        <div className="col-start-7 col-end-10 row-start-7 row-end-10 [clip-path:polygon(50%_50%,0_0,100%_0)] bg-[#ff434c]" />
-        <div className="col-start-7 col-end-10 row-start-7 row-end-10 [clip-path:polygon(50%_50%,100%_0,100%_100%)] bg-[#2fd15c]" />
+        <div className="col-start-7 col-end-10 row-start-7 row-end-10 [clip-path:polygon(50%_50%,0_0,100%_0)] bg-[#2fd15c]" />
+        <div className="col-start-7 col-end-10 row-start-7 row-end-10 [clip-path:polygon(50%_50%,100%_0,100%_100%)] bg-[#ffc91f]" />
         <div className="col-start-7 col-end-10 row-start-7 row-end-10 [clip-path:polygon(50%_50%,100%_100%,0_100%)] bg-[#4285ff]" />
-        <div className="col-start-7 col-end-10 row-start-7 row-end-10 [clip-path:polygon(50%_50%,0_100%,0_0)] bg-[#ffc91f]" />
+        <div className="col-start-7 col-end-10 row-start-7 row-end-10 [clip-path:polygon(50%_50%,0_100%,0_0)] bg-[#ff434c]" />
 
         {homeTokenGroups.flatMap((group, groupIndex) =>
           group.positions.map((position, index) => (
@@ -248,7 +248,9 @@ function LudoPreviewBoard() {
               key={`${groupIndex}-${index}`}
               className={`flex h-full w-full items-center justify-center ${position}`}
             >
-              <div className="h-[34%] w-[34%] rounded-full border-2 border-white/90 bg-white shadow-[0_0_0_2px_rgba(255,255,255,0.18)]" />
+              <div className="flex h-[38%] w-[38%] items-center justify-center rounded-full bg-white shadow-[0_1px_3px_rgba(0,0,0,0.18)]">
+                <div className={`h-[62%] w-[62%] rounded-full ${group.color}`} />
+              </div>
             </div>
           )),
         )}

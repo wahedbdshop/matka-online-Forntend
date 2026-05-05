@@ -161,6 +161,90 @@ function isCloseFinalSettlementRow(sessionType: "OPEN" | "CLOSE" | undefined, pl
   return sessionType === "CLOSE" || normalizedPlayType === "JORI";
 }
 
+function hasOpenResult(result: any) {
+  return !!result?.openPatti && result.openPatti !== "000";
+}
+
+function hasCloseResult(result: any) {
+  return !!result?.closePatti && result.closePatti !== "000";
+}
+
+function getResultTimestamp(result: any) {
+  return (
+    result?.publishedAt ??
+    result?.resultAddedAt ??
+    result?.settledAt ??
+    result?.dateTime ??
+    result?.updatedAt ??
+    result?.createdAt
+  );
+}
+
+function getEntityWinTime(entity: any) {
+  return (
+    entity?.winTime ??
+    entity?.wonAt ??
+    entity?.winningAt ??
+    entity?.settledAt ??
+    entity?.resultAddedAt ??
+    entity?.resultUpdatedAt ??
+    entity?.result?.dateTime ??
+    entity?.result?.updatedAt ??
+    entity?.kalyanResult?.updatedAt ??
+    entity?.resultCreatedAt ??
+    entity?.result?.createdAt ??
+    entity?.kalyanResult?.createdAt
+  );
+}
+
+function getResultMarketKey(result: any) {
+  return normalizeSearchTerm(
+    getKalyanMarketBaseName(result?.market) ||
+      result?.gameName ||
+      result?.marketName ||
+      result?.title ||
+      result?.market?.name ||
+      result?.market?.marketName,
+  );
+}
+
+function getEntryMarketKey(entry: any) {
+  return normalizeSearchTerm(
+    getKalyanMarketBaseName(entry?.market) ||
+      entry?.gameName ||
+      entry?.marketName ||
+      entry?.items?.[0]?.gameName,
+  );
+}
+
+function findMatchingResult(results: any[], entry: any, sessionType?: "OPEN" | "CLOSE", playType?: unknown) {
+  const marketId = String(entry?.marketId ?? entry?.market?.id ?? "");
+  const entryMarketKey = getEntryMarketKey(entry);
+  const resultDate = String(entry?.resultDate ?? "").slice(0, 10);
+  const needsCloseResult = isCloseFinalSettlementRow(sessionType, playType);
+
+  return results.find((result: any) => {
+    const resultMarketId = String(result?.marketId ?? result?.market?.id ?? "");
+    const resultMarketKey = getResultMarketKey(result);
+    const marketIdMatches = !!marketId && !!resultMarketId && resultMarketId === marketId;
+    const marketNameMatches = !!entryMarketKey && !!resultMarketKey && entryMarketKey === resultMarketKey;
+
+    if ((marketId || entryMarketKey) && !marketIdMatches && !marketNameMatches) return false;
+
+    const currentResultDate = String(result?.resultDate ?? "").slice(0, 10);
+    if (resultDate && currentResultDate && currentResultDate !== resultDate) return false;
+
+    const resultSessionType = String(result?.sessionType ?? "").toUpperCase();
+    if (sessionType && resultSessionType === sessionType) return true;
+
+    if (!resultSessionType) {
+      return needsCloseResult ? hasCloseResult(result) : hasOpenResult(result);
+    }
+
+    return false;
+  });
+}
+
 function KalyanWinHistoryPageContent() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -271,6 +355,21 @@ function KalyanWinHistoryPageContent() {
   const rates = useMemo<any[]>(
     () => (Array.isArray(ratesData?.data) ? ratesData.data : []),
     [ratesData],
+  );
+
+  const { data: resultsData } = useQuery({
+    queryKey: ["kalyan-results-for-win-history", dateFilter],
+    queryFn: () =>
+      KalyanAdminService.getResults({
+        date: dateFilter || undefined,
+        page: 1,
+        limit: 500,
+      }),
+    enabled: !!dateFilter,
+  });
+  const publishedResults = useMemo<any[]>(
+    () => resultsData?.data?.results ?? resultsData?.data ?? [],
+    [resultsData],
   );
 
   const { data, isLoading } = useQuery({
@@ -475,7 +574,11 @@ function KalyanWinHistoryPageContent() {
                 betAmount,
                 winAmount: calculateWinAmount(betAmount, playType, rates),
                 status: entry.betStatus ?? entry.status ?? entry.gameStatus ?? "WON",
-                dateTime: entry.createdAt,
+                betPlayTime: entry.createdAt,
+                winTime:
+                  getEntityWinTime(entry) ??
+                  getResultTimestamp(findMatchingResult(publishedResults, entry, sessionType, playType)) ??
+                  (resultAddedAt ? Number(resultAddedAt) : undefined),
               },
             ];
           }
@@ -483,24 +586,34 @@ function KalyanWinHistoryPageContent() {
           return items.map((item: any, index: number) => {
             const betAmount = Number(item.amount ?? entry.totalAmount ?? 0);
             const playType = item.playType || entry.playType || "-";
+            const itemSessionType = resolveSessionType({
+              ...entry,
+              sessionType: item?.sessionType ?? item?.session ?? entry?.sessionType,
+              items: [item],
+            });
             return {
               key: `${entry.id}-${item.id ?? index}`,
               entry,
               userName: entry.user?.name ?? entry.user?.username ?? "-",
               gameName: entry.gameName || resolveGameName(entry),
-              sessionType,
+              sessionType: itemSessionType ?? sessionType,
               category: playType,
               betNumber: item.selectedNumber || "-",
               betAmount,
               winAmount: calculateWinAmount(betAmount, playType, rates),
               status: item.betStatus ?? item.status ?? item.gameStatus ?? "WON",
-              dateTime: item.createdAt ?? entry.createdAt,
+              betPlayTime: item.createdAt ?? entry.createdAt,
+              winTime:
+                getEntityWinTime(item) ??
+                getEntityWinTime(entry) ??
+                getResultTimestamp(findMatchingResult(publishedResults, entry, itemSessionType ?? sessionType, playType)) ??
+                (resultAddedAt ? Number(resultAddedAt) : undefined),
             };
           });
         })
         .sort((left, right) => {
-          const rightTime = right?.dateTime ? new Date(right.dateTime).getTime() : 0;
-          const leftTime = left?.dateTime ? new Date(left.dateTime).getTime() : 0;
+          const rightTime = right?.betPlayTime ? new Date(right.betPlayTime).getTime() : 0;
+          const leftTime = left?.betPlayTime ? new Date(left.betPlayTime).getTime() : 0;
 
           if (rightTime !== leftTime) {
             return rightTime - leftTime;
@@ -508,7 +621,7 @@ function KalyanWinHistoryPageContent() {
 
           return String(right?.gameName ?? "").localeCompare(String(left?.gameName ?? ""));
         }),
-    [dateFilter, entries, page, rates, sessionFilter, settlementView, usingAllMarketsDataset],
+    [dateFilter, entries, page, publishedResults, rates, resultAddedAt, sessionFilter, settlementView, usingAllMarketsDataset],
   );
 
   useEffect(() => {
@@ -527,7 +640,7 @@ function KalyanWinHistoryPageContent() {
     return () => window.clearTimeout(timeoutId);
   }, [settlementRefreshActive]);
 
-  const formatDate = (value?: string) => {
+  const formatDate = (value?: string | number) => {
     if (!value) return "-";
     return new Date(value).toLocaleString("en-BD", {
       day: "2-digit",
@@ -651,7 +764,8 @@ function KalyanWinHistoryPageContent() {
                 "Bet Amount",
                 "Win Amount",
                 "Status",
-                "Date Time",
+                "Bet Play Time",
+                "Win Time",
               ].map((heading) => (
                 <th
                   key={heading}
@@ -666,7 +780,7 @@ function KalyanWinHistoryPageContent() {
             {entriesLoading ? (
               Array.from({ length: 8 }).map((_, rowIndex) => (
                 <tr key={rowIndex} className="border-b border-slate-200 dark:border-slate-700/50">
-                  {Array.from({ length: 9 }).map((_, colIndex) => (
+                  {Array.from({ length: 10 }).map((_, colIndex) => (
                     <td
                       key={colIndex}
                       className="border-r border-slate-200 px-4 py-3 text-center last:border-r-0 dark:border-slate-700/40"
@@ -678,7 +792,7 @@ function KalyanWinHistoryPageContent() {
               ))
             ) : rows.length === 0 ? (
               <tr>
-                <td colSpan={9} className="px-4 py-10 text-center text-slate-500">
+                <td colSpan={10} className="px-4 py-10 text-center text-slate-500">
                   No winning entries found
                 </td>
               </tr>
@@ -722,8 +836,11 @@ function KalyanWinHistoryPageContent() {
                       {row.status}
                     </span>
                   </td>
+                  <td className="border-r border-slate-200 px-4 py-3 text-center text-xs text-slate-500 last:border-r-0 dark:border-slate-700/40 dark:text-slate-400">
+                    {formatDate(row.betPlayTime)}
+                  </td>
                   <td className="px-4 py-3 text-center text-xs text-slate-500 last:border-r-0 dark:text-slate-400">
-                    {formatDate(row.dateTime)}
+                    {formatDate(row.winTime)}
                   </td>
                 </tr>
               ))
@@ -780,7 +897,22 @@ function KalyanWinHistoryPageContent() {
                 ["Bet Amount", `Rs. ${Number(detailEntry.totalAmount ?? 0).toLocaleString()}`],
                 ["Status", detailEntry.gameStatus ?? detailEntry.status ?? "-"],
                 ["Bet Result", detailEntry.betStatus ?? "-"],
-                ["Date Time", formatDate(detailEntry.createdAt)],
+                ["Bet Play Time", formatDate(detailEntry.createdAt)],
+                [
+                  "Win Time",
+                  formatDate(
+                    getEntityWinTime(detailEntry) ??
+                      getResultTimestamp(
+                        findMatchingResult(
+                          publishedResults,
+                          detailEntry,
+                          resolveSessionType(detailEntry),
+                          resolvePlayType(detailEntry),
+                        ),
+                      ) ??
+                      (resultAddedAt ? Number(resultAddedAt) : undefined),
+                  ),
+                ],
               ].map(([label, value]) => (
                 <div key={label} className="flex justify-between gap-4 text-xs">
                   <span className="text-slate-500">{label}</span>

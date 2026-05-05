@@ -207,7 +207,10 @@ function BetsContent() {
                 Status
               </th>
               <th className="px-4 py-3 text-xs font-medium text-slate-400">
-                Time (BD)
+                Bet Play Time
+              </th>
+              <th className="px-4 py-3 text-xs font-medium text-slate-400">
+                Win Time
               </th>
             </tr>
           </thead>
@@ -215,7 +218,7 @@ function BetsContent() {
             {isLoading ? (
               Array.from({ length: 8 }).map((_, i) => (
                 <tr key={i} className="border-b border-slate-700/50">
-                  {Array.from({ length: 9 }).map((_, j) => (
+                  {Array.from({ length: 10 }).map((_, j) => (
                     <td key={j} className="px-4 py-3">
                       <div className="h-4 w-16 animate-pulse rounded bg-slate-700" />
                     </td>
@@ -225,7 +228,7 @@ function BetsContent() {
             ) : bets.length === 0 ? (
               <tr>
                 <td
-                  colSpan={9}
+                  colSpan={10}
                   className="px-4 py-10 text-center text-slate-500"
                 >
                   {statusFilter === "WON"
@@ -302,11 +305,20 @@ function BetsContent() {
                         </span>
                       </td>
 
-                      {/* Time */}
+                      {/* Bet Play Time */}
                       <td className="px-4 py-3 text-xs text-slate-400">
                         {formatBangladeshDateTime(bet.placedAt, {
                           timeZone: bet.round?.scheduleTimeZone,
                         })}
+                      </td>
+
+                      {/* Win Time */}
+                      <td className="px-4 py-3 text-xs text-slate-400">
+                        {bet.settledAt
+                          ? formatBangladeshDateTime(bet.settledAt, {
+                              timeZone: bet.round?.scheduleTimeZone,
+                            })
+                          : "-"}
                       </td>
                     </tr>
                   );

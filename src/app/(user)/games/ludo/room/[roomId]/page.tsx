@@ -46,17 +46,101 @@ const TRACK: Array<[number, number]> = [
  *  Must match the backend LUDO_START_POSITIONS color order. */
 const HOME_CELLS: Record<string, Array<[number, number]>> = {
   RED:    [[1,1],  [1,3],  [3,1],  [3,3]],
-  GREEN:  [[11,11],[11,13],[13,11],[13,13]],
+  GREEN:  [[1,11], [1,13], [3,11], [3,13]],
   BLUE:   [[11,1], [11,3], [13,1], [13,3]],
-  YELLOW: [[1,11], [1,13], [3,11], [3,13]],
+  YELLOW: [[11,11],[11,13],[13,11],[13,13]],
 };
 
 const HOME_LANE_CELLS: Record<string, Array<[number, number]>> = {
   RED:    [[7,1], [7,2], [7,3], [7,4], [7,5], [7,6]],
-  GREEN:  [[7,13], [7,12], [7,11], [7,10], [7,9], [7,8]],
+  GREEN:  [[1,7], [2,7], [3,7], [4,7], [5,7], [6,7]],
   BLUE:   [[13,7], [12,7], [11,7], [10,7], [9,7], [8,7]],
-  YELLOW: [[1,7], [2,7], [3,7], [4,7], [5,7], [6,7]],
+  YELLOW: [[7,13], [7,12], [7,11], [7,10], [7,9], [7,8]],
 };
+
+type DisplaySeat = "top-left" | "top-right" | "bottom-right" | "bottom-left";
+
+const DISPLAY_SEAT_PLACEHOLDER_COLOR: Record<DisplaySeat, LudoColor> = {
+  "top-left": "RED",
+  "top-right": "GREEN",
+  "bottom-right": "YELLOW",
+  "bottom-left": "BLUE",
+};
+
+const PLACEHOLDER_COLOR_TRACK_START_INDEX: Record<LudoColor, number> = {
+  RED: 0,
+  GREEN: 13,
+  YELLOW: 26,
+  BLUE: 39,
+};
+
+function getDisplaySeatColors(
+  viewerColor?: LudoColor,
+  opponentColor?: LudoColor,
+): Record<DisplaySeat, LudoColor> {
+  const allColors: LudoColor[] = ["RED", "GREEN", "YELLOW", "BLUE"];
+
+  if (!viewerColor) {
+    return {
+      "top-left": "RED",
+      "top-right": "GREEN",
+      "bottom-right": "YELLOW",
+      "bottom-left": "BLUE",
+    };
+  }
+
+  const used = new Set<LudoColor>([viewerColor]);
+  if (opponentColor) used.add(opponentColor);
+
+  const remaining = allColors.filter((color) => !used.has(color));
+  const topLeftColor =
+    remaining.find((color) => color === "YELLOW") ??
+    remaining[0] ??
+    "YELLOW";
+  const bottomRightColor =
+    remaining.find((color) => color !== topLeftColor) ??
+    topLeftColor;
+
+  return {
+    "top-left": topLeftColor,
+    "top-right": opponentColor ?? "GREEN",
+    "bottom-right": bottomRightColor,
+    "bottom-left": viewerColor,
+  };
+}
+
+function getDisplaySeatForColor(
+  color: LudoColor,
+  seatColors: Record<DisplaySeat, LudoColor>,
+): DisplaySeat {
+  return (
+    (Object.entries(seatColors).find(([, seatColor]) => seatColor === color)?.[0] as DisplaySeat | undefined) ??
+    "bottom-left"
+  );
+}
+
+function getPlaceholderColorForSeat(seat: DisplaySeat): LudoColor {
+  return DISPLAY_SEAT_PLACEHOLDER_COLOR[seat];
+}
+
+function getTrackProgress(token: LudoToken, color: LudoColor) {
+  if (typeof token.stepsMoved === "number" && token.stepsMoved > 0) {
+    return token.stepsMoved - 1;
+  }
+
+  const boardPosition =
+    token.boardPosition ??
+    (typeof token.position === "number" && token.position > 0
+      ? token.position - 1
+      : null);
+
+  if (typeof boardPosition !== "number" || boardPosition < 0) {
+    return null;
+  }
+
+  const absoluteStartIndex = PLACEHOLDER_COLOR_TRACK_START_INDEX[color];
+  return (boardPosition - absoluteStartIndex + TRACK.length) % TRACK.length;
+}
 
 const LUDO_SOUND_ENABLED_KEY = "ludo.sound.enabled";
 const LUDO_SOUND_VOLUME_KEY = "ludo.sound.volume";
@@ -80,9 +164,15 @@ function tokenCell(
   token: LudoToken,
   player: LudoRoomPlayer,
   idx: number,
+  seatColors: Record<DisplaySeat, LudoColor>,
 ): [number, number] {
+  // Server positions stay absolute; the client remaps them into viewer-relative
+  // seats so "you" always render bottom-left and the opponent top-right.
+  const displaySeat = getDisplaySeatForColor(player.color, seatColors);
+  const placeholderColor = getPlaceholderColorForSeat(displaySeat);
+
   if (token.status === "HOME") {
-    return HOME_CELLS[player.color]?.[idx] ?? [1, 1];
+    return HOME_CELLS[placeholderColor]?.[idx] ?? [1, 1];
   }
 
   if (
@@ -90,22 +180,20 @@ function tokenCell(
     token.homeLanePosition > 0
   ) {
     const laneIndex = Math.min(token.homeLanePosition, 6) - 1;
-    return HOME_LANE_CELLS[player.color]?.[laneIndex] ?? [7, 7];
+    return HOME_LANE_CELLS[placeholderColor]?.[laneIndex] ?? [7, 7];
   }
 
   if (token.status === "GOAL" || token.status === "FINISHED") {
-    return HOME_LANE_CELLS[player.color]?.[5] ?? [7, 7];
+    return HOME_LANE_CELLS[placeholderColor]?.[5] ?? [7, 7];
   }
-  const bi =
-    token.boardPosition ??
-    (typeof token.stepsMoved === "number" && token.stepsMoved > 0
-      ? token.stepsMoved - 1
-      : token.position - 1);
-  const cell =
-    typeof bi === "number" && bi >= 0 && bi < TRACK.length
-      ? TRACK[bi % TRACK.length]
-      : HOME_CELLS[player.color]?.[idx];
-  return cell ?? [7, 7];
+
+  const progress = getTrackProgress(token, player.color);
+  if (typeof progress === "number") {
+    const displayStartIndex = PLACEHOLDER_COLOR_TRACK_START_INDEX[placeholderColor];
+    return TRACK[(displayStartIndex + progress) % TRACK.length] ?? [7, 7];
+  }
+
+  return HOME_CELLS[placeholderColor]?.[idx] ?? [7, 7];
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -145,6 +233,13 @@ type CaptureReturn = {
   userId: string;
   tokenId: string;
   path: number[];
+};
+
+type TokenMoveAnimation = {
+  userId: string;
+  tokenId: string;
+  fromProgress: number;
+  toProgress: number;
 };
 
 function roomWithCaptureReturnFrame(
@@ -192,11 +287,17 @@ function DiceSVG({ value, size = 56 }: { value?: number | null; size?: number })
   const pts = dots[safeValue];
   return (
     <svg width={size} height={size} viewBox="0 0 100 100">
-      <rect x={6} y={8} width={90} height={90} rx={18} fill="rgba(0,0,0,0.18)" />
-      <rect x={2} y={2} width={90} height={90} rx={18} fill="white" />
-      <rect x={8} y={6} width={76} height={32} rx={12} fill="rgba(255,255,255,0.65)" />
+      <defs>
+        <linearGradient id={`dice-body-${safeValue}`} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#63d9ff" />
+          <stop offset="100%" stopColor="#1dbbf4" />
+        </linearGradient>
+      </defs>
+      <rect x={7} y={10} width={86} height={86} rx={24} fill="rgba(16,72,108,0.28)" />
+      <rect x={4} y={4} width={86} height={86} rx={24} fill={`url(#dice-body-${safeValue})`} stroke="#178fcb" strokeWidth="2" />
+      <rect x={12} y={10} width={62} height={20} rx={10} fill="rgba(255,255,255,0.28)" />
       {pts.map(([cx, cy], i) => (
-        <circle key={i} cx={cx} cy={cy} r={9} fill="#1e40af" />
+        <circle key={i} cx={cx} cy={cy} r={8.2} fill="#f8fafc" />
       ))}
     </svg>
   );
@@ -206,19 +307,23 @@ function DiceSVG({ value, size = 56 }: { value?: number | null; size?: number })
 // Small inline token icon (for bottom bar)
 // ─────────────────────────────────────────────────────────────────────────────
 const COLOR_HEX: Record<string, string> = {
-  RED: "#dc2626", GREEN: "#16a34a", BLUE: "#2563eb", YELLOW: "#d97706",
+  RED: "#ef1d26", GREEN: "#08ae4d", BLUE: "#2ba8ef", YELLOW: "#ffd61f",
 };
 
 function PlayerPin({ color }: { color: string }) {
   const hex = COLOR_HEX[color] ?? "#888";
   return (
     <svg width="28" height="40" viewBox="0 0 40 56">
-      <ellipse cx="20" cy="53" rx="7" ry="2.5" fill="rgba(0,0,0,0.25)" />
-      <circle cx="20" cy="18" r="17" fill={hex} />
-      <circle cx="20" cy="18" r="17" fill="none" stroke="white" strokeWidth="2.5" />
-      <ellipse cx="13" cy="11" rx="6" ry="3.5" fill="rgba(255,255,255,0.38)" />
-      <circle cx="20" cy="18" r="7" fill="rgba(255,255,255,0.52)" />
-      <polygon points="20,33 13,54 20,47 27,54" fill={hex} />
+      <ellipse cx="20" cy="53" rx="7.2" ry="2.6" fill="rgba(0,0,0,0.2)" />
+      <path
+        d="M20 51 C15.6 45.4 8.8 38.8 8.8 27.8 C8.8 18.3 14.7 11.8 20 11.8 C25.3 11.8 31.2 18.3 31.2 27.8 C31.2 38.8 24.4 45.4 20 51 Z"
+        fill="white"
+        stroke="#475569"
+        strokeWidth="1.4"
+      />
+      <circle cx="20" cy="28" r="9.6" fill="white" stroke="rgba(148,163,184,0.8)" strokeWidth="1" />
+      <circle cx="20" cy="28" r="7.5" fill={hex} stroke="rgba(51,65,85,0.5)" strokeWidth="1" />
+      <ellipse cx="17.1" cy="23.2" rx="3" ry="1.8" fill="rgba(255,255,255,0.58)" transform="rotate(-22 17.1 23.2)" />
     </svg>
   );
 }
@@ -432,9 +537,19 @@ export default function LudoRoomPage() {
   // dice. A draining ring shows the remaining time. When it hits 0 the dice
   // is auto-rolled so the turn passes to the opponent.
   const ROLL_TIMEOUT_SEC = 20;
+  const LOCAL_DICE_ROLL_MS = 520;
+  const REMOTE_DICE_ROLL_MS = 320;
+  const DICE_SETTLE_MS = 280;
   const [rollCountdown, setRollCountdown] = useState<number | null>(null);
   const rollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const rollAutoRef     = useRef<ReturnType<typeof setTimeout>  | null>(null);
+  const [diceFaceValue, setDiceFaceValue] = useState(1);
+  const [diceAnimationState, setDiceAnimationState] = useState<"idle" | "rolling" | "settling">("idle");
+  const diceShuffleIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const diceSettleTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const diceIdleTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const localRollPendingRef = useRef(false);
+  const diceRollStartRef = useRef<number | null>(null);
 
   const { data: roomData, isLoading, refetch } = useQuery({
     queryKey: ["ludo-room", roomId],
@@ -541,6 +656,66 @@ export default function LudoRoomPage() {
     }
   }, [playNoise, playTone, soundEnabled, soundVolume, stopDiceSound]);
 
+  const clearDiceVisualTimers = useCallback(() => {
+    if (diceShuffleIntervalRef.current) {
+      clearInterval(diceShuffleIntervalRef.current);
+      diceShuffleIntervalRef.current = null;
+    }
+    if (diceSettleTimeoutRef.current) {
+      clearTimeout(diceSettleTimeoutRef.current);
+      diceSettleTimeoutRef.current = null;
+    }
+    if (diceIdleTimeoutRef.current) {
+      clearTimeout(diceIdleTimeoutRef.current);
+      diceIdleTimeoutRef.current = null;
+    }
+  }, []);
+
+  const startDiceRollVisual = useCallback(() => {
+    clearDiceVisualTimers();
+    diceRollStartRef.current = Date.now();
+    setDiceAnimationState("rolling");
+    setDiceFaceValue((current) => (current >= 6 ? 1 : current + 1));
+    diceShuffleIntervalRef.current = setInterval(() => {
+      setDiceFaceValue(Math.floor(Math.random() * 6) + 1);
+    }, 78);
+  }, [clearDiceVisualTimers]);
+
+  const settleDiceRollVisual = useCallback((finalValue: number, minimumRollMs = 0) => {
+    if (diceSettleTimeoutRef.current) {
+      clearTimeout(diceSettleTimeoutRef.current);
+      diceSettleTimeoutRef.current = null;
+    }
+    if (diceIdleTimeoutRef.current) {
+      clearTimeout(diceIdleTimeoutRef.current);
+      diceIdleTimeoutRef.current = null;
+    }
+
+    const elapsed =
+      diceRollStartRef.current == null ? minimumRollMs : Date.now() - diceRollStartRef.current;
+    const remainingRollMs = Math.max(0, minimumRollMs - elapsed);
+
+    diceSettleTimeoutRef.current = setTimeout(() => {
+      if (diceShuffleIntervalRef.current) {
+        clearInterval(diceShuffleIntervalRef.current);
+        diceShuffleIntervalRef.current = null;
+      }
+      setDiceFaceValue(finalValue);
+      setDiceAnimationState("settling");
+      diceIdleTimeoutRef.current = setTimeout(() => {
+        setDiceAnimationState("idle");
+        localRollPendingRef.current = false;
+        diceRollStartRef.current = null;
+      }, DICE_SETTLE_MS);
+    }, remainingRollMs);
+  }, [DICE_SETTLE_MS]);
+
+  useEffect(() => {
+    return () => {
+      clearDiceVisualTimers();
+    };
+  }, [clearDiceVisualTimers]);
+
   const playStepSound = useCallback(() => {
     playTone(620, 0.035, "square", 0.09);
   }, [playTone]);
@@ -626,6 +801,125 @@ export default function LudoRoomPage() {
     return captures;
   }, []);
 
+  const getTokenProgressForAnimation = useCallback((token: LudoToken, color: LudoColor) => {
+    if (token.status === "HOME") return -1;
+
+    if (
+      typeof token.homeLanePosition === "number" &&
+      token.homeLanePosition > 0
+    ) {
+      return TRACK.length + Math.min(token.homeLanePosition, 6) - 1;
+    }
+
+    if (token.status === "GOAL" || token.status === "FINISHED") {
+      return TRACK.length + HOME_LANE_CELLS[color].length - 1;
+    }
+
+    return getTrackProgress(token, color);
+  }, []);
+
+  const findTokenMoveAnimation = useCallback((fromRoom: LudoRoom, toRoom: LudoRoom): TokenMoveAnimation | null => {
+    for (const toPlayer of toRoom.players) {
+      const fromPlayer = fromRoom.players.find(
+        (player) => player.userId === toPlayer.userId,
+      );
+      if (!fromPlayer) continue;
+
+      for (const toToken of toPlayer.tokens) {
+        const fromToken = fromPlayer.tokens.find((token) => token.id === toToken.id);
+        if (!fromToken) continue;
+
+        const fromProgress = getTokenProgressForAnimation(
+          fromToken,
+          toPlayer.color as LudoColor,
+        );
+        const toProgress = getTokenProgressForAnimation(
+          toToken,
+          toPlayer.color as LudoColor,
+        );
+
+        if (
+          typeof fromProgress !== "number" ||
+          typeof toProgress !== "number" ||
+          toProgress <= fromProgress
+        ) {
+          continue;
+        }
+
+        const steps = toProgress - fromProgress;
+        if (steps > 0 && steps <= 6) {
+          return {
+            userId: toPlayer.userId,
+            tokenId: toToken.id,
+            fromProgress,
+            toProgress,
+          };
+        }
+      }
+    }
+
+    return null;
+  }, [getTokenProgressForAnimation]);
+
+  const roomWithMoveProgress = useCallback((
+    fromRoom: LudoRoom,
+    move: TokenMoveAnimation,
+    progress: number,
+  ): LudoRoom => ({
+    ...fromRoom,
+    players: fromRoom.players.map((player) =>
+      player.userId !== move.userId
+        ? player
+        : {
+            ...player,
+            tokens: player.tokens.map((token) => {
+              if (token.id !== move.tokenId) return token;
+
+              if (progress < TRACK.length) {
+                return {
+                  ...token,
+                  status: "TRACK" as const,
+                  canMove: false,
+                  stepsMoved: progress + 1,
+                  position: progress + 1,
+                  boardPosition: null,
+                  homeLanePosition: null,
+                };
+              }
+
+              const homeLanePosition = Math.min(
+                HOME_LANE_CELLS[player.color].length,
+                progress - TRACK.length + 1,
+              );
+
+              return {
+                ...token,
+                status: "TRACK" as const,
+                canMove: false,
+                stepsMoved: progress + 1,
+                position: progress + 1,
+                boardPosition: null,
+                homeLanePosition,
+              };
+            }),
+          },
+    ),
+  }), []);
+
+  const didTokenFinish = useCallback((fromRoom: LudoRoom, toRoom: LudoRoom) =>
+    fromRoom.players.some((fromPlayer) => {
+      const toPlayer = toRoom.players.find((player) => player.userId === fromPlayer.userId);
+      return fromPlayer.tokens.some((fromToken) => {
+        const toToken = toPlayer?.tokens.find((token) => token.id === fromToken.id);
+        return Boolean(
+          toToken &&
+            fromToken.status !== "GOAL" &&
+            fromToken.status !== "FINISHED" &&
+            (toToken.status === "GOAL" || toToken.status === "FINISHED"),
+        );
+      });
+    }), []);
+
   const playCaptureReturnAnimation = useCallback((fromRoom: LudoRoom, toRoom: LudoRoom) => {
     const captures = getCapturedReturns(fromRoom, toRoom);
     const maxFrames = Math.max(0, ...captures.map((capture) => capture.path.length));
@@ -662,6 +956,65 @@ export default function LudoRoomPage() {
     return true;
   }, [getCapturedReturns, playKillSound, playStepSound, rememberTokenPaths]);
 
+  const finishMoveAnimation = useCallback((fromRoom: LudoRoom, toRoom: LudoRoom) => {
+    setAnimRoom(null);
+
+    if (playCaptureReturnAnimation(fromRoom, toRoom)) {
+      return;
+    }
+
+    if (didTokenFinish(fromRoom, toRoom)) {
+      playWinSound();
+    }
+
+    isAnimatingRef.current = false;
+    latestRoomRef.current = toRoom;
+    rememberTokenPaths(toRoom);
+    setRoomState(toRoom);
+  }, [didTokenFinish, playCaptureReturnAnimation, playWinSound, rememberTokenPaths]);
+
+  const playTokenMoveAnimation = useCallback((fromRoom: LudoRoom, toRoom: LudoRoom) => {
+    const move = findTokenMoveAnimation(fromRoom, toRoom);
+    if (!move) return false;
+
+    const steps = move.toProgress - move.fromProgress;
+    if (steps <= 0) return false;
+
+    animTimersRef.current.forEach(clearTimeout);
+    animTimersRef.current = [];
+    latestRoomRef.current = toRoom;
+    setRoomState(toRoom);
+    isAnimatingRef.current = true;
+    setAnimRoom(fromRoom);
+
+    if (steps === 1) {
+      playStepSound();
+      finishMoveAnimation(fromRoom, toRoom);
+      return true;
+    }
+
+    for (let step = 1; step <= steps; step++) {
+      const progress = move.fromProgress + step;
+      const isLast = step === steps;
+
+      const timer = setTimeout(() => {
+        playStepSound();
+
+        if (isLast) {
+          animTimersRef.current = [];
+          finishMoveAnimation(fromRoom, toRoom);
+          return;
+        }
+
+        setAnimRoom(roomWithMoveProgress(fromRoom, move, progress));
+      }, step * 190);
+
+      animTimersRef.current.push(timer);
+    }
+
+    return true;
+  }, [findTokenMoveAnimation, finishMoveAnimation, playStepSound, roomWithMoveProgress]);
+
   // Normalize any socket/API payload and preserve per-client yourColor.
   // Server broadcasts the same room object to all clients so yourColor is absent.
   const applyRoomUpdate = useCallback((incoming: unknown) => {
@@ -688,24 +1041,14 @@ export default function LudoRoomPage() {
       nextRoom.lastDiceValue !== previousRoom.lastDiceValue
     ) {
       startDiceSound(360);
+      if (!localRollPendingRef.current) {
+        startDiceRollVisual();
+        settleDiceRollVisual(nextRoom.lastDiceValue!, REMOTE_DICE_ROLL_MS);
+      }
     }
 
-    if (previousRoom) {
-      const previousFinishedIds = new Set(
-        previousRoom.players.flatMap((player) =>
-          player.tokens
-            .filter((token) => token.status === "GOAL" || token.status === "FINISHED")
-            .map((token) => token.id),
-        ),
-      );
-      const hasNewFinishedToken = nextRoom.players.some((player) =>
-        player.tokens.some(
-          (token) =>
-            (token.status === "GOAL" || token.status === "FINISHED") &&
-            !previousFinishedIds.has(token.id),
-        ),
-      );
-      if (hasNewFinishedToken) playWinSound();
+    if (previousRoom && playTokenMoveAnimation(previousRoom, nextRoom)) {
+      return;
     }
 
     if (previousRoom && playCaptureReturnAnimation(previousRoom, nextRoom)) {
@@ -714,13 +1057,23 @@ export default function LudoRoomPage() {
 
     latestRoomRef.current = nextRoom;
     rememberTokenPaths(nextRoom);
+    if (previousRoom && didTokenFinish(previousRoom, nextRoom)) {
+      playWinSound();
+    }
     setRoomState(nextRoom);
-  }, [playCaptureReturnAnimation, playWinSound, rememberTokenPaths, startDiceSound]);
+  }, [didTokenFinish, playCaptureReturnAnimation, playTokenMoveAnimation, playWinSound, rememberTokenPaths, settleDiceRollVisual, startDiceRollVisual, startDiceSound]);
 
   const rollMutation = useMutation({
     mutationFn: () => LudoService.rollDice(roomId),
     onSuccess: ({ data }) => {
       stopDiceSound();
+      if (typeof data.lastDiceValue === "number" && data.lastDiceValue >= 1 && data.lastDiceValue <= 6) {
+        settleDiceRollVisual(data.lastDiceValue, LOCAL_DICE_ROLL_MS);
+      } else {
+        setDiceAnimationState("idle");
+        localRollPendingRef.current = false;
+        diceRollStartRef.current = null;
+      }
       latestRoomRef.current = data;
       rememberTokenPaths(data);
       setRoomState(data);
@@ -741,6 +1094,10 @@ export default function LudoRoomPage() {
     },
     onError: (err: unknown) => {
       stopDiceSound();
+      clearDiceVisualTimers();
+      setDiceAnimationState("idle");
+      localRollPendingRef.current = false;
+      diceRollStartRef.current = null;
       toast.error(getErrorMessage(err, "Failed to roll dice"));
     },
   });
@@ -762,116 +1119,15 @@ export default function LudoRoomPage() {
       }
 
       // ── Find which token moved and how many steps ───────────────────────
-      let movingPlayerId = "";
-      let movingTokenId  = "";
-      let fromBoardPos   = -1;
-      let steps          = 0;
-
-      outer: for (const toPlayer of toRoom.players) {
-        const fromPlayer = fromRoom.players.find(p => p.userId === toPlayer.userId);
-        if (!fromPlayer) continue;
-        for (const toToken of toPlayer.tokens) {
-          const fromToken = fromPlayer.tokens.find(t => t.id === toToken.id);
-          if (!fromToken) continue;
-          // Entered from home
-          if (fromToken.status === "HOME" && toToken.status !== "HOME") {
-            movingPlayerId = toPlayer.userId;
-            movingTokenId  = toToken.id;
-            steps = 1; fromBoardPos = -1;
-            break outer;
-          }
-          // Moved along TRACK
-          const fp = fromToken.boardPosition ?? Math.max(0, (fromToken.position ?? 1) - 1);
-          const tp = toToken.boardPosition   ?? Math.max(0, (toToken.position   ?? 1) - 1);
-          if (tp > fp && tp - fp <= 6 && toToken.status !== "GOAL" && toToken.status !== "FINISHED") {
-            movingPlayerId = toPlayer.userId;
-            movingTokenId  = toToken.id;
-            fromBoardPos   = fp;
-            steps          = tp - fp;
-            break outer;
-          }
-        }
-      }
-
-      // If only 1 step (or nothing to animate), show final state immediately
-      if (steps <= 1) {
-        playStepSound();
-        if (!playCaptureReturnAnimation(fromRoom, toRoom)) {
-          const wonToken = fromRoom.players.some((fromPlayer) => {
-            const toPlayer = toRoom.players.find((player) => player.userId === fromPlayer.userId);
-            return fromPlayer.tokens.some((fromToken) => {
-              const toToken = toPlayer?.tokens.find((token) => token.id === fromToken.id);
-              return Boolean(
-                toToken &&
-                  fromToken.status !== "GOAL" &&
-                  fromToken.status !== "FINISHED" &&
-                  (toToken.status === "GOAL" || toToken.status === "FINISHED"),
-              );
-            });
-          });
-          if (wonToken) playWinSound();
-          isAnimatingRef.current = false;
-          latestRoomRef.current = toRoom;
-          rememberTokenPaths(toRoom);
-          setRoomState(toRoom);
-        }
+      if (playTokenMoveAnimation(fromRoom, toRoom)) {
         return;
       }
 
+      // If only 1 step (or nothing to animate), show final state immediately
+      finishMoveAnimation(fromRoom, toRoom);
+      return;
+
       // ── Schedule one setState per intermediate step ─────────────────────
-      animTimersRef.current.forEach(clearTimeout);
-      animTimersRef.current = [];
-
-      for (let step = 1; step <= steps; step++) {
-        const intPos = fromBoardPos + step;
-        const isLast = step === steps;
-
-        const t = setTimeout(() => {
-          playStepSound();
-          if (isLast) {
-            animTimersRef.current = [];
-            setAnimRoom(null);
-            if (!playCaptureReturnAnimation(fromRoom, toRoom)) {
-              const wonToken = fromRoom.players.some((fromPlayer) => {
-                const toPlayer = toRoom.players.find((player) => player.userId === fromPlayer.userId);
-                return fromPlayer.tokens.some((fromToken) => {
-                  const toToken = toPlayer?.tokens.find((token) => token.id === fromToken.id);
-                  return Boolean(
-                    toToken &&
-                      fromToken.status !== "GOAL" &&
-                      fromToken.status !== "FINISHED" &&
-                      (toToken.status === "GOAL" || toToken.status === "FINISHED"),
-                  );
-                });
-              });
-              if (wonToken) playWinSound();
-              isAnimatingRef.current = false;
-              latestRoomRef.current = toRoom;
-              rememberTokenPaths(toRoom);
-              setRoomState(toRoom);
-            }
-          } else {
-            setAnimRoom({
-              ...fromRoom,
-              players: fromRoom.players.map(p =>
-                p.userId !== movingPlayerId ? p : {
-                  ...p,
-                  tokens: p.tokens.map(tk =>
-                    tk.id !== movingTokenId ? tk : {
-                      ...tk,
-                      status: "PLAYING" as const,
-                      boardPosition: intPos,
-                      position: intPos + 1,
-                    }
-                  ),
-                }
-              ),
-            });
-          }
-        }, step * 200);
-
-        animTimersRef.current.push(t);
-      }
     },
     onError: (err: unknown) => {
       isAnimatingRef.current = false;
@@ -936,6 +1192,14 @@ export default function LudoRoomPage() {
       : null;
   const myTurn   = Boolean(me && room?.currentTurnUserId === me.userId);
   const availSet = useMemo(() => new Set(room?.availableTokenIds ?? []), [room?.availableTokenIds]);
+  const displaySeatColors = useMemo(
+    () =>
+      getDisplaySeatColors(
+        (me?.color as LudoColor | undefined) ?? (room?.yourColor as LudoColor | undefined),
+        opponent?.color as LudoColor | undefined,
+      ),
+    [me?.color, opponent?.color, room?.yourColor],
+  );
   const canRoll  =
     room?.status === "LIVE" &&
     myTurn &&
@@ -945,6 +1209,10 @@ export default function LudoRoomPage() {
     typeof room?.lastDiceValue === "number" && room.lastDiceValue >= 1 && room.lastDiceValue <= 6
       ? room.lastDiceValue
       : lastVisibleDiceValue;
+  const renderedDiceValue =
+    diceAnimationState === "idle"
+      ? visibleDiceValue
+      : diceFaceValue;
 
   useEffect(() => {
     if (
@@ -958,6 +1226,7 @@ export default function LudoRoomPage() {
 
   useEffect(() => {
     if (!room) return;
+    if (isAnimatingRef.current) return;
     latestRoomRef.current = room;
     rememberTokenPaths(room);
   }, [room, rememberTokenPaths]);
@@ -1055,7 +1324,7 @@ export default function LudoRoomPage() {
     (displayedRoom?.players ?? []).forEach((player) => {
       (player.tokens ?? []).forEach((token, idx) => {
         const isFinishedToken = token.status === "GOAL" || token.status === "FINISHED";
-        const [row, col] = tokenCell(token, player, idx);
+        const [row, col] = tokenCell(token, player, idx, displaySeatColors);
         const key = isFinishedToken ? `win-${player.color}` : `${row}-${col}`;
         const entry = map.get(key) ?? [];
         const isMyToken = player.userId === me?.userId;
@@ -1074,7 +1343,7 @@ export default function LudoRoomPage() {
       });
     });
     return map;
-  }, [displayedRoom?.players, availSet, me?.userId]);
+  }, [displayedRoom?.players, availSet, displaySeatColors, me?.userId]);
 
   // ── Loading ──────────────────────────────────────────────────────────────
   if (isLoading || !room) {
@@ -1214,7 +1483,7 @@ export default function LudoRoomPage() {
       {/* ── Board ── */}
       <div className="relative z-10 flex min-h-0 flex-1 items-center justify-center px-4 py-3">
         <div
-          className="aspect-square overflow-hidden rounded-xl bg-white"
+          className="aspect-square overflow-hidden rounded-sm bg-white"
           style={{
             width: "min(100%, 420px, calc(100vh - 178px))",
             boxShadow: "0 0 0 3px rgba(255,255,255,0.16), 0 18px 36px rgba(0,0,0,0.36)",
@@ -1228,6 +1497,7 @@ export default function LudoRoomPage() {
               moveMutation.mutate(id);
             }}
             viewerColor={me?.color as LudoColor | undefined}
+            opponentColor={opponent?.color as LudoColor | undefined}
           />
         </div>
       </div>
@@ -1311,24 +1581,47 @@ export default function LudoRoomPage() {
             <button
               type="button"
               onClick={() => {
+                localRollPendingRef.current = true;
+                startDiceRollVisual();
                 startDiceSound();
                 rollMutation.mutate();
               }}
               disabled={!canRoll}
               className={cn(
-                "relative h-[68px] w-[68px] rounded-[18px] transition-all duration-100 active:translate-y-1",
+                "relative h-[78px] w-[78px] rounded-[20px] transition-all duration-100 active:translate-y-1",
                 canRoll
-                  ? "shadow-[0_7px_0_#163393,0_12px_20px_rgba(0,0,0,0.24)]"
-                  : "opacity-60 shadow-[0_4px_0_#64748b]",
+                  ? "shadow-[0_7px_0_#b9919b,0_16px_24px_rgba(0,0,0,0.28)]"
+                  : "opacity-60 shadow-[0_4px_0_#8f8f8f]",
+                diceAnimationState !== "idle" && "shadow-[0_7px_0_#b9919b,0_0_18px_rgba(255,255,255,0.42),0_18px_28px_rgba(0,0,0,0.28)]",
               )}
-              style={{ background: canRoll ? "#7fb2ff" : "#9caee0" }}
+              style={{
+                background: canRoll
+                  ? "linear-gradient(180deg,#ffe9ef 0%,#f4cbd3 100%)"
+                  : "linear-gradient(180deg,#ead9dd 0%,#cdb7bc 100%)",
+                border: "2px solid rgba(255,255,255,0.55)",
+              }}
             >
-              <div className="flex h-full w-full items-center justify-center p-2">
-                <DiceSVG value={visibleDiceValue} size={48} />
+              <div
+                className="pointer-events-none absolute inset-x-[14%] top-[10%] h-[22%] rounded-[12px]"
+                style={{
+                  background:
+                    diceAnimationState !== "idle"
+                      ? "linear-gradient(180deg,rgba(255,255,255,0.82),rgba(255,255,255,0.16))"
+                      : "linear-gradient(180deg,rgba(255,255,255,0.6),rgba(255,255,255,0.08))",
+                }}
+              />
+              <div className="pointer-events-none absolute inset-[5%] rounded-[18px] border border-[#f6e8ec] shadow-[inset_0_1px_0_rgba(255,255,255,0.78),inset_0_-2px_0_rgba(133,90,103,0.22)]" />
+              <div
+                className={cn(
+                  "relative flex h-full w-full items-center justify-center p-2",
+                  diceAnimationState === "rolling" && "animate-[ludo-hand-dice-roll_.52s_ease-in-out_infinite]",
+                  diceAnimationState === "settling" && "animate-[ludo-hand-dice-settle_.28s_ease-out]",
+                  diceAnimationState !== "idle" && "drop-shadow-[0_0_16px_rgba(255,255,255,0.65)]",
+                )}
+                style={{ transformOrigin: "50% 58%" }}
+              >
+                <DiceSVG value={renderedDiceValue} size={56} />
               </div>
-              {rollMutation.isPending && (
-                <Loader2 className="absolute left-1/2 top-1/2 h-7 w-7 -translate-x-1/2 -translate-y-1/2 animate-spin text-blue-800" />
-              )}
             </button>
 
             <p className="text-[10px] font-black uppercase tracking-widest text-white/70">
@@ -1379,6 +1672,24 @@ export default function LudoRoomPage() {
           onHome={() => router.push("/dashboard")}
         />
       )}
+
+      <style jsx global>{`
+        @keyframes ludo-hand-dice-roll {
+          0% { transform: translate(0, 0) rotate(0deg) scale(1); }
+          14% { transform: translate(-4px, -6px) rotate(-13deg) scale(1.04); }
+          28% { transform: translate(5px, -2px) rotate(11deg) scale(0.99); }
+          42% { transform: translate(-3px, 4px) rotate(-8deg) scale(1.03); }
+          58% { transform: translate(4px, -5px) rotate(10deg) scale(1.05); }
+          74% { transform: translate(-5px, 1px) rotate(-11deg) scale(0.98); }
+          100% { transform: translate(0, 0) rotate(0deg) scale(1); }
+        }
+
+        @keyframes ludo-hand-dice-settle {
+          0% { transform: translate(-2px, -4px) rotate(-8deg) scale(1.06); }
+          55% { transform: translate(2px, 2px) rotate(5deg) scale(0.97); }
+          100% { transform: translate(0, 0) rotate(0deg) scale(1); }
+        }
+      `}</style>
     </div>
   );
 }

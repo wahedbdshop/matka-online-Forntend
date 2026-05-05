@@ -1,8 +1,9 @@
 "use client";
 import Link from "next/link";
 import Image from "next/image";
+import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
-import { Bell, IndianRupee, RefreshCw } from "lucide-react";
+import { Bell, Eye, EyeOff, IndianRupee, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ThemeToggle } from "@/components/shared/theme-toggle";
@@ -29,6 +30,8 @@ const protectedUserRoutes = [
   "/kalyan",
   "/chat",
 ];
+
+const BALANCE_VISIBILITY_STORAGE_KEY = "user-balance-visible";
 
 export const TopHeader = ({
   initialIsAuthenticated = false,
@@ -72,6 +75,26 @@ export const TopHeader = ({
   const unreadCount = notifData?.data?.unreadCount || 0;
   const balance = Number(profile?.balance ?? 0);
   const displayBalance = balance.toLocaleString("en-BD");
+  const [showBalance, setShowBalance] = useState(true);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const savedPreference = window.localStorage.getItem(
+      BALANCE_VISIBILITY_STORAGE_KEY,
+    );
+    if (savedPreference === "false") {
+      setShowBalance(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    window.localStorage.setItem(
+      BALANCE_VISIBILITY_STORAGE_KEY,
+      String(showBalance),
+    );
+  }, [showBalance]);
 
   return (
     <header className="sticky top-0 z-40 border-b border-slate-200 bg-white/95 shadow-sm backdrop-blur dark:border-slate-700 dark:bg-slate-900/95 dark:shadow-none">
@@ -82,8 +105,23 @@ export const TopHeader = ({
               <div className="flex items-center gap-1.5 min-w-0 rounded-xl border border-slate-200 bg-slate-50 px-2 py-1.5 shadow-sm dark:border-slate-700 dark:bg-slate-800/80 dark:shadow-none">
                 <IndianRupee className="h-3.5 w-3.5 shrink-0 text-emerald-400" />
                 <p className="truncate text-sm font-bold leading-tight text-slate-950 dark:text-white">
-                  {displayBalance}
+                  {showBalance ? displayBalance : "••••••"}
                 </p>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    setShowBalance((previous) => !previous);
+                  }}
+                  className="shrink-0 rounded-md p-1 text-slate-500 transition-colors hover:bg-slate-200 hover:text-slate-950 dark:text-slate-400 dark:hover:bg-slate-700 dark:hover:text-white"
+                  aria-label={showBalance ? "Hide balance" : "Show balance"}
+                >
+                  {showBalance ? (
+                    <EyeOff className="h-3.5 w-3.5" />
+                  ) : (
+                    <Eye className="h-3.5 w-3.5" />
+                  )}
+                </button>
                 <button
                   type="button"
                   onClick={(e) => {
