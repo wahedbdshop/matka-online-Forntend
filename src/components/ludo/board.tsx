@@ -28,6 +28,8 @@ export type LudoToken = {
   color: LudoColor;
   label?: string;
   available?: boolean;
+  home?: boolean;
+  finished?: boolean;
 };
 
 export type LudoBoardProps = {
@@ -230,13 +232,44 @@ function TokenPin({
   const hex  = PALETTE[token.color].main;
   const dark = PALETTE[token.color].dark;
   const gid  = token.color.toLowerCase();
+  const rotationStyle =
+    boardRotation !== 0
+      ? {
+          transform: `rotate(${-boardRotation}deg)`,
+          transformOrigin: "center",
+        }
+      : undefined;
+
+  const finishedEl = (
+    <svg
+      viewBox="0 0 40 40"
+      style={{
+        width: fill,
+        height: fill,
+        flexShrink: 0,
+        ...rotationStyle,
+      }}
+      className="drop-shadow-[0_0_7px_rgba(250,204,21,0.75)]"
+    >
+      <circle cx="20" cy="20" r="15" fill={hex} />
+      <circle cx="20" cy="20" r="15" fill="none" stroke="rgba(255,255,255,0.75)" strokeWidth="2" />
+      <circle cx="20" cy="20" r="11" fill="rgba(255,255,255,0.16)" />
+      <path
+        d="M20 8.5 22.8 15.6 30.4 16.1 24.5 20.9 26.4 28.3 20 24.2 13.6 28.3 15.5 20.9 9.6 16.1 17.2 15.6 20 8.5Z"
+        fill="#facc15"
+        stroke="rgba(255,255,255,0.85)"
+        strokeWidth="1"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
 
   // Teardrop path — arc flag 0,1 = clockwise → upper semicircle via top ✓
   const pinPath = "M 20,38 Q 6,29 6,16 A 14,14 0 0,1 34,16 Q 34,29 20,38 Z";
   // Slightly enlarged dark rim path for depth/outline
   const rimPath = "M 20,39.5 Q 4.5,29.5 4.5,16 A 15.5,15.5 0 0,1 35.5,16 Q 35.5,29.5 20,39.5 Z";
 
-  const svgEl = (
+  const svgEl = token.finished ? finishedEl : (
     <svg
       viewBox="0 0 40 40"
       style={{
@@ -244,12 +277,9 @@ function TokenPin({
         height: fill,
         flexShrink: 0,
         // Counter-rotate so the pin tip always points downward toward the player
-        ...(boardRotation !== 0 && {
-          transform: `rotate(${-boardRotation}deg)`,
-          transformOrigin: "center",
-        }),
+        ...rotationStyle,
       }}
-      className={cn(token.available && "drop-shadow-[0_0_8px_rgba(253,224,71,1)] animate-bounce")}
+      className={cn(token.available && "drop-shadow-[0_0_10px_rgba(253,224,71,1)]")}
     >
       <defs>
         {/* 3-D radial gradient: bright white top-left → full colour → dark bottom-right */}
@@ -296,13 +326,30 @@ function TokenPin({
     </svg>
   );
 
+  const tokenContent = (
+    <div
+      className="relative flex items-center justify-center overflow-visible"
+      style={{ width: fill, height: fill }}
+    >
+      {token.available && (
+        <>
+          <span className="absolute -inset-[18%] rounded-full border-2 border-yellow-300 shadow-[0_0_14px_rgba(250,204,21,0.95)]" />
+          <span className="absolute -inset-[26%] animate-ping rounded-full border-2 border-yellow-200/80" />
+        </>
+      )}
+      <span className="relative z-10 flex h-full w-full items-center justify-center overflow-visible">
+        {svgEl}
+      </span>
+    </div>
+  );
+
   if (!onMove) {
     return (
       <div
-        className="flex items-center justify-center"
+        className="relative z-20 flex items-center justify-center overflow-visible"
         style={{ width: fill, height: fill }}
       >
-        {svgEl}
+        {tokenContent}
       </div>
     );
   }
@@ -312,7 +359,7 @@ function TokenPin({
       type="button"
       onPointerDown={() => onMove(token.id)}
       onKeyDown={(e) => e.key === "Enter" && onMove(token.id)}
-      className="absolute inset-0 flex items-center justify-center focus:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400"
+      className="absolute inset-0 z-20 flex items-center justify-center overflow-visible focus:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400"
       style={{
         background: "transparent",
         border: "none",
@@ -321,7 +368,7 @@ function TokenPin({
         touchAction: "manipulation",
       }}
     >
-      {svgEl}
+      {tokenContent}
     </button>
   );
 }
@@ -376,10 +423,10 @@ function Cell({
   if (kind.t === "home-circle") {
     const hex = PALETTE[kind.color].main;
     return (
-      <div className="aspect-square bg-white flex items-center justify-center p-[5%]">
+      <div className="relative z-20 flex aspect-square items-center justify-center overflow-visible bg-white p-[5%]">
         {/* Decorative circle — shows under token if occupied */}
         <div
-          className="relative w-full h-full rounded-full flex items-center justify-center overflow-hidden"
+          className="relative z-10 flex h-full w-full items-center justify-center overflow-visible rounded-full"
           style={{
             background: `radial-gradient(circle at 36% 30%, ${hex}cc, ${hex})`,
             boxShadow: `inset 0 3px 8px rgba(0,0,0,.28), 0 0 0 3px white, 0 0 0 4px ${hex}55`,
@@ -403,7 +450,7 @@ function Cell({
 
           {/* Token (if present) rendered on top */}
           {first && (
-            <div className="absolute inset-[1%]">
+            <div className="absolute -inset-[4%] z-20 overflow-visible">
               <TokenPin
                 token={first}
                 fill="100%"
@@ -425,7 +472,7 @@ function Cell({
   if (kind.t === "run-up") {
     return (
       <div
-        className="aspect-square border border-[#c8c8c8] flex items-center justify-center relative overflow-hidden"
+        className="relative z-20 flex aspect-square items-center justify-center overflow-visible border border-[#c8c8c8]"
         style={{ backgroundColor: PALETTE[kind.color].tint }}
       >
         {!multi && first ? (
@@ -454,7 +501,7 @@ function Cell({
     const hex = PALETTE[kind.color].main;
     return (
       <div
-        className="aspect-square border border-[#c8c8c8] flex items-center justify-center relative overflow-hidden bg-white"
+        className="relative z-20 flex aspect-square items-center justify-center overflow-visible border border-[#c8c8c8] bg-white"
         style={{ boxShadow: `inset 0 0 0 2.5px ${hex}` }}
       >
         {!multi && first ? (
@@ -473,7 +520,7 @@ function Cell({
   // ── SAFE CELL — white with star icon ─────────────────────────────────────
   if (kind.t === "safe") {
     return (
-      <div className="aspect-square border border-[#c8c8c8] bg-white flex items-center justify-center relative overflow-hidden">
+      <div className="relative z-20 flex aspect-square items-center justify-center overflow-visible border border-[#c8c8c8] bg-white">
         {!multi && first && (
           <TokenPin token={first} fill="100%" onMove={first.available ? onMove : undefined} />
         )}
@@ -490,7 +537,7 @@ function Cell({
   // ── DIRECTION CELL — colored arrow at arm edges ───────────────────────────
   if (kind.t === "direction") {
     return (
-      <div className="aspect-square border border-[#c8c8c8] bg-white flex items-center justify-center relative overflow-hidden">
+      <div className="relative z-20 flex aspect-square items-center justify-center overflow-visible border border-[#c8c8c8] bg-white">
         {!multi && first && (
           <TokenPin token={first} fill="100%" onMove={first.available ? onMove : undefined} />
         )}
@@ -509,7 +556,7 @@ function Cell({
 
   // ── REGULAR PATH ──────────────────────────────────────────────────────────
   return (
-    <div className="aspect-square border border-[#c8c8c8] bg-white flex items-center justify-center relative overflow-hidden">
+    <div className="relative z-20 flex aspect-square items-center justify-center overflow-visible border border-[#c8c8c8] bg-white">
       {!multi && first && (
         <TokenPin token={first} fill="100%" onMove={first.available ? onMove : undefined} />
       )}
@@ -529,11 +576,11 @@ function MultiTokens({
   onMove?: (id: string) => void;
 }) {
   return (
-    <div className="absolute inset-[4%] grid grid-cols-2 grid-rows-2 gap-px">
+    <div className="absolute inset-[4%] z-20 grid grid-cols-2 grid-rows-2 gap-px overflow-visible">
       {tokens.slice(0, 4).map((t) => (
-        // relative + overflow-hidden makes each sub-cell a positioning context
+        // relative keeps each sub-cell a positioning context
         // so the button's absolute inset-0 stays within its own quadrant.
-        <div key={t.id} className="relative overflow-hidden flex items-center justify-center">
+        <div key={t.id} className="relative flex items-center justify-center overflow-visible">
           <TokenPin
             token={t}
             fill="100%"
@@ -595,6 +642,77 @@ function CenterOverlay() {
 // Perspective rotation — maps each player's color to the CSS rotation angle
 // that brings their home quadrant to the bottom-left of the board.
 // ─────────────────────────────────────────────────────────────────────────────
+const WIN_TOKEN_POSITIONS: Record<LudoColor, Array<{ left: string; top: string }>> = {
+  RED: [
+    { left: "50%", top: "30%" },
+    { left: "42%", top: "38%" },
+    { left: "58%", top: "38%" },
+    { left: "50%", top: "46%" },
+  ],
+  GREEN: [
+    { left: "70%", top: "50%" },
+    { left: "62%", top: "42%" },
+    { left: "62%", top: "58%" },
+    { left: "54%", top: "50%" },
+  ],
+  YELLOW: [
+    { left: "50%", top: "70%" },
+    { left: "42%", top: "62%" },
+    { left: "58%", top: "62%" },
+    { left: "50%", top: "54%" },
+  ],
+  BLUE: [
+    { left: "30%", top: "50%" },
+    { left: "38%", top: "42%" },
+    { left: "38%", top: "58%" },
+    { left: "46%", top: "50%" },
+  ],
+};
+
+function CenterWinTokens({
+  tokens,
+}: {
+  tokens: LudoToken[];
+}) {
+  if (tokens.length === 0) return null;
+
+  const byColor = tokens.reduce<Record<LudoColor, LudoToken[]>>(
+    (acc, token) => {
+      acc[token.color].push(token);
+      return acc;
+    },
+    { RED: [], GREEN: [], BLUE: [], YELLOW: [] },
+  );
+
+  return (
+    <div
+      className="absolute pointer-events-none z-20"
+      style={{ top: "40%", left: "40%", width: "20%", height: "20%" }}
+    >
+      {(Object.keys(byColor) as LudoColor[]).flatMap((color) =>
+        byColor[color].slice(0, 4).map((token, index) => {
+          const pos = WIN_TOKEN_POSITIONS[color][index];
+          return (
+            <div
+              key={token.id}
+              className="absolute flex items-center justify-center"
+              style={{
+                left: pos.left,
+                top: pos.top,
+                width: "24%",
+                height: "24%",
+                transform: "translate(-50%, -50%)",
+              }}
+            >
+              <TokenPin token={{ ...token, finished: true, home: false }} fill="100%" />
+            </div>
+          );
+        }),
+      )}
+    </div>
+  );
+}
+
 const VIEWER_ROTATION: Record<LudoColor, 0 | 90 | 180 | 270> = {
   BLUE:   0,    // already bottom-left
   GREEN:  90,   // bottom-right → rotate 90° CW → bottom-left
@@ -612,6 +730,13 @@ export function LudoBoard({
 }: LudoBoardProps) {
   const GRID = 15;
   const rotation = viewerColor != null ? VIEWER_ROTATION[viewerColor] : 0;
+  const centerWinTokens = useMemo(
+    () =>
+      Array.from(tokenPositions.values())
+        .flat()
+        .filter((token) => token.finished),
+    [tokenPositions],
+  );
 
   // Pre-compute all 225 cell classifications once (never changes).
   const cells = useMemo(
@@ -632,7 +757,7 @@ export function LudoBoard({
       >
         {/* ── 15×15 CSS Grid ──────────────────────────────────────────────── */}
         <div
-          className="absolute inset-0 grid"
+          className="absolute inset-0 z-10 grid"
           style={{ gridTemplateColumns: `repeat(${GRID}, 1fr)` }}
         >
           {cells.map(({ row, col, kind }) => (
@@ -647,9 +772,10 @@ export function LudoBoard({
 
         {/* ── Center triangle overlay ──────────────────────────────────────── */}
         <CenterOverlay />
+        <CenterWinTokens tokens={centerWinTokens} />
 
         {/* ── Board outer border ───────────────────────────────────────────── */}
-        <div className="absolute inset-0 border-2 border-[#888] pointer-events-none" />
+        <div className="pointer-events-none absolute inset-0 z-30 border-2 border-[#888]" />
       </div>
     </BoardRotationContext.Provider>
   );

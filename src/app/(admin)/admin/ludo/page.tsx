@@ -582,7 +582,7 @@ export default function LudoAdminPage() {
                       min={5}
                       value={turnInput !== "" ? turnInput : (settings.turnTimeoutSec ?? "")}
                       onChange={(e) => setTurnInput(e.target.value)}
-                      placeholder={String(settings.turnTimeoutSec ?? 30)}
+                      placeholder={String(settings.turnTimeoutSec ?? 20)}
                       className="h-8 w-full rounded-lg border border-slate-600 bg-slate-800 px-2 text-sm text-white outline-none focus:border-purple-500"
                     />
                     <button

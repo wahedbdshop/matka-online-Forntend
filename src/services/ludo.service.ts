@@ -46,6 +46,7 @@ export type LudoRoomPlayer = {
   color: "RED" | "GREEN" | "YELLOW" | "BLUE";
   connected: boolean;
   tokensFinished?: number;
+  autoMoveCount?: number;
   isYou?: boolean;
   tokens: LudoToken[];
 };
@@ -63,6 +64,7 @@ export type LudoRoom = {
   availableTokenIds?: string[];
   currentTurnUserId?: string | null;
   lastDiceValue?: number | null;
+  moveVersion?: number;
   winnerUserId?: string | null;
   turnEndsAt?: string | null;
   players: LudoRoomPlayer[];
