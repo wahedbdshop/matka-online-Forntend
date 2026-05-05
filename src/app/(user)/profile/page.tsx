@@ -354,10 +354,10 @@ export default function ProfilePage() {
               }
               disabled={isLanguageSaving}
             >
-              <SelectTrigger className="h-11 w-full rounded-xl border-slate-200 bg-slate-50 px-3 text-left dark:border-slate-600 dark:bg-slate-900">
+              <SelectTrigger className="h-11 w-full rounded-xl border-slate-200 bg-slate-50 px-3 text-left text-slate-950 dark:border-slate-600 dark:bg-slate-900 dark:text-white">
                 <SelectValue placeholder={t.common.selectLanguage} />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="bg-white text-slate-950 dark:bg-slate-900 dark:text-white">
                 {LANGUAGE_OPTIONS.map((option) => (
                   <SelectItem key={option.value} value={option.value}>
                     {option.nativeLabel} ({option.englishLabel})

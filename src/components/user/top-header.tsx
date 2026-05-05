@@ -98,13 +98,16 @@ export const TopHeader = ({
 
   return (
     <header className="sticky top-0 z-40 border-b border-slate-200 bg-white/95 shadow-sm backdrop-blur dark:border-slate-700 dark:bg-slate-900/95 dark:shadow-none">
-      <div className="relative max-w-lg mx-auto flex items-center justify-between px-4 h-[58px]">
+      <div className="relative mx-auto flex h-[58px] max-w-lg items-center justify-between px-4">
         {showAuthenticatedUi ? (
-          <Link href="/profile" className="min-w-0 max-w-[calc(50%-52px)]">
+          <Link
+            href="/profile"
+            className="min-w-0 max-w-[calc(50%-40px)] sm:max-w-[calc(50%-52px)]"
+          >
             <div className="flex items-center gap-2">
-              <div className="flex items-center gap-1.5 min-w-0 rounded-xl border border-slate-200 bg-slate-50 px-2 py-1.5 shadow-sm dark:border-slate-700 dark:bg-slate-800/80 dark:shadow-none">
-                <IndianRupee className="h-3.5 w-3.5 shrink-0 text-emerald-400" />
-                <p className="truncate text-sm font-bold leading-tight text-slate-950 dark:text-white">
+              <div className="flex min-w-0 items-center gap-1 rounded-xl border border-slate-200 bg-slate-50 px-1.5 py-1.5 shadow-sm dark:border-slate-700 dark:bg-slate-800/80 dark:shadow-none sm:gap-1.5 sm:px-2">
+                <IndianRupee className="h-3 w-3 shrink-0 text-emerald-400 sm:h-3.5 sm:w-3.5" />
+                <p className="truncate text-[13px] font-bold leading-tight text-slate-950 dark:text-white sm:text-sm">
                   {showBalance ? displayBalance : "••••••"}
                 </p>
                 <button
@@ -113,13 +116,13 @@ export const TopHeader = ({
                     e.preventDefault();
                     setShowBalance((previous) => !previous);
                   }}
-                  className="shrink-0 rounded-md p-1 text-slate-500 transition-colors hover:bg-slate-200 hover:text-slate-950 dark:text-slate-400 dark:hover:bg-slate-700 dark:hover:text-white"
+                  className="shrink-0 rounded-md p-0.5 text-slate-500 transition-colors hover:bg-slate-200 hover:text-slate-950 dark:text-slate-400 dark:hover:bg-slate-700 dark:hover:text-white sm:p-1"
                   aria-label={showBalance ? "Hide balance" : "Show balance"}
                 >
                   {showBalance ? (
-                    <EyeOff className="h-3.5 w-3.5" />
+                    <EyeOff className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
                   ) : (
-                    <Eye className="h-3.5 w-3.5" />
+                    <Eye className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
                   )}
                 </button>
                 <button
@@ -128,11 +131,11 @@ export const TopHeader = ({
                     e.preventDefault();
                     refetchProfile();
                   }}
-                  className="shrink-0 rounded-md p-1 text-slate-500 transition-colors hover:bg-slate-200 hover:text-slate-950 dark:text-slate-400 dark:hover:bg-slate-700 dark:hover:text-white"
+                  className="shrink-0 rounded-md p-0.5 text-slate-500 transition-colors hover:bg-slate-200 hover:text-slate-950 dark:text-slate-400 dark:hover:bg-slate-700 dark:hover:text-white sm:p-1"
                   aria-label={t.profile.refreshBalance}
                 >
                   <RefreshCw
-                    className={`h-3.5 w-3.5 ${isFetching ? "animate-spin" : ""}`}
+                    className={`h-3 w-3 sm:h-3.5 sm:w-3.5 ${isFetching ? "animate-spin" : ""}`}
                   />
                 </button>
               </div>
@@ -157,7 +160,7 @@ export const TopHeader = ({
             width={142}
             height={42}
             priority
-            className="header-logo-image h-9 w-auto object-contain sm:h-10"
+            className="header-logo-image h-8 w-auto object-contain sm:h-10"
           />
         </Link>
 
