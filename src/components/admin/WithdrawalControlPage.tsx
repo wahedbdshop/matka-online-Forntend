@@ -9,7 +9,6 @@ import {
   Clock3,
   MessageSquareWarning,
   Power,
-  Save,
 } from "lucide-react";
 import { AdminService } from "@/services/admin.service";
 import {
@@ -176,62 +175,58 @@ function WithdrawalControlForm({
     queryClient.invalidateQueries({ queryKey: ["public-settings"] });
   };
 
+  const persistDraftSettings = async () => {
+    const finalMessage = message.trim();
+    if (!finalMessage) {
+      throw new Error("Message is required");
+    }
+
+    if ((autoOpenTime && !autoCloseTime) || (!autoOpenTime && autoCloseTime)) {
+      throw new Error("Set both auto open and close times");
+    }
+
+    await Promise.all([
+      AdminService.updateSetting(SETTINGS.message, finalMessage),
+      AdminService.updateSetting(SETTINGS.manualOpenTime, manualOpenTime),
+      AdminService.updateSetting(
+        SETTINGS.autoDays,
+        stringifyScheduleDaysValue(selectedDays),
+      ),
+      AdminService.updateSetting(
+        SETTINGS.autoOpenTime,
+        normalizeScheduleTimeValue(autoOpenTime),
+      ),
+      AdminService.updateSetting(
+        SETTINGS.autoCloseTime,
+        normalizeScheduleTimeValue(autoCloseTime),
+      ),
+    ]);
+  };
+
   const { mutate: toggleManual } = useMutation({
-    mutationFn: (value: boolean) =>
-      AdminService.setGlobalToggle(SETTINGS.manualToggle, value),
+    mutationFn: async (value: boolean) => {
+      await persistDraftSettings();
+      return AdminService.setGlobalToggle(SETTINGS.manualToggle, value);
+    },
     onSuccess: () => {
-      toast.success("Manual withdrawal control updated");
+      toast.success("Withdrawal controls updated");
       invalidateSettings();
     },
     onError: (error: any) =>
-      toast.error(error?.response?.data?.message || "Failed to update"),
+      toast.error(error?.message || error?.response?.data?.message || "Failed to update"),
   });
 
   const { mutate: toggleAutoMode } = useMutation({
-    mutationFn: (value: string) =>
-      AdminService.updateSetting(SETTINGS.autoMode, value),
+    mutationFn: async (value: string) => {
+      await persistDraftSettings();
+      return AdminService.updateSetting(SETTINGS.autoMode, value);
+    },
     onSuccess: () => {
-      toast.success("Auto schedule mode updated");
+      toast.success("Withdrawal controls updated");
       invalidateSettings();
     },
     onError: (error: any) =>
-      toast.error(error?.response?.data?.message || "Failed to update"),
-  });
-
-  const { mutate: saveSettings, isPending: isSaving } = useMutation({
-    mutationFn: async () => {
-      const finalMessage = message.trim();
-      if (!finalMessage) {
-        throw new Error("Message is required");
-      }
-
-      if ((autoOpenTime && !autoCloseTime) || (!autoOpenTime && autoCloseTime)) {
-        throw new Error("Set both auto open and close times");
-      }
-
-      await Promise.all([
-        AdminService.updateSetting(SETTINGS.message, finalMessage),
-        AdminService.updateSetting(SETTINGS.manualOpenTime, manualOpenTime),
-        AdminService.updateSetting(
-          SETTINGS.autoDays,
-          stringifyScheduleDaysValue(selectedDays),
-        ),
-        AdminService.updateSetting(
-          SETTINGS.autoOpenTime,
-          normalizeScheduleTimeValue(autoOpenTime),
-        ),
-        AdminService.updateSetting(
-          SETTINGS.autoCloseTime,
-          normalizeScheduleTimeValue(autoCloseTime),
-        ),
-      ]);
-    },
-    onSuccess: () => {
-      toast.success("Withdrawal controls saved");
-      invalidateSettings();
-    },
-    onError: (error: any) =>
-      toast.error(error?.message || error?.response?.data?.message || "Failed to save"),
+      toast.error(error?.message || error?.response?.data?.message || "Failed to update"),
   });
 
   const toggleDay = (day: number) => {
@@ -409,6 +404,10 @@ function WithdrawalControlForm({
           Withdrawal off thakle user ei message dekhbe. Manual aar auto dui mode-r jonnoi same message use hobe.
         </p>
 
+        <p className="text-[11px] text-slate-500">
+          Uporer toggle use korlei current message, day, aar time settings save hoye jabe.
+        </p>
+
         <div>
           <label className="mb-1.5 block text-[11px] text-slate-400">
             Message Shown To Users *
@@ -443,15 +442,6 @@ function WithdrawalControlForm({
           )}
         </div>
 
-        <button
-          type="button"
-          onClick={() => saveSettings()}
-          disabled={isSaving}
-          className="flex items-center gap-2 rounded-lg bg-orange-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-orange-700 disabled:opacity-50"
-        >
-          <Save className="h-3.5 w-3.5" />
-          {isSaving ? "Saving..." : "Save Withdrawal Controls"}
-        </button>
       </div>
     </div>
   );

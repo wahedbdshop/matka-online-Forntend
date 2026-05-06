@@ -9,7 +9,6 @@ import {
   Clock3,
   MessageSquareWarning,
   Power,
-  Save,
 } from "lucide-react";
 import { AdminService } from "@/services/admin.service";
 import {
@@ -184,59 +183,55 @@ function DepositControlForm({
     queryClient.invalidateQueries({ queryKey: ["public-settings"] });
   };
 
+  const persistDraftSettings = async () => {
+    const finalMessage = draftMessage.trim();
+    if (!finalMessage) {
+      throw new Error("Message is required");
+    }
+
+    if ((draftAutoOpenTime && !draftAutoCloseTime) || (!draftAutoOpenTime && draftAutoCloseTime)) {
+      throw new Error("Set both auto open and close times");
+    }
+
+    await Promise.all([
+      AdminService.updateSetting(SETTINGS.message, finalMessage),
+      AdminService.updateSetting(SETTINGS.manualOpenTime, draftManualOpenTime),
+      AdminService.updateSetting(SETTINGS.autoDays, stringifyScheduleDaysValue(draftAutoDays)),
+      AdminService.updateSetting(
+        SETTINGS.autoOpenTime,
+        normalizeScheduleTimeValue(draftAutoOpenTime),
+      ),
+      AdminService.updateSetting(
+        SETTINGS.autoCloseTime,
+        normalizeScheduleTimeValue(draftAutoCloseTime),
+      ),
+    ]);
+  };
+
   const { mutate: toggleManual } = useMutation({
-    mutationFn: (value: boolean) =>
-      AdminService.setGlobalToggle(SETTINGS.manualToggle, value),
+    mutationFn: async (value: boolean) => {
+      await persistDraftSettings();
+      return AdminService.setGlobalToggle(SETTINGS.manualToggle, value);
+    },
     onSuccess: () => {
-      toast.success("Manual deposit control updated");
+      toast.success("Deposit controls updated");
       invalidateSettings();
     },
     onError: (error: any) =>
-      toast.error(error?.response?.data?.message || "Failed to update"),
+      toast.error(error?.message || error?.response?.data?.message || "Failed to update"),
   });
 
   const { mutate: toggleAutoMode } = useMutation({
-    mutationFn: (value: string) =>
-      AdminService.updateSetting(SETTINGS.autoMode, value),
+    mutationFn: async (value: string) => {
+      await persistDraftSettings();
+      return AdminService.updateSetting(SETTINGS.autoMode, value);
+    },
     onSuccess: () => {
-      toast.success("Auto schedule mode updated");
+      toast.success("Deposit controls updated");
       invalidateSettings();
     },
     onError: (error: any) =>
-      toast.error(error?.response?.data?.message || "Failed to update"),
-  });
-
-  const { mutate: saveSettings, isPending: isSaving } = useMutation({
-    mutationFn: async () => {
-      const finalMessage = draftMessage.trim();
-      if (!finalMessage) {
-        throw new Error("Message is required");
-      }
-
-      if ((draftAutoOpenTime && !draftAutoCloseTime) || (!draftAutoOpenTime && draftAutoCloseTime)) {
-        throw new Error("Set both auto open and close times");
-      }
-
-      await Promise.all([
-        AdminService.updateSetting(SETTINGS.message, finalMessage),
-        AdminService.updateSetting(SETTINGS.manualOpenTime, draftManualOpenTime),
-        AdminService.updateSetting(SETTINGS.autoDays, stringifyScheduleDaysValue(draftAutoDays)),
-        AdminService.updateSetting(
-          SETTINGS.autoOpenTime,
-          normalizeScheduleTimeValue(draftAutoOpenTime),
-        ),
-        AdminService.updateSetting(
-          SETTINGS.autoCloseTime,
-          normalizeScheduleTimeValue(draftAutoCloseTime),
-        ),
-      ]);
-    },
-    onSuccess: () => {
-      toast.success("Deposit controls saved");
-      invalidateSettings();
-    },
-    onError: (error: any) =>
-      toast.error(error?.message || error?.response?.data?.message || "Failed to save"),
+      toast.error(error?.message || error?.response?.data?.message || "Failed to update"),
   });
 
   const toggleDay = (day: number) => {
@@ -413,6 +408,10 @@ function DepositControlForm({
           Deposit off thakle user ei message dekhbe. Manual aar auto dui mode-r jonnoi same message use hobe.
         </p>
 
+        <p className="text-[11px] text-slate-500">
+          Uporer toggle use korlei current message, day, aar time settings save hoye jabe.
+        </p>
+
         <div>
           <label className="mb-1.5 block text-[11px] text-slate-400">
             Message Shown To Users *
@@ -447,15 +446,6 @@ function DepositControlForm({
           )}
         </div>
 
-        <button
-          type="button"
-          onClick={() => saveSettings()}
-          disabled={isSaving}
-          className="flex items-center gap-2 rounded-lg bg-purple-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-purple-700 disabled:opacity-50"
-        >
-          <Save className="h-3.5 w-3.5" />
-          {isSaving ? "Saving..." : "Save Deposit Controls"}
-        </button>
       </div>
     </div>
   );
