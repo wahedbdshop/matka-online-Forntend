@@ -26,6 +26,11 @@ import {
 } from "lucide-react";
 import { DepositService } from "@/services/deposit.service";
 import { AdminService } from "@/services/admin.service";
+import {
+  getNextScheduledOpenIso,
+  isFeatureEnabledBySchedule,
+  parseScheduleDaysValue,
+} from "@/lib/feature-schedule";
 import { cn } from "@/lib/utils";
 import { useLanguage } from "@/providers/language-provider";
 
@@ -576,16 +581,47 @@ export default function DepositPage() {
   });
 
   const globalSettings = globalData?.data ?? [];
-  const isDepositOn = settingsLoading
-    ? false
-    : globalSettings.find((s: any) => s.key === "global_deposit")?.value !==
-      "false";
+  const manualDepositEnabled =
+    globalSettings.find((s: any) => s.key === "global_deposit")?.value !==
+    "false";
   const depositMessage =
     globalSettings.find((s: any) => s.key === "global_deposit_message")
       ?.value || "Deposit is currently unavailable. Please try again later.";
   const depositOpenTime =
     globalSettings.find((s: any) => s.key === "global_deposit_open_time")
       ?.value || "";
+  const autoModeEnabled =
+    globalSettings.find((s: any) => s.key === "global_deposit_auto_mode")
+      ?.value === "true";
+  const autoOpenTime =
+    globalSettings.find((s: any) => s.key === "global_deposit_auto_open_time")
+      ?.value || "";
+  const autoCloseTime =
+    globalSettings.find((s: any) => s.key === "global_deposit_auto_close_time")
+      ?.value || "";
+  const autoDays = parseScheduleDaysValue(
+    globalSettings.find((s: any) => s.key === "global_deposit_auto_days")
+      ?.value,
+  );
+  const scheduleDepositEnabled = isFeatureEnabledBySchedule({
+    enabled: autoModeEnabled,
+    openTime: autoOpenTime,
+    closeTime: autoCloseTime,
+    selectedDays: autoDays,
+  });
+  const effectiveDepositOpenTime = autoModeEnabled
+    ? getNextScheduledOpenIso({
+        enabled: autoModeEnabled,
+        openTime: autoOpenTime,
+        closeTime: autoCloseTime,
+        selectedDays: autoDays,
+      })
+    : depositOpenTime;
+  const isDepositOn = settingsLoading
+    ? false
+    : autoModeEnabled
+      ? scheduleDepositEnabled
+      : manualDepositEnabled;
 
   const { data: methodsData } = useQuery({
     queryKey: ["deposit-methods"],
@@ -859,7 +895,7 @@ export default function DepositPage() {
           {!settingsLoading && !isDepositOn && (
             <DepositOffBanner
               message={depositMessage}
-              openTimeIso={depositOpenTime}
+              openTimeIso={effectiveDepositOpenTime}
             />
           )}
 

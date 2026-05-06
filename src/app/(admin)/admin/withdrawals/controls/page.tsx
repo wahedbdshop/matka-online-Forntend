@@ -1,5 +1,5 @@
-import { FeatureControlPage } from "@/components/admin/FeatureControlPage";
+import { WithdrawalControlPage } from "@/components/admin/WithdrawalControlPage";
 
 export default function WithdrawControlsPage() {
-  return <FeatureControlPage feature="withdraw" />;
+  return <WithdrawalControlPage />;
 }

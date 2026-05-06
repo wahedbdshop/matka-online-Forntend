@@ -1,5 +1,5 @@
-import { FeatureControlPage } from "@/components/admin/FeatureControlPage";
+import { DepositControlPage } from "@/components/admin/DepositControlPage";
 
 export default function DepositControlsPage() {
-  return <FeatureControlPage feature="deposit" />;
+  return <DepositControlPage />;
 }

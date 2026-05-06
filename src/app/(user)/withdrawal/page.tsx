@@ -3,7 +3,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import { useState, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
@@ -23,6 +23,11 @@ import { WithdrawalService } from "@/services/withdrawal.service";
 import { DepositService } from "@/services/deposit.service";
 import { AdminService } from "@/services/admin.service";
 import { UserService } from "@/services/user.service"; // profile fetch
+import {
+  getNextScheduledOpenIso,
+  isFeatureEnabledBySchedule,
+  parseScheduleDaysValue,
+} from "@/lib/feature-schedule";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/store/auth.store";
 import { useLanguage } from "@/providers/language-provider";
@@ -161,7 +166,40 @@ function calcCharge(amount: number, chargeType: string, chargeVal: number) {
 }
 
 // ─── Banners ──────────────────────────────────────────────────
-function WithdrawOffBanner({ message }: { message: string }) {
+function useCountdown(targetIso: string) {
+  const [timeLeft, setTimeLeft] = useState(0);
+
+  useEffect(() => {
+    if (!targetIso) return;
+    const target = new Date(targetIso).getTime();
+    const tick = () =>
+      setTimeLeft(Math.max(0, Math.floor((target - Date.now()) / 1000)));
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, [targetIso]);
+
+  const h = Math.floor(timeLeft / 3600);
+  const m = Math.floor((timeLeft % 3600) / 60);
+  const s = timeLeft % 60;
+
+  return {
+    timeLeft,
+    formatted: `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`,
+    isExpired: timeLeft === 0,
+  };
+}
+
+function WithdrawOffBanner({
+  message,
+  openTimeIso,
+}: {
+  message: string;
+  openTimeIso: string;
+}) {
+  const { formatted, isExpired } = useCountdown(openTimeIso);
+  const hasTimer = !!openTimeIso && !isExpired;
+
   return (
     <div className="rounded-2xl border border-red-500/30 bg-gradient-to-br from-red-950/40 to-slate-900/60 p-6 flex flex-col items-center gap-4 text-center">
       <div className="w-16 h-16 rounded-2xl bg-red-500/10 border border-red-500/20 flex items-center justify-center">
@@ -173,9 +211,44 @@ function WithdrawOffBanner({ message }: { message: string }) {
         </p>
         <p className="text-slate-400 text-sm leading-relaxed">{message}</p>
       </div>
-      <div className="flex items-center gap-2 text-slate-500 text-xs">
-        <TimerOff className="h-3.5 w-3.5" /> Please check back later
-      </div>
+
+      {hasTimer && (
+        <div className="w-full rounded-xl bg-slate-800/60 border border-slate-700 p-4 space-y-2">
+          <p className="text-slate-500 text-xs uppercase tracking-wider">
+            Withdrawal opens in
+          </p>
+          <div className="flex items-center justify-center gap-2">
+            {formatted.split(":").map((unit, index) => (
+              <div key={index} className="flex items-center gap-2">
+                <div className="rounded-xl bg-slate-900 border border-slate-700 px-4 py-2 min-w-[56px] text-center">
+                  <p className="text-white font-mono font-bold text-2xl tabular-nums">
+                    {unit}
+                  </p>
+                  <p className="text-slate-500 text-[10px] mt-0.5">
+                    {index === 0 ? "HRS" : index === 1 ? "MIN" : "SEC"}
+                  </p>
+                </div>
+                {index < 2 && (
+                  <span className="text-slate-500 font-bold text-xl">:</span>
+                )}
+              </div>
+            ))}
+          </div>
+          <p className="text-slate-600 text-[11px]">
+            Opens at:{" "}
+            {new Date(openTimeIso).toLocaleString("en-BD", {
+              dateStyle: "medium",
+              timeStyle: "short",
+            })}
+          </p>
+        </div>
+      )}
+
+      {!hasTimer && (
+        <div className="flex items-center gap-2 text-slate-500 text-xs">
+          <TimerOff className="h-3.5 w-3.5" /> Please check back later
+        </div>
+      )}
     </div>
   );
 }
@@ -306,13 +379,47 @@ export default function WithdrawPage() {
     queryFn: () => AdminService.getPublicSettings(),
   });
   const globalSettings = globalData?.data ?? [];
-  const isWithdrawOn = settingsLoading
-    ? false
-    : globalSettings.find((s: any) => s.key === "global_withdraw")?.value !==
-      "false";
+  const manualWithdrawEnabled =
+    globalSettings.find((s: any) => s.key === "global_withdraw")?.value !==
+    "false";
   const withdrawMessage =
     globalSettings.find((s: any) => s.key === "global_withdraw_message")
       ?.value || "Withdrawal is currently unavailable. Please try again later.";
+  const withdrawOpenTime =
+    globalSettings.find((s: any) => s.key === "global_withdraw_open_time")
+      ?.value || "";
+  const autoModeEnabled =
+    globalSettings.find((s: any) => s.key === "global_withdraw_auto_mode")
+      ?.value === "true";
+  const autoOpenTime =
+    globalSettings.find((s: any) => s.key === "global_withdraw_auto_open_time")
+      ?.value || "";
+  const autoCloseTime =
+    globalSettings.find((s: any) => s.key === "global_withdraw_auto_close_time")
+      ?.value || "";
+  const autoDays = parseScheduleDaysValue(
+    globalSettings.find((s: any) => s.key === "global_withdraw_auto_days")
+      ?.value,
+  );
+  const scheduleWithdrawEnabled = isFeatureEnabledBySchedule({
+    enabled: autoModeEnabled,
+    openTime: autoOpenTime,
+    closeTime: autoCloseTime,
+    selectedDays: autoDays,
+  });
+  const effectiveWithdrawOpenTime = autoModeEnabled
+    ? getNextScheduledOpenIso({
+        enabled: autoModeEnabled,
+        openTime: autoOpenTime,
+        closeTime: autoCloseTime,
+        selectedDays: autoDays,
+      })
+    : withdrawOpenTime;
+  const isWithdrawOn = settingsLoading
+    ? false
+    : autoModeEnabled
+      ? scheduleWithdrawEnabled
+      : manualWithdrawEnabled;
 
   const { data: methodsData } = useQuery({
     queryKey: ["withdraw-methods"],
@@ -690,7 +797,10 @@ export default function WithdrawPage() {
           {settingsLoading && <SettingsSkeleton />}
 
           {!settingsLoading && !isWithdrawOn && (
-            <WithdrawOffBanner message={withdrawMessage} />
+            <WithdrawOffBanner
+              message={withdrawMessage}
+              openTimeIso={effectiveWithdrawOpenTime}
+            />
           )}
 
           {!settingsLoading && isWithdrawOn && (
