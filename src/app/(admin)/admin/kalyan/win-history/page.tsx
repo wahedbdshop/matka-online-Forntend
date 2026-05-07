@@ -126,6 +126,59 @@ function sortEntriesByNewest(items: any[]) {
   });
 }
 
+function getEntryItemCount(entry: any) {
+  return Array.isArray(entry?.items) ? entry.items.length : 0;
+}
+
+function pickRicherEntry(currentEntry: any, nextEntry: any) {
+  if (!currentEntry) return nextEntry;
+  if (!nextEntry) return currentEntry;
+
+  const currentItemCount = getEntryItemCount(currentEntry);
+  const nextItemCount = getEntryItemCount(nextEntry);
+
+  if (nextItemCount !== currentItemCount) {
+    return nextItemCount > currentItemCount ? nextEntry : currentEntry;
+  }
+
+  const currentUpdatedAt = new Date(
+    currentEntry?.updatedAt ?? currentEntry?.createdAt ?? 0,
+  ).getTime();
+  const nextUpdatedAt = new Date(
+    nextEntry?.updatedAt ?? nextEntry?.createdAt ?? 0,
+  ).getTime();
+
+  if (nextUpdatedAt !== currentUpdatedAt) {
+    return nextUpdatedAt > currentUpdatedAt ? nextEntry : currentEntry;
+  }
+
+  return currentEntry;
+}
+
+function mergeEntriesById(entries: any[]) {
+  return sortEntriesByNewest(
+    entries.reduce((accumulator: any[], entry: any) => {
+      const entryId = String(entry?.id ?? "");
+      if (!entryId) return accumulator;
+
+      const existingIndex = accumulator.findIndex(
+        (candidate) => String(candidate?.id ?? "") === entryId,
+      );
+
+      if (existingIndex === -1) {
+        accumulator.push(entry);
+        return accumulator;
+      }
+
+      accumulator[existingIndex] = pickRicherEntry(
+        accumulator[existingIndex],
+        entry,
+      );
+      return accumulator;
+    }, []),
+  );
+}
+
 function normalizeSearchTerm(value: unknown) {
   return String(value ?? "").trim().toLowerCase();
 }
@@ -275,6 +328,58 @@ function KalyanWinHistoryPageContent() {
   const [page, setPage] = useState(1);
   const [detailEntry, setDetailEntry] = useState<any>(null);
 
+  const fetchEntryDataset = async (params: {
+    search?: string;
+    marketId?: string;
+    sessionType?: "" | "OPEN" | "CLOSE";
+    playType?: string;
+    date?: string;
+    page?: number;
+    limit?: number;
+  }) => {
+    const baseResponse = await KalyanAdminService.getAdminEntries({
+      search: params.search,
+      marketId: params.marketId,
+      sessionType: params.sessionType || undefined,
+      playType: params.playType,
+      date: params.date,
+      page: params.page,
+      limit: params.limit,
+    }).catch(() => null);
+
+    if (params.playType) {
+      const entries = sortEntriesByNewest(extractEntryList(baseResponse));
+      return {
+        entries,
+        total: entries.length,
+      };
+    }
+
+    const playTypeResponses = await Promise.all(
+      PLAY_TYPES.map((playType) =>
+        KalyanAdminService.getAdminEntries({
+          search: params.search,
+          marketId: params.marketId,
+          sessionType: params.sessionType || undefined,
+          playType,
+          date: params.date,
+          page: 1,
+          limit: params.limit,
+        }).catch(() => null),
+      ),
+    );
+
+    const entries = mergeEntriesById([
+      ...extractEntryList(baseResponse),
+      ...playTypeResponses.flatMap((response) => extractEntryList(response)),
+    ]);
+
+    return {
+      entries,
+      total: entries.length,
+    };
+  };
+
   useEffect(() => {
     if (resultAddedAt) {
       setSettlementRefreshActive(true);
@@ -291,8 +396,8 @@ function KalyanWinHistoryPageContent() {
   const uniqueMarkets = Array.from(
     new Map(markets.map((market: any) => [String(market?.id ?? ""), market])).values(),
   ).filter((market: any) => String(market?.id ?? "").trim().length > 0);
-  const closeFinalMarketIds = useMemo(() => {
-    if (settlementView !== "close-final" || !marketFilter) {
+  const relatedMarketIds = useMemo(() => {
+    if (!marketFilter) {
       return [];
     }
 
@@ -313,12 +418,11 @@ function KalyanWinHistoryPageContent() {
       .map((market: any) => String(market.id));
 
     return relatedMarketIds.length > 0 ? relatedMarketIds : [marketFilter];
-  }, [marketFilter, settlementView, uniqueMarkets]);
-  const closeFinalMarketIdsKey = closeFinalMarketIds.join("|");
+  }, [marketFilter, uniqueMarkets]);
+  const relatedMarketIdsKey = relatedMarketIds.join("|");
   const usingRelatedMarketDataset =
-    settlementView === "close-final" &&
     marketFilter &&
-    closeFinalMarketIds.length > 1;
+    relatedMarketIds.length > 1;
   const marketOptions = markets.flatMap((market: any) => {
     const explicitSessionType = resolveMarketSessionType(market);
 
@@ -384,14 +488,14 @@ function KalyanWinHistoryPageContent() {
       resultAddedAt,
     ],
     queryFn: () =>
-      KalyanAdminService.getAdminEntries({
+      fetchEntryDataset({
         search: search || undefined,
         marketId: marketFilter || undefined,
         sessionType: sessionFilter || undefined,
         playType: playTypeFilter || undefined,
         date: dateFilter || undefined,
-        page,
-        limit: LIMIT,
+        page: 1,
+        limit: ALL_MARKETS_BASE_LIMIT,
       }),
     enabled:
       !usingRelatedMarketDataset && (!!marketFilter || marketOptions.length === 0),
@@ -408,7 +512,7 @@ function KalyanWinHistoryPageContent() {
       dateFilter,
       resultAddedAt,
       usingRelatedMarketDataset
-        ? closeFinalMarketIdsKey
+        ? relatedMarketIdsKey
         : uniqueMarkets.map((market: any) => market.id).join("|"),
     ],
     enabled:
@@ -417,8 +521,8 @@ function KalyanWinHistoryPageContent() {
     refetchInterval: settlementRefreshActive ? 1500 : false,
     queryFn: async () => {
       const responses = await Promise.all(
-        (usingRelatedMarketDataset ? closeFinalMarketIds : uniqueMarkets.map((market: any) => market.id)).map((marketId: string) =>
-          KalyanAdminService.getAdminEntries({
+        (usingRelatedMarketDataset ? relatedMarketIds : uniqueMarkets.map((market: any) => market.id)).map((marketId: string) =>
+          fetchEntryDataset({
             search: search || undefined,
             marketId,
             playType: playTypeFilter || undefined,
@@ -429,17 +533,9 @@ function KalyanWinHistoryPageContent() {
         ),
       );
 
-      const deduped = new Map<string, any>();
-
-      responses.forEach((response) => {
-        extractEntryList(response).forEach((entry) => {
-          const key = String(entry?.id ?? "");
-          if (!key || deduped.has(key)) return;
-          deduped.set(key, entry);
-        });
-      });
-
-      const entries = sortEntriesByNewest([...deduped.values()]);
+      const entries = mergeEntriesById(
+        responses.flatMap((response) => response?.entries ?? []),
+      );
       return {
         entries,
         total: entries.length,
@@ -458,7 +554,7 @@ function KalyanWinHistoryPageContent() {
     enabled: !marketFilter,
     refetchInterval: settlementRefreshActive ? 1500 : false,
     queryFn: async () => {
-      const response = await KalyanAdminService.getAdminEntries({
+      const response = await fetchEntryDataset({
         search: search || undefined,
         playType: playTypeFilter || undefined,
         date: dateFilter || undefined,
@@ -466,7 +562,7 @@ function KalyanWinHistoryPageContent() {
         limit: ALL_MARKETS_BASE_LIMIT,
       }).catch(() => null);
 
-      const entries = sortEntriesByNewest(extractEntryList(response));
+      const entries = sortEntriesByNewest(response?.entries ?? []);
       return {
         entries,
         total: entries.length,
@@ -479,18 +575,15 @@ function KalyanWinHistoryPageContent() {
     ? loadingAllMarkets || (!usingRelatedMarketDataset && loadingAllMarketsBase)
     : isLoading;
   const mergedAllMarketEntries = usingAllMarketsDataset
-    ? sortEntriesByNewest([
+    ? mergeEntriesById([
         ...(!usingRelatedMarketDataset ? (allMarketsBaseData?.entries ?? []) : []),
         ...(allMarketsData?.entries ?? []),
-      ]).filter(
-        (entry, index, allEntries) =>
-          allEntries.findIndex((candidate) => String(candidate?.id ?? "") === String(entry?.id ?? "")) === index,
-      )
+      ])
     : [];
   const normalizedSearch = normalizeSearchTerm(search);
   const rawEntries: any[] = usingAllMarketsDataset
     ? mergedAllMarketEntries
-    : extractEntryList(data);
+    : data?.entries ?? [];
   const searchedEntries = rawEntries.filter((entry) =>
     matchesUserSearch(entry, normalizedSearch),
   );
@@ -504,7 +597,7 @@ function KalyanWinHistoryPageContent() {
   });
   const total = usingAllMarketsDataset
     ? entries.length
-    : data?.data?.total ?? entries.length;
+    : entries.length;
   const totalPages = Math.max(1, Math.ceil(total / LIMIT));
 
   const rows = useMemo(

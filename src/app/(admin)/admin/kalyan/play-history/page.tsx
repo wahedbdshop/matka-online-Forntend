@@ -136,6 +136,47 @@ function sortEntriesByNewest(items: any[]) {
   });
 }
 
+function getEntryItemCount(entry: any) {
+  return Array.isArray(entry?.items) ? entry.items.length : 0;
+}
+
+function pickRicherEntry(currentEntry: any, nextEntry: any) {
+  if (!currentEntry) return nextEntry;
+  if (!nextEntry) return currentEntry;
+
+  const currentItemCount = getEntryItemCount(currentEntry);
+  const nextItemCount = getEntryItemCount(nextEntry);
+
+  if (nextItemCount !== currentItemCount) {
+    return nextItemCount > currentItemCount ? nextEntry : currentEntry;
+  }
+
+  const currentUpdatedAt = new Date(
+    currentEntry?.updatedAt ?? currentEntry?.createdAt ?? 0,
+  ).getTime();
+  const nextUpdatedAt = new Date(
+    nextEntry?.updatedAt ?? nextEntry?.createdAt ?? 0,
+  ).getTime();
+
+  if (nextUpdatedAt !== currentUpdatedAt) {
+    return nextUpdatedAt > currentUpdatedAt ? nextEntry : currentEntry;
+  }
+
+  return currentEntry;
+}
+
+function mergeEntriesById(entries: any[]) {
+  const deduped = new Map<string, any>();
+
+  entries.forEach((entry) => {
+    const key = String(entry?.id ?? "");
+    if (!key) return;
+    deduped.set(key, pickRicherEntry(deduped.get(key), entry));
+  });
+
+  return sortEntriesByNewest([...deduped.values()]);
+}
+
 function normalizeSearchTerm(value: unknown) {
   return String(value ?? "").trim().toLowerCase();
 }
@@ -184,6 +225,61 @@ export default function KalyanPlayHistoryPage() {
   const [editAmount, setEditAmount] = useState("");
   const [balanceAdjustment, setBalanceAdjustment] = useState("");
   const [editNote, setEditNote] = useState("");
+
+  const fetchEntryDataset = async (params: {
+    search?: string;
+    marketId?: string;
+    sessionType?: "" | "OPEN" | "CLOSE";
+    playType?: string;
+    status?: string;
+    date?: string;
+    page?: number;
+    limit?: number;
+  }) => {
+    const baseResponse = await KalyanAdminService.getAdminEntries({
+      search: params.search,
+      marketId: params.marketId,
+      sessionType: params.sessionType || undefined,
+      playType: params.playType,
+      status: params.status,
+      date: params.date,
+      page: params.page,
+      limit: params.limit,
+    }).catch(() => null);
+
+    if (params.playType) {
+      const entries = sortEntriesByNewest(extractEntryList(baseResponse));
+      return {
+        entries,
+        total: entries.length,
+      };
+    }
+
+    const playTypeResponses = await Promise.all(
+      PLAY_TYPES.map((playType) =>
+        KalyanAdminService.getAdminEntries({
+          search: params.search,
+          marketId: params.marketId,
+          sessionType: params.sessionType || undefined,
+          playType,
+          status: params.status,
+          date: params.date,
+          page: 1,
+          limit: params.limit,
+        }).catch(() => null),
+      ),
+    );
+
+    const entries = mergeEntriesById([
+      ...extractEntryList(baseResponse),
+      ...playTypeResponses.flatMap((response) => extractEntryList(response)),
+    ]);
+
+    return {
+      entries,
+      total: entries.length,
+    };
+  };
 
   const { data: marketsData } = useQuery({
     queryKey: ["kalyan-markets-all"],
@@ -236,7 +332,7 @@ export default function KalyanPlayHistoryPage() {
     ],
     enabled: !!marketFilter || marketOptions.length === 0,
     queryFn: () =>
-      KalyanAdminService.getAdminEntries({
+      fetchEntryDataset({
         search: search || undefined,
         marketId: marketFilter || undefined,
         sessionType: sessionFilter || undefined,
@@ -261,7 +357,7 @@ export default function KalyanPlayHistoryPage() {
     queryFn: async () => {
       const responses = await Promise.all(
         uniqueMarkets.map((market: any) =>
-          KalyanAdminService.getAdminEntries({
+          fetchEntryDataset({
             search: search || undefined,
             marketId: market.id,
             playType: playTypeFilter || undefined,
@@ -272,18 +368,9 @@ export default function KalyanPlayHistoryPage() {
           }).catch(() => null),
         ),
       );
-
-      const deduped = new Map<string, any>();
-
-      responses.forEach((response) => {
-        extractEntryList(response).forEach((entry) => {
-          const key = String(entry?.id ?? "");
-          if (!key || deduped.has(key)) return;
-          deduped.set(key, entry);
-        });
-      });
-
-      const entries = sortEntriesByNewest([...deduped.values()]);
+      const entries = mergeEntriesById(
+        responses.flatMap((response) => response?.entries ?? []),
+      );
       return {
         entries,
         total: entries.length,
@@ -301,7 +388,7 @@ export default function KalyanPlayHistoryPage() {
     ],
     enabled: !marketFilter,
     queryFn: async () => {
-      const response = await KalyanAdminService.getAdminEntries({
+      const response = await fetchEntryDataset({
         search: search || undefined,
         playType: playTypeFilter || undefined,
         status: statusFilter || undefined,
@@ -309,8 +396,7 @@ export default function KalyanPlayHistoryPage() {
         page: 1,
         limit: ALL_MARKETS_BASE_LIMIT,
       }).catch(() => null);
-
-      const entries = sortEntriesByNewest(extractEntryList(response));
+      const entries = sortEntriesByNewest(response?.entries ?? []);
       return {
         entries,
         total: entries.length,
@@ -333,7 +419,7 @@ export default function KalyanPlayHistoryPage() {
   const normalizedSearch = normalizeSearchTerm(search);
   const rawEntries: any[] = usingAllMarketsDataset
     ? mergedAllMarketEntries
-    : extractEntryList(data);
+    : data?.entries ?? [];
   const isRemovedEntity = (value: any) =>
     isRemovedStatus(value?.gameStatus) ||
     isRemovedStatus(value?.status) ||
@@ -399,7 +485,7 @@ export default function KalyanPlayHistoryPage() {
   });
   const total: number = usingAllMarketsDataset
     ? mergedAllMarketEntries.length
-    : data?.data?.total ?? entries.length;
+    : data?.total ?? entries.length;
   const totalPages = Math.max(1, Math.ceil(total / LIMIT));
 
   const formatDate = (value?: string) => {

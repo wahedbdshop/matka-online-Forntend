@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
@@ -38,15 +38,20 @@ const DEFAULT_MESSAGE =
 function Toggle({
   checked,
   onClick,
+  disabled = false,
 }: {
   checked: boolean;
   onClick: () => void;
+  disabled?: boolean;
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
-      className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full border-2 transition-all duration-200 ${
+      disabled={disabled}
+      className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full border-2 transition-all duration-200 ${
+        disabled ? "cursor-not-allowed opacity-60" : "cursor-pointer"
+      } ${
         checked
           ? "bg-purple-500 border-transparent shadow-[0_0_8px_rgba(0,0,0,0.3)]"
           : "bg-slate-700 border-slate-600"
@@ -135,6 +140,7 @@ function DepositControlForm({
   const [autoOpenTime, setAutoOpenTime] = useState(savedAutoOpenTime);
   const [autoCloseTime, setAutoCloseTime] = useState(savedAutoCloseTime);
   const [selectedDays, setSelectedDays] = useState<number[]>(savedAutoDays);
+  const didRepairAutoModeRef = useRef(false);
 
   const draftMessage = message;
   const draftManualOpenTime = manualOpenTime;
@@ -159,14 +165,20 @@ function DepositControlForm({
     selectedDays: draftAutoDays,
   });
 
-  const effectiveEnabled = autoModeEnabled ? autoScheduleActive : manualEnabled;
+  const masterToggleEnabled = manualEnabled;
+  const manualModeEnabled = !autoModeEnabled && masterToggleEnabled;
+  const effectiveEnabled = autoModeEnabled ? autoScheduleActive : manualModeEnabled;
   const effectiveModeLabel = autoModeEnabled ? "Auto Schedule" : "Manual";
 
   const statusText = useMemo(() => {
     if (!autoModeEnabled) {
-      return manualEnabled
+      return manualModeEnabled
         ? "Deposits are live because manual mode is enabled."
         : "Deposits are closed because manual mode is disabled.";
+    }
+
+    if (!masterToggleEnabled) {
+      return "Auto mode is syncing the required backend toggle. Please wait a moment.";
     }
 
     if (!autoScheduleConfigured) {
@@ -176,12 +188,40 @@ function DepositControlForm({
     return autoScheduleActive
       ? "Deposits are currently open from the auto schedule."
       : "Deposits are currently closed by the auto schedule.";
-  }, [autoModeEnabled, autoScheduleActive, autoScheduleConfigured, manualEnabled]);
+  }, [
+    autoModeEnabled,
+    autoScheduleActive,
+    autoScheduleConfigured,
+    manualModeEnabled,
+    masterToggleEnabled,
+  ]);
 
   const invalidateSettings = () => {
     queryClient.invalidateQueries({ queryKey: ["global-settings"] });
     queryClient.invalidateQueries({ queryKey: ["public-settings"] });
   };
+
+  useEffect(() => {
+    if (!autoModeEnabled || masterToggleEnabled || didRepairAutoModeRef.current) {
+      return;
+    }
+
+    didRepairAutoModeRef.current = true;
+
+    AdminService.setGlobalToggle(SETTINGS.manualToggle, true)
+      .then(() => {
+        toast.success("Auto schedule repaired and master deposit toggle enabled");
+        invalidateSettings();
+      })
+      .catch((error: any) => {
+        didRepairAutoModeRef.current = false;
+        toast.error(
+          error?.message ||
+            error?.response?.data?.message ||
+            "Failed to repair auto schedule state",
+        );
+      });
+  }, [autoModeEnabled, masterToggleEnabled, queryClient]);
 
   const persistDraftSettings = async () => {
     const finalMessage = draftMessage.trim();
@@ -211,7 +251,12 @@ function DepositControlForm({
   const { mutate: toggleManual } = useMutation({
     mutationFn: async (value: boolean) => {
       await persistDraftSettings();
-      return AdminService.setGlobalToggle(SETTINGS.manualToggle, value);
+      if (value) {
+        await AdminService.updateSetting(SETTINGS.autoMode, "false");
+        return AdminService.setGlobalToggle(SETTINGS.manualToggle, true);
+      }
+
+      return AdminService.setGlobalToggle(SETTINGS.manualToggle, false);
     },
     onSuccess: () => {
       toast.success("Deposit controls updated");
@@ -224,7 +269,14 @@ function DepositControlForm({
   const { mutate: toggleAutoMode } = useMutation({
     mutationFn: async (value: string) => {
       await persistDraftSettings();
-      return AdminService.updateSetting(SETTINGS.autoMode, value);
+      await AdminService.updateSetting(SETTINGS.autoMode, value);
+
+      if (value === "true") {
+        await AdminService.setGlobalToggle(SETTINGS.manualToggle, true);
+        return;
+      }
+
+      await AdminService.setGlobalToggle(SETTINGS.manualToggle, false);
     },
     onSuccess: () => {
       toast.success("Deposit controls updated");
@@ -296,12 +348,13 @@ function DepositControlForm({
             <div>
               <p className="text-sm font-semibold text-white">Manual Control</p>
               <p className="text-xs text-slate-400">
-                Auto mode off thakle ei toggle diye deposit instantly on/off korte parben.
+                Auto mode on thakle manual control off thakbe. Manual on korle auto schedule automatically off hoye jabe.
               </p>
             </div>
             <Toggle
-              checked={manualEnabled}
-              onClick={() => toggleManual(!manualEnabled)}
+              checked={manualModeEnabled}
+              disabled={autoModeEnabled}
+              onClick={() => toggleManual(!manualModeEnabled)}
             />
           </div>
 
@@ -337,6 +390,10 @@ function DepositControlForm({
           <div className="rounded-lg border border-slate-700 bg-slate-900/60 p-3 text-xs text-slate-300">
             Schedule days: {formatScheduleDaysSummary(draftAutoDays)}
           </div>
+
+          <p className="text-[11px] text-slate-400">
+            Auto mode on thakle backend-er required master toggle hidden vabe on thakbe, but manual mode off hishebei treat kora hobe.
+          </p>
 
           <div>
             <label className="mb-2 block text-[11px] text-slate-400">

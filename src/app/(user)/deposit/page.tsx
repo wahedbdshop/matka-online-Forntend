@@ -603,15 +603,17 @@ export default function DepositPage() {
     globalSettings.find((s: any) => s.key === "global_deposit_auto_days")
       ?.value,
   );
-  const scheduleDepositEnabled = isFeatureEnabledBySchedule({
+  const autoScheduleDepositEnabled = isFeatureEnabledBySchedule({
     enabled: autoModeEnabled,
     openTime: autoOpenTime,
     closeTime: autoCloseTime,
     selectedDays: autoDays,
   });
+  const scheduleDepositEnabled =
+    manualDepositEnabled && autoScheduleDepositEnabled;
   const effectiveDepositOpenTime = autoModeEnabled
     ? getNextScheduledOpenIso({
-        enabled: autoModeEnabled,
+        enabled: autoModeEnabled && manualDepositEnabled,
         openTime: autoOpenTime,
         closeTime: autoCloseTime,
         selectedDays: autoDays,

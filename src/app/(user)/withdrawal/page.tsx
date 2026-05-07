@@ -401,15 +401,17 @@ export default function WithdrawPage() {
     globalSettings.find((s: any) => s.key === "global_withdraw_auto_days")
       ?.value,
   );
-  const scheduleWithdrawEnabled = isFeatureEnabledBySchedule({
+  const autoScheduleWithdrawEnabled = isFeatureEnabledBySchedule({
     enabled: autoModeEnabled,
     openTime: autoOpenTime,
     closeTime: autoCloseTime,
     selectedDays: autoDays,
   });
+  const scheduleWithdrawEnabled =
+    manualWithdrawEnabled && autoScheduleWithdrawEnabled;
   const effectiveWithdrawOpenTime = autoModeEnabled
     ? getNextScheduledOpenIso({
-        enabled: autoModeEnabled,
+        enabled: autoModeEnabled && manualWithdrawEnabled,
         openTime: autoOpenTime,
         closeTime: autoCloseTime,
         selectedDays: autoDays,
