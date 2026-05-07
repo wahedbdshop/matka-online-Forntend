@@ -64,6 +64,7 @@ export type LudoRoom = {
   availableTokenIds?: string[];
   currentTurnUserId?: string | null;
   lastDiceValue?: number | null;
+  rolledDiceValue?: number | null;
   moveVersion?: number;
   winnerUserId?: string | null;
   turnEndsAt?: string | null;
@@ -154,6 +155,10 @@ export const normalizeLudoRoom = (room: LudoRoom): LudoRoom => ({
 
 const normalizeLudoRoomResponse = (response: LudoRoomResponse) => {
   const payload = response.data;
+  const payloadDiceValue =
+    payload && typeof payload === "object" && "diceValue" in payload
+      ? (typeof payload.diceValue === "number" ? payload.diceValue : null)
+      : null;
   const room =
     payload && typeof payload === "object" && "room" in payload
       ? (payload.room ?? payload.snapshot)
@@ -165,7 +170,14 @@ const normalizeLudoRoomResponse = (response: LudoRoomResponse) => {
 
   return {
     ...response,
-    data: normalizeLudoRoom(room as LudoRoom),
+    data: {
+      ...normalizeLudoRoom(room as LudoRoom),
+      rolledDiceValue: payloadDiceValue,
+      lastDiceValue:
+        payloadDiceValue ??
+        normalizeLudoRoom(room as LudoRoom).lastDiceValue ??
+        null,
+    },
   } satisfies ApiResponse<LudoRoom>;
 };
 

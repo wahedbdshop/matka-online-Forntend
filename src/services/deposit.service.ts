@@ -3,13 +3,16 @@ import { api } from "@/lib/axios";
 import { ApiResponse } from "@/types";
 
 export const DepositService = {
-  // User — available payment methods
   getAvailableMethods: async () => {
     const res = await api.get<ApiResponse<any>>("/deposit/methods");
     return res.data;
   },
 
-  // User — deposit request submit
+  reserve: async (payload: { paymentMethod: string; amount: number }) => {
+    const res = await api.post<ApiResponse<any>>("/deposit/reserve", payload);
+    return res.data;
+  },
+
   create: async (payload: {
     paymentMethod: string;
     amount: number;
@@ -20,7 +23,6 @@ export const DepositService = {
     return res.data;
   },
 
-  // User — my history
   getMyDeposits: async (page = 1, limit = 20) => {
     const res = await api.get<ApiResponse<any>>(
       `/deposit/my?page=${page}&limit=${limit}`,
@@ -28,20 +30,18 @@ export const DepositService = {
     return res.data;
   },
 
-  // User — single detail
   getMyDepositById: async (id: string) => {
     const res = await api.get<ApiResponse<any>>(`/deposit/my/${id}`);
     return res.data;
   },
 
-  // User — commission
   previewBonus: async (amount: number) => {
     const res = await api.get<ApiResponse<any>>(
       `/deposit/preview-bonus?amount=${amount}`,
     );
     return res.data;
   },
-  // ─── New ──────────────────────────────────────────────────────────────────
+
   getGlobalAgents: async (): Promise<{ data: any[] }> => {
     try {
       const res = await api.get("/deposit/global-agents", {

@@ -62,8 +62,6 @@ const ALL_QUICK_AMOUNTS = [
   500, 1000, 2000, 5000, 10000, 15000, 20000, 25000, 30000, 50000, 75000,
   100000, 150000, 200000,
 ];
-const METHOD_ROTATION_STORAGE_KEY = "deposit-method-rotation-v1";
-
 const METHOD_STYLE: Record<
   string,
   { color: string; bg: string; border: string }
@@ -186,50 +184,6 @@ function groupMethodsForDisplay(methods: DepositMethod[]) {
   );
 
   return [...regularMethods, ...globalAgentMethods];
-}
-
-function getNextMethodVariant(
-  methods: DepositMethod[] | null | undefined,
-  methodName?: string | null,
-  fallbackMethod?: DepositMethod | null,
-) {
-  const nextMethods = methods ?? [];
-  const rotationKey = getMethodRotationKey(methodName);
-  const matchingMethods = nextMethods.filter(
-    (method) => getMethodRotationKey(method.name) === rotationKey,
-  );
-
-  if (matchingMethods.length === 0) {
-    return fallbackMethod ?? null;
-  }
-
-  if (typeof window === "undefined") {
-    return matchingMethods[0];
-  }
-
-  let rotationState: Record<string, number> = {};
-  const storedRotationState = window.localStorage.getItem(
-    METHOD_ROTATION_STORAGE_KEY,
-  );
-
-  if (storedRotationState) {
-    try {
-      rotationState = JSON.parse(storedRotationState) as Record<string, number>;
-    } catch {
-      rotationState = {};
-    }
-  }
-
-  const currentIndex = rotationState[rotationKey] ?? 0;
-  const nextMethod = matchingMethods[currentIndex % matchingMethods.length];
-  rotationState[rotationKey] = (currentIndex + 1) % matchingMethods.length;
-
-  window.localStorage.setItem(
-    METHOD_ROTATION_STORAGE_KEY,
-    JSON.stringify(rotationState),
-  );
-
-  return nextMethod;
 }
 
 function generateQuickAmounts(min: number, max: number): number[] {
@@ -652,7 +606,7 @@ export default function DepositPage() {
   });
   const deposits = historyData?.data?.deposits ?? [];
   const hasPendingDeposit = deposits.some(
-    (d: any) => d.status === "PENDING",
+    (d: any) => d.status === "PENDING" && !!d.transactionId,
   );
 
   // ── Bonus preview (debounced) ─────────────────────────────────────────────
@@ -767,6 +721,13 @@ export default function DepositPage() {
   // ── Step handlers ─────────────────────────────────────────────────────────
   // Step 1: Method
   const handleMethodSelect = (method: DepositMethod) => {
+    if (hasPendingDeposit) {
+      toast.error(
+        "You already have a pending deposit request. Please wait for approval before creating a new one.",
+      );
+      return;
+    }
+
     if (method.isGlobal) {
       // Global agent → show info modal only, no deposit flow
       setShowGlobalModal(true);
@@ -794,24 +755,40 @@ export default function DepositPage() {
       return;
     }
 
-    const nextMethod = getNextMethodVariant(
-      methodsDataList,
-      selectedMethod?.name,
-      selectedMethod,
-    );
-
-    if (!nextMethod?.agentNumber) {
-      toast.error("No agent number available for this method right now.");
-      return;
-    }
-
     setAmountError("");
-    setSelectedMethod(nextMethod);
-    startTimer();
-    setStep("instruction");
+    reserveDeposit({
+      paymentMethod: selectedMethod?.name ?? "",
+      amount: num,
+    });
   };
 
   // Step 3: Submit
+  const { mutate: reserveDeposit, isPending: isReservePending } = useMutation({
+    mutationFn: DepositService.reserve,
+    onSuccess: (res) => {
+      const reservedDeposit = res?.data;
+
+      if (!reservedDeposit?.agentNumber) {
+        toast.error("No agent number available for this method right now.");
+        return;
+      }
+
+      setSelectedMethod((prev) =>
+        prev
+          ? {
+              ...prev,
+              agentNumber: reservedDeposit.agentNumber,
+            }
+          : prev,
+      );
+      setBonus(Number(reservedDeposit.bonus ?? 0));
+      startTimer();
+      setStep("instruction");
+    },
+    onError: (e: any) =>
+      toast.error(e?.response?.data?.message || "Failed to reserve number"),
+  });
+
   const { mutate: createDeposit, isPending } = useMutation({
     mutationFn: DepositService.create,
     onSuccess: () => {
@@ -904,6 +881,16 @@ export default function DepositPage() {
           {/* Normal flow */}
           {!settingsLoading && isDepositOn && (
             <>
+              {hasPendingDeposit && (
+                <div className="flex items-center gap-2 rounded-xl border border-yellow-500/30 bg-yellow-500/10 px-3 py-2.5">
+                  <Clock className="h-3.5 w-3.5 shrink-0 text-yellow-400" />
+                  <p className="text-xs font-medium text-yellow-400">
+                    You already have a pending deposit request. Please wait for
+                    approval before creating a new deposit.
+                  </p>
+                </div>
+              )}
+
               {/* Step Indicator */}
               <div className="flex items-center gap-2">
                 {stepList.map((s, i) => (
@@ -977,8 +964,9 @@ export default function DepositPage() {
                           <button
                             key={m.name ?? i}
                             onClick={() => handleMethodSelect(m)}
+                            disabled={hasPendingDeposit}
                             className={cn(
-                              "relative flex items-center gap-3 p-4 rounded-xl border-2 transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]",
+                              "relative flex items-center gap-3 p-4 rounded-xl border-2 transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100",
                               style.bg,
                               style.border,
                             )}
@@ -1153,7 +1141,7 @@ export default function DepositPage() {
 
                   <button
                     onClick={handleAmountNext}
-                    disabled={!amount}
+                    disabled={!amount || isReservePending}
                     className="w-full py-3 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-sm font-semibold disabled:opacity-40 transition-all hover:scale-[1.01] active:scale-[0.99]"
                   >
                     Continue →

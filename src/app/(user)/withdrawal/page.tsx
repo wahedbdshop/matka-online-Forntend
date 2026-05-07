@@ -484,7 +484,7 @@ export default function WithdrawPage() {
     enabled: isWithdrawOn,
   });
   const hasPendingDeposit = (depositData?.data?.deposits ?? []).some(
-    (d: any) => d.status === "PENDING",
+    (d: any) => d.status === "PENDING" && !!d.transactionId,
   );
 
   // ── Derived ───────────────────────────────────────────────

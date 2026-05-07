@@ -564,6 +564,7 @@ export default function LudoRoomPage() {
   const [rollCountdown, setRollCountdown] = useState<number | null>(null);
   const rollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const rollAutoRef     = useRef<ReturnType<typeof setTimeout>  | null>(null);
+  const turnWarningPlayedRef = useRef<string | null>(null);
   const [diceFaceValue, setDiceFaceValue] = useState(1);
   const [diceAnimationState, setDiceAnimationState] = useState<"idle" | "rolling" | "settling">("idle");
   const diceShuffleIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -755,6 +756,15 @@ export default function LudoRoomPage() {
   const playLossSound = useCallback(() => {
     [330, 247, 196].forEach((frequency, index) => {
       setTimeout(() => playTone(frequency, 0.18, "sine", 0.1), index * 140);
+    });
+  }, [playTone]);
+
+  const playTurnWarningSound = useCallback(() => {
+    [0, 1, 2, 3, 4].forEach((step) => {
+      setTimeout(() => {
+        playTone(880, 0.06, "triangle", 0.11);
+        setTimeout(() => playTone(740, 0.08, "triangle", 0.09), 80);
+      }, step * 1000);
     });
   }, [playTone]);
 
@@ -1051,9 +1061,22 @@ export default function LudoRoomPage() {
 
     if (!incoming || typeof incoming !== "object") return;
     // Payload can be { room: {...} } or the room object directly
-    const raw = (incoming as Record<string, unknown>).room ?? incoming;
+    const incomingRecord = incoming as Record<string, unknown>;
+    const raw = incomingRecord.room ?? incoming;
     if (!raw || typeof raw !== "object" || !("players" in raw)) return;
-    const normalized = normalizeLudoRoom(raw as LudoRoom);
+    const payloadDiceValue =
+      typeof incomingRecord.diceValue === "number"
+        ? incomingRecord.diceValue
+        : typeof incomingRecord.lastDiceValue === "number"
+          ? incomingRecord.lastDiceValue
+          : null;
+    const normalized = normalizeLudoRoom({
+      ...(raw as LudoRoom),
+      rolledDiceValue: payloadDiceValue,
+      lastDiceValue:
+        payloadDiceValue ??
+        ((raw as LudoRoom).lastDiceValue ?? null),
+    });
     const previousRoom = latestRoomRef.current;
     const nextRoom = {
       ...normalized,
@@ -1091,6 +1114,8 @@ export default function LudoRoomPage() {
   const rollMutation = useMutation({
     mutationFn: () => LudoService.rollDice(roomId),
     onSuccess: ({ data }) => {
+      const fromRoom = latestRoomRef.current;
+      const autoMovedByRoll = Boolean(fromRoom && findTokenMoveAnimation(fromRoom, data));
       stopDiceSound();
       if (typeof data.lastDiceValue === "number" && data.lastDiceValue >= 1 && data.lastDiceValue <= 6) {
         settleDiceRollVisual(data.lastDiceValue, LOCAL_DICE_ROLL_MS);
@@ -1099,9 +1124,17 @@ export default function LudoRoomPage() {
         localRollPendingRef.current = false;
         diceRollStartRef.current = null;
       }
-      latestRoomRef.current = data;
-      rememberTokenPaths(data);
-      setRoomState(data);
+      if (fromRoom && autoMovedByRoll) {
+        isAnimatingRef.current = true;
+        const timer = setTimeout(() => {
+          playTokenMoveAnimation(fromRoom, data);
+        }, LOCAL_DICE_ROLL_MS);
+        animTimersRef.current.push(timer);
+      } else {
+        latestRoomRef.current = data;
+        rememberTokenPaths(data);
+        setRoomState(data);
+      }
       // Notify room so the opponent's client gets the update instantly
       emitEvent("ludo:room:join", roomId);
       void refetch();
@@ -1329,6 +1362,7 @@ export default function LudoRoomPage() {
     // Clear any running timers first
     if (rollIntervalRef.current) { clearInterval(rollIntervalRef.current); rollIntervalRef.current = null; }
     if (rollAutoRef.current)     { clearTimeout(rollAutoRef.current);      rollAutoRef.current     = null; }
+    turnWarningPlayedRef.current = null;
 
     if (!canRoll) { setRollCountdown(null); return; }
 
@@ -1357,6 +1391,19 @@ export default function LudoRoomPage() {
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [canRoll]);
+
+  useEffect(() => {
+    if (!myTurn || rollCountdown === null || rollCountdown > 5) return;
+
+    const turnKey = room?.turnEndsAt
+      ? `${room.currentTurnUserId}:${room.turnEndsAt}`
+      : room?.currentTurnUserId ?? "turn-warning";
+
+    if (turnWarningPlayedRef.current === turnKey) return;
+
+    turnWarningPlayedRef.current = turnKey;
+    playTurnWarningSound();
+  }, [myTurn, playTurnWarningSound, rollCountdown, room?.currentTurnUserId, room?.turnEndsAt]);
 
   // During animation show the intermediate state; otherwise use the live room.
   const displayedRoom = animRoom ?? room;
@@ -1409,7 +1456,7 @@ export default function LudoRoomPage() {
         : myTurn && availSet.size > 0
           ? "MOVE"
           : "WAIT";
-  const turnCountdownDanger = rollCountdown !== null && rollCountdown <= 2;
+  const turnCountdownDanger = rollCountdown !== null && rollCountdown <= 5;
   const turnCountdownColor = turnCountdownDanger ? "#ff5b57" : "#f5b414";
   const turnCountdownProgress =
     rollCountdown !== null
@@ -1565,8 +1612,8 @@ export default function LudoRoomPage() {
           <div className={cn(
             "relative flex min-w-0 items-center gap-1 rounded-xl border px-2 py-1.5",
             myTurn
-              ? "border-yellow-300 bg-white/14"
-              : "border-white/15 bg-white/8",
+              ? "border-yellow-300 bg-white/16 shadow-[0_0_0_1px_rgba(255,211,77,0.18)]"
+              : "border-white/20 bg-white/14",
           )}>
             <PlayerPin color={myColor} />
             <div className="min-w-0">
@@ -1615,13 +1662,13 @@ export default function LudoRoomPage() {
                 "relative h-[66px] w-[66px] rounded-[18px] transition-all duration-100 active:translate-y-1",
                 canRoll
                   ? "shadow-[0_7px_0_#b9919b,0_16px_24px_rgba(0,0,0,0.28)]"
-                  : "opacity-60 shadow-[0_4px_0_#8f8f8f]",
+                  : "shadow-[0_5px_0_#b29aa1,0_12px_20px_rgba(0,0,0,0.2)]",
                 diceAnimationState !== "idle" && "shadow-[0_7px_0_#b9919b,0_0_16px_rgba(255,255,255,0.34),0_18px_28px_rgba(0,0,0,0.28)]",
               )}
               style={{
                 background: canRoll
                   ? "linear-gradient(180deg,#ffe9ef 0%,#f4cbd3 100%)"
-                  : "linear-gradient(180deg,#ead9dd 0%,#cdb7bc 100%)",
+                  : "linear-gradient(180deg,#fff0f4 0%,#efd3da 100%)",
                 border: "2px solid rgba(255,255,255,0.55)",
               }}
             >
@@ -1656,8 +1703,8 @@ export default function LudoRoomPage() {
           <div className={cn(
             "relative flex min-w-0 items-center justify-end gap-1 rounded-xl border px-2 py-1.5 text-right",
             room.currentTurnUserId === opponent?.userId
-              ? "border-yellow-300 bg-white/14"
-              : "border-white/15 bg-white/8",
+              ? "border-yellow-300 bg-white/16 shadow-[0_0_0_1px_rgba(255,211,77,0.18)]"
+              : "border-white/20 bg-white/14",
           )}>
             <div className="min-w-0">
               <p className="truncate text-[10px] font-black leading-tight text-white">

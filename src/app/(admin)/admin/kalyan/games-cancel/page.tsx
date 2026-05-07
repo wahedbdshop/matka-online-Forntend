@@ -431,7 +431,9 @@ export default function KalyanGamesCancelPage() {
         </div>
         <div>
           <h1 className="text-xl font-bold text-slate-950 dark:text-white">Games Cancel</h1>
-          <p className="text-xs text-slate-500 dark:text-slate-400">Cancelable played rounds with auto refund support.</p>
+          <p className="text-xs text-slate-500 dark:text-slate-400">
+            Cancelling one game now auto-cancels both Open and Close sessions for the selected date and refunds active played amounts to user wallets.
+          </p>
         </div>
       </div>
 
@@ -519,7 +521,12 @@ export default function KalyanGamesCancelPage() {
                     <td className="border-r border-slate-200 px-4 py-4 font-semibold text-slate-900 last:border-r-0 dark:border-slate-700/40 dark:text-white">
                       <div className="space-y-1">
                         <p>{getDisplayGameName(round)}</p>
-                        <p className="text-[11px] text-slate-500 dark:text-slate-400">Played slips: {round.entryCount ?? 0}</p>
+                        <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                          Played slips: {round.entryCount ?? 0}
+                        </p>
+                        <p className="text-[10px] text-red-500 dark:text-red-300">
+                          Cancel applies to paired Open + Close sessions with wallet refund.
+                        </p>
                       </div>
                     </td>
                     <td className="border-r border-slate-200 px-4 py-4 text-sm text-slate-600 last:border-r-0 dark:border-slate-700/40 dark:text-slate-300">
@@ -584,7 +591,7 @@ export default function KalyanGamesCancelPage() {
                 on {formatDateLabel(confirmTarget.resultDate)}?
               </p>
               <p className="mt-1 text-[10px] text-red-400">
-                This will cancel the game and refund all active played amounts.
+                This will automatically cancel both Open and Close sessions for this game on the selected date and refund all active played amounts to user accounts.
               </p>
             </div>
             <div className="flex gap-2">

@@ -209,6 +209,13 @@ const SAFE_SET = new Set([
   "8-2",
 ]);
 
+const SAFE_COLOR_MAP = new Map<string, LudoColor>([
+  ["2-6", "GREEN"],
+  ["6-12", "YELLOW"],
+  ["12-8", "BLUE"],
+  ["8-2", "RED"],
+]);
+
 /**
  * Colored run-up lanes — the final stretch each color travels before reaching
  * the center. Symmetric about both axes.
@@ -255,7 +262,7 @@ type CellKind =
   | { t: "home-circle"; color: LudoColor }
   | { t: "run-up";      color: LudoColor }
   | { t: "start";       color: LudoColor }
-  | { t: "safe" }
+  | { t: "safe";        color: LudoColor }
   | { t: "direction";   color: LudoColor; arrow: string }
   | { t: "center" }
   | { t: "path" };
@@ -294,7 +301,9 @@ function classify(row: number, col: number): CellKind {
   if (startColor) return { t: "start", color: startColor };
 
   // ── Safe cells ───────────────────────────────────────────────────────────
-  if (SAFE_SET.has(key)) return { t: "safe" };
+  if (SAFE_SET.has(key)) {
+    return { t: "safe", color: SAFE_COLOR_MAP.get(key) ?? "RED" };
+  }
 
   // ── Directional arrow cells ───────────────────────────────────────────────
   const dir = DIRECTION_MAP.get(key);
@@ -617,13 +626,15 @@ function Cell({
 
   // ── SAFE CELL — white with star icon ─────────────────────────────────────
   if (kind.t === "safe") {
+    const hex = PALETTE[kind.color].main;
+    const softHex = darkenHex(hex, 0.18);
     return (
       <div className="relative z-20 flex aspect-square items-center justify-center overflow-visible border border-[#b7b7b7] bg-white">
         {!multi && first && (
           <TokenPin token={first} fill="100%" onMove={first.available ? onMove : undefined} />
         )}
         {!first && (
-          <svg viewBox="0 0 20 20" className="w-[68%] h-[68%] opacity-70" fill="none" stroke="#777" strokeWidth="1.25">
+          <svg viewBox="0 0 20 20" className="h-[68%] w-[68%]" fill={`${hex}26`} stroke={softHex} strokeWidth="1.25">
             <polygon points="10,2 12.4,7.8 18.5,8.5 14,12.8 15.3,19 10,15.8 4.7,19 6,12.8 1.5,8.5 7.6,7.8" />
           </svg>
         )}
@@ -992,12 +1003,14 @@ function TrackTokenSlot({
   onMove?: (id: string) => void;
 }) {
   return (
-    <div className="relative flex h-[80%] w-[80%] items-center justify-center overflow-visible">
-      <ClassicTokenPin
-        token={token}
-        fill="100%"
-        onMove={token.available ? onMove : undefined}
-      />
+    <div className="relative flex h-[92%] w-[92%] items-center justify-center overflow-visible">
+      <div className="flex h-full w-full -translate-y-[10%] scale-[1.16] items-center justify-center">
+        <ClassicTokenPin
+          token={token}
+          fill="100%"
+          onMove={token.available ? onMove : undefined}
+        />
+      </div>
     </div>
   );
 }
@@ -1052,7 +1065,7 @@ function BoardCell({
           }}
         >
           {first && (
-            <div className="absolute -inset-[70%] z-20 overflow-visible">
+            <div className="absolute -inset-x-[48%] -inset-y-[42%] -translate-y-[17%] z-20 overflow-visible">
               <ClassicTokenPin
                 token={first}
                 fill="100%"
@@ -1087,11 +1100,13 @@ function BoardCell({
   }
 
   if (kind.t === "safe") {
+    const hex = PALETTE[kind.color].main;
+    const softHex = darkenHex(hex, 0.18);
     return (
       <div className={trackCellClassName} style={premiumWhiteCellStyle}>
         {!multi && first && <TrackTokenSlot token={first} onMove={onMove} />}
         {!first && (
-          <svg viewBox="0 0 20 20" className="h-[78%] w-[78%] opacity-85" fill="none" stroke="#7a7a7a" strokeWidth="1.35">
+          <svg viewBox="0 0 20 20" className="h-[78%] w-[78%]" fill={`${hex}2b`} stroke={softHex} strokeWidth="1.35">
             <polygon points="10,2 12.4,7.8 18.5,8.5 14,12.8 15.3,19 10,15.8 4.7,19 6,12.8 1.5,8.5 7.6,7.8" />
           </svg>
         )}
