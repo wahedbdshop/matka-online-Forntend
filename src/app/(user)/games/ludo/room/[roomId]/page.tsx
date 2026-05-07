@@ -529,6 +529,8 @@ export default function LudoRoomPage() {
   const [resultCountdown, setResultCountdown] = useState(10);
   const [resultActionsVisible, setResultActionsVisible] = useState(false);
   const latestRoomRef = useRef<LudoRoom | null>(null);
+  const pendingRoomUpdateRef = useRef<unknown | null>(null);
+  const applyRoomUpdateRef = useRef<(incoming: unknown) => void>(() => {});
   const tokenPathHistoryRef = useRef<Map<string, number[]>>(new Map());
   const audioContextRef = useRef<AudioContext | null>(null);
   const diceSoundIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -955,6 +957,44 @@ export default function LudoRoomPage() {
       });
     }), []);
 
+  const flushPendingRoomUpdate = useCallback(() => {
+    if (isAnimatingRef.current || !pendingRoomUpdateRef.current) return;
+    const pendingUpdate = pendingRoomUpdateRef.current;
+    pendingRoomUpdateRef.current = null;
+    applyRoomUpdateRef.current(pendingUpdate);
+  }, []);
+
+  function applyNormalizedRoomUpdate(nextRoom: LudoRoom) {
+    const previousRoom = latestRoomRef.current;
+
+    if (
+      previousRoom &&
+      typeof nextRoom.lastDiceValue === "number" &&
+      nextRoom.lastDiceValue !== previousRoom.lastDiceValue
+    ) {
+      startDiceSound(360);
+      if (!localRollPendingRef.current) {
+        startDiceRollVisual();
+        settleDiceRollVisual(nextRoom.lastDiceValue, REMOTE_DICE_ROLL_MS);
+      }
+    }
+
+    if (previousRoom && playTokenMoveAnimation(previousRoom, nextRoom)) {
+      return;
+    }
+
+    if (previousRoom && playCaptureReturnAnimation(previousRoom, nextRoom)) {
+      return;
+    }
+
+    latestRoomRef.current = nextRoom;
+    rememberTokenPaths(nextRoom);
+    if (previousRoom && didTokenFinish(previousRoom, nextRoom)) {
+      playWinSound();
+    }
+    setRoomState(nextRoom);
+  }
+
   const playCaptureReturnAnimation = useCallback((fromRoom: LudoRoom, toRoom: LudoRoom) => {
     const captures = getCapturedReturns(fromRoom, toRoom);
     const maxFrames = Math.max(0, ...captures.map((capture) => capture.path.length));
@@ -978,6 +1018,7 @@ export default function LudoRoomPage() {
           animTimersRef.current = [];
           setAnimRoom(null);
           rememberTokenPaths(toRoom);
+          flushPendingRoomUpdate();
           return;
         }
 
@@ -989,7 +1030,7 @@ export default function LudoRoomPage() {
     }
 
     return true;
-  }, [getCapturedReturns, playKillSound, playStepSound, rememberTokenPaths]);
+  }, [flushPendingRoomUpdate, getCapturedReturns, playKillSound, playStepSound, rememberTokenPaths]);
 
   const finishMoveAnimation = useCallback((fromRoom: LudoRoom, toRoom: LudoRoom) => {
     setAnimRoom(null);
@@ -1006,7 +1047,8 @@ export default function LudoRoomPage() {
     latestRoomRef.current = toRoom;
     rememberTokenPaths(toRoom);
     setRoomState(toRoom);
-  }, [didTokenFinish, playCaptureReturnAnimation, playWinSound, rememberTokenPaths]);
+    flushPendingRoomUpdate();
+  }, [didTokenFinish, flushPendingRoomUpdate, playCaptureReturnAnimation, playWinSound, rememberTokenPaths]);
 
   const playTokenMoveAnimation = useCallback((fromRoom: LudoRoom, toRoom: LudoRoom) => {
     const move = findTokenMoveAnimation(fromRoom, toRoom);
@@ -1050,14 +1092,28 @@ export default function LudoRoomPage() {
     return true;
   }, [findTokenMoveAnimation, finishMoveAnimation, playStepSound, roomWithMoveProgress]);
 
+  const applyThirdSixFallback = useCallback((room: LudoRoom, previousTurnUserId?: string | null) => {
+    if (!room.currentTurnUserId || room.currentTurnUserId !== previousTurnUserId) {
+      return room;
+    }
+
+    const opponentPlayer =
+      room.players.find((player) => player.userId !== room.currentTurnUserId) ?? null;
+
+    return {
+      ...room,
+      availableTokenIds: [],
+      currentTurnUserId: opponentPlayer?.userId ?? null,
+    };
+  }, []);
+
   // Normalize any socket/API payload and preserve per-client yourColor.
   // Server broadcasts the same room object to all clients so yourColor is absent.
   const applyRoomUpdate = useCallback((incoming: unknown) => {
-    // Block socket pushes while a step-walk animation is in progress.
-    // Without this guard the socket broadcast (which arrives before onSuccess)
-    // jumps the token straight to its final cell, making the animation appear
-    // to walk backwards from that cell back to the start.
-    if (isAnimatingRef.current) return;
+    if (isAnimatingRef.current) {
+      pendingRoomUpdateRef.current = incoming;
+      return;
+    }
 
     if (!incoming || typeof incoming !== "object") return;
     // Payload can be { room: {...} } or the room object directly
@@ -1082,34 +1138,9 @@ export default function LudoRoomPage() {
       ...normalized,
       yourColor: previousRoom?.yourColor ?? normalized.yourColor,
     };
-
-    if (
-      previousRoom &&
-      typeof nextRoom.lastDiceValue === "number" &&
-      nextRoom.lastDiceValue !== previousRoom.lastDiceValue
-    ) {
-      startDiceSound(360);
-      if (!localRollPendingRef.current) {
-        startDiceRollVisual();
-        settleDiceRollVisual(nextRoom.lastDiceValue!, REMOTE_DICE_ROLL_MS);
-      }
-    }
-
-    if (previousRoom && playTokenMoveAnimation(previousRoom, nextRoom)) {
-      return;
-    }
-
-    if (previousRoom && playCaptureReturnAnimation(previousRoom, nextRoom)) {
-      return;
-    }
-
-    latestRoomRef.current = nextRoom;
-    rememberTokenPaths(nextRoom);
-    if (previousRoom && didTokenFinish(previousRoom, nextRoom)) {
-      playWinSound();
-    }
-    setRoomState(nextRoom);
-  }, [didTokenFinish, playCaptureReturnAnimation, playTokenMoveAnimation, playWinSound, rememberTokenPaths, settleDiceRollVisual, startDiceRollVisual, startDiceSound]);
+    applyNormalizedRoomUpdate(nextRoom);
+  }, [applyNormalizedRoomUpdate]);
+  applyRoomUpdateRef.current = applyRoomUpdate;
 
   const rollMutation = useMutation({
     mutationFn: () => LudoService.rollDice(roomId),
@@ -1137,14 +1168,18 @@ export default function LudoRoomPage() {
       }
       // Notify room so the opponent's client gets the update instantly
       emitEvent("ludo:room:join", roomId);
-      void refetch();
 
       // Three consecutive 6s rule
       if (data.lastDiceValue === 6) {
         consecutiveSixRef.current += 1;
         if (consecutiveSixRef.current >= 3) {
           consecutiveSixRef.current = 0;
+          const penalizedRoom = applyThirdSixFallback(data, fromRoom?.currentTurnUserId);
+          latestRoomRef.current = penalizedRoom;
+          rememberTokenPaths(penalizedRoom);
+          setRoomState(penalizedRoom);
           toast.warning("3 consecutive 6s! Turn passed.");
+          emitEvent("ludo:room:join", roomId);
         }
       } else {
         consecutiveSixRef.current = 0;
@@ -1164,7 +1199,6 @@ export default function LudoRoomPage() {
     mutationFn: (tokenId: string) => LudoService.moveToken(roomId, tokenId),
     onSuccess: ({ data: toRoom }) => {
       emitEvent("ludo:room:join", roomId);
-      void refetch();
 
       const fromRoom = preMoveRoomRef.current;
       preMoveRoomRef.current = null;
@@ -1244,14 +1278,20 @@ export default function LudoRoomPage() {
   }, [applyRoomUpdate, emitEvent, isConnected, onEvent, roomId]);
 
   const serverRoom = roomData?.data ?? null;
+  const shouldPreferServerRoom =
+    Boolean(
+      serverRoom &&
+      (
+        !roomState?.currentTurnUserId ||
+        (serverRoom.moveVersion ?? 0) >= (roomState?.moveVersion ?? 0) ||
+        serverRoom.currentTurnUserId !== roomState?.currentTurnUserId ||
+        serverRoom.lastDiceValue !== roomState?.lastDiceValue
+      )
+    );
   const room =
     serverRoom?.status === "FINISHED" || serverRoom?.status === "CANCELLED"
       ? serverRoom
-      : serverRoom &&
-          (
-            !roomState?.currentTurnUserId ||
-            (serverRoom.moveVersion ?? 0) > (roomState.moveVersion ?? 0)
-          )
+      : shouldPreferServerRoom
         ? serverRoom
         : roomState ?? serverRoom;
   const me =
@@ -1434,7 +1474,6 @@ export default function LudoRoomPage() {
     });
     return map;
   }, [displayedRoom?.players, availSet, displaySeatColors, me?.userId]);
-
   // ── Loading ──────────────────────────────────────────────────────────────
   if (isLoading || !room) {
     return (
@@ -1577,12 +1616,12 @@ export default function LudoRoomPage() {
       )}
 
       {/* ── Board ── */}
-      <div className="relative z-10 flex min-h-0 flex-1 items-center justify-center px-4 py-3">
+      <div className="relative z-10 flex min-h-0 flex-1 items-center justify-center px-2 py-2 sm:px-4 sm:py-3">
         <div
-          className="aspect-square overflow-hidden rounded-sm bg-white"
+          className="aspect-square overflow-hidden rounded-[8px] bg-white p-[2px]"
           style={{
-            width: "min(100%, 420px, calc(100vh - 178px))",
-            boxShadow: "0 0 0 3px rgba(255,255,255,0.16), 0 18px 36px rgba(0,0,0,0.36)",
+            width: "min(calc(100vw - 18px), 470px, calc(100vh - 160px))",
+            boxShadow: "0 0 0 1px rgba(255,255,255,0.18), 0 16px 28px rgba(0,0,0,0.34)",
           }}
         >
           <LudoBoard

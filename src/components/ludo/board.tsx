@@ -50,10 +50,10 @@ const BoardRotationContext = createContext<0 | 90 | 180 | 270>(0);
 // Color palette
 // ─────────────────────────────────────────────────────────────────────────────
 const PALETTE = {
-  RED:    { main: "#ef1d26", dark: "#98121a", tint: "#ef1d26" },
-  GREEN:  { main: "#08ae4d", dark: "#067039", tint: "#08ae4d" },
-  BLUE:   { main: "#2ba8ef", dark: "#175f9a", tint: "#2ba8ef" },
-  YELLOW: { main: "#ffd61f", dark: "#b48700", tint: "#ffd61f" },
+  RED:    { main: "#ff1825", dark: "#b20d14", tint: "#ff1825" },
+  GREEN:  { main: "#07b541", dark: "#04712b", tint: "#07b541" },
+  BLUE:   { main: "#32a7ef", dark: "#186d9f", tint: "#32a7ef" },
+  YELLOW: { main: "#ffdd1f", dark: "#c18a00", tint: "#ffdd1f" },
 } satisfies Record<LudoColor, { main: string; dark: string; tint: string }>;
 
 function darkenHex(hex: string, amount: number) {
@@ -983,10 +983,11 @@ function DirectionArrowIcon({
   return (
     <svg
       viewBox="0 0 20 20"
-      className="pointer-events-none h-[74%] w-[74%]"
+      className="pointer-events-none h-[68%] w-[68%]"
       fill="none"
       stroke={color}
-      strokeWidth="2.35"
+      strokeWidth="2"
+      opacity="0.68"
       strokeLinecap="round"
       strokeLinejoin="round"
     >
@@ -1003,8 +1004,8 @@ function TrackTokenSlot({
   onMove?: (id: string) => void;
 }) {
   return (
-    <div className="relative flex h-[92%] w-[92%] items-center justify-center overflow-visible">
-      <div className="flex h-full w-full -translate-y-[10%] scale-[1.16] items-center justify-center">
+    <div className="relative flex h-[98%] w-[98%] items-center justify-center overflow-visible">
+      <div className="flex h-full w-full -translate-y-[8%] scale-[1.28] items-center justify-center sm:scale-[1.22]">
         <ClassicTokenPin
           token={token}
           fill="100%"
@@ -1026,46 +1027,67 @@ function BoardCell({
 }) {
   const first = tokens[0];
   const multi = tokens.length > 1;
-  const boardLine = "#a8a8a8";
+  const boardLine = "#b7b7b7";
   const trackCellClassName =
     "relative z-20 flex aspect-square items-center justify-center overflow-visible border bg-white";
-  const premiumWhiteCellStyle = {
+  const classicWhiteCellStyle = {
     borderColor: boardLine,
-    background: "linear-gradient(180deg, #ffffff 0%, #fbfbfb 55%, #ececec 100%)",
-    boxShadow:
-      "inset 0 1px 0 rgba(255,255,255,0.96), inset 0 -1px 0 rgba(0,0,0,0.08), inset 1px 0 0 rgba(255,255,255,0.7), inset -1px 0 0 rgba(0,0,0,0.04)",
+    backgroundColor: "#ffffff",
+    boxShadow: "inset 0 0 0 1px rgba(0,0,0,0.02)",
   };
-  const premiumColoredCellStyle = (color: string) => ({
+  const classicColoredCellStyle = (color: string) => ({
     borderColor: boardLine,
     backgroundColor: color,
-    backgroundImage:
-      "linear-gradient(180deg, rgba(255,255,255,0.22) 0%, rgba(255,255,255,0) 42%, rgba(0,0,0,0.08) 100%)",
-    boxShadow:
-      "inset 0 1px 0 rgba(255,255,255,0.45), inset 0 -1px 0 rgba(0,0,0,0.1), inset 1px 0 0 rgba(255,255,255,0.14), inset -1px 0 0 rgba(0,0,0,0.04)",
+    boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.06)",
   });
 
   if (kind.t === "home-outer") {
-    return <div className="aspect-square" style={{ backgroundColor: PALETTE[kind.color].main }} />;
+    return (
+      <div
+        className="aspect-square"
+        style={{
+          backgroundColor: PALETTE[kind.color].main,
+          boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.04)",
+        }}
+      />
+    );
   }
 
   if (kind.t === "home-inner") {
-    return <div className="aspect-square bg-white" />;
+    return (
+      <div
+        className="aspect-square bg-white"
+        style={{ boxShadow: "inset 0 0 0 1px rgba(0,0,0,0.08)" }}
+      />
+    );
   }
 
   if (kind.t === "home-circle") {
     const hex = PALETTE[kind.color].main;
+    const ring = darkenHex(hex, 0.14);
 
     return (
-      <div className="relative z-20 flex aspect-square items-center justify-center overflow-visible bg-white p-[10%]">
+      <div className="relative z-20 flex aspect-square items-center justify-center overflow-visible bg-white p-[10%] sm:p-[12%]">
         <div
           className="relative z-10 flex h-full w-full items-center justify-center overflow-visible rounded-full"
           style={{
-            background: `radial-gradient(circle at 34% 28%, rgba(255,255,255,0.24) 0%, rgba(255,255,255,0.08) 18%, ${hex} 20%, ${hex} 74%, ${darkenHex(hex, 0.18)} 100%)`,
-            boxShadow: "0 1px 3px rgba(0,0,0,.18), inset 0 1px 0 rgba(255,255,255,.28)",
+            background: hex,
+            boxShadow: first
+              ? `0 2px 5px rgba(0,0,0,.22), 0 0 0 3px #ffffff, 0 0 0 5px ${ring}`
+              : `inset 0 2px 0 rgba(255,255,255,0.26), inset 0 -2px 0 rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.14)`,
           }}
         >
+          {!first && (
+            <span
+              className="absolute rounded-full"
+              style={{
+                inset: "15%",
+                background: "rgba(255,255,255,0.18)",
+              }}
+            />
+          )}
           {first && (
-            <div className="absolute -inset-x-[48%] -inset-y-[42%] -translate-y-[17%] z-20 overflow-visible">
+            <div className="absolute -inset-x-[34%] -inset-y-[27%] -translate-y-[10%] z-20 overflow-visible sm:-inset-x-[38%] sm:-inset-y-[31%] sm:-translate-y-[12%]">
               <ClassicTokenPin
                 token={first}
                 fill="100%"
@@ -1086,7 +1108,7 @@ function BoardCell({
     return (
       <div
         className={trackCellClassName}
-        style={premiumColoredCellStyle(PALETTE[kind.color].tint)}
+        style={classicColoredCellStyle(PALETTE[kind.color].tint)}
       >
         {!multi && first ? <TrackTokenSlot token={first} onMove={onMove} /> : null}
         {multi && (
@@ -1103,10 +1125,18 @@ function BoardCell({
     const hex = PALETTE[kind.color].main;
     const softHex = darkenHex(hex, 0.18);
     return (
-      <div className={trackCellClassName} style={premiumWhiteCellStyle}>
+      <div className={trackCellClassName} style={classicWhiteCellStyle}>
         {!multi && first && <TrackTokenSlot token={first} onMove={onMove} />}
         {!first && (
-          <svg viewBox="0 0 20 20" className="h-[78%] w-[78%]" fill={`${hex}2b`} stroke={softHex} strokeWidth="1.35">
+          <svg
+            viewBox="0 0 20 20"
+            className="h-[74%] w-[74%]"
+            fill="none"
+            stroke={softHex}
+            strokeWidth="1.15"
+            strokeLinejoin="round"
+            opacity="0.95"
+          >
             <polygon points="10,2 12.4,7.8 18.5,8.5 14,12.8 15.3,19 10,15.8 4.7,19 6,12.8 1.5,8.5 7.6,7.8" />
           </svg>
         )}
@@ -1117,7 +1147,7 @@ function BoardCell({
 
   if (kind.t === "direction") {
     return (
-      <div className={trackCellClassName} style={premiumWhiteCellStyle}>
+      <div className={trackCellClassName} style={classicWhiteCellStyle}>
         {!multi && first && <TrackTokenSlot token={first} onMove={onMove} />}
         {!first && (
           <DirectionArrowIcon direction={kind.arrow} color={PALETTE[kind.color].main} />
@@ -1128,7 +1158,7 @@ function BoardCell({
   }
 
   return (
-    <div className={trackCellClassName} style={premiumWhiteCellStyle}>
+    <div className={trackCellClassName} style={classicWhiteCellStyle}>
       {!multi && first && <TrackTokenSlot token={first} onMove={onMove} />}
       {multi && <MultiTokens tokens={tokens} onMove={onMove} />}
     </div>
@@ -1161,10 +1191,10 @@ function ClassicCenterOverlay({
         <polygon points="3,0 3,3 1.5,1.5" fill={rightColor} />
         <polygon points="3,3 0,3 1.5,1.5" fill={bottomColor} />
         <polygon points="0,3 0,0 1.5,1.5" fill={leftColor} />
-        <line x1="0" y1="0" x2="1.5" y2="1.5" stroke="rgba(255,255,255,.42)" strokeWidth="0.04" />
-        <line x1="3" y1="0" x2="1.5" y2="1.5" stroke="rgba(255,255,255,.42)" strokeWidth="0.04" />
-        <line x1="3" y1="3" x2="1.5" y2="1.5" stroke="rgba(255,255,255,.42)" strokeWidth="0.04" />
-        <line x1="0" y1="3" x2="1.5" y2="1.5" stroke="rgba(255,255,255,.42)" strokeWidth="0.04" />
+        <line x1="0" y1="0" x2="1.5" y2="1.5" stroke="rgba(255,255,255,.3)" strokeWidth="0.03" />
+        <line x1="3" y1="0" x2="1.5" y2="1.5" stroke="rgba(255,255,255,.3)" strokeWidth="0.03" />
+        <line x1="3" y1="3" x2="1.5" y2="1.5" stroke="rgba(255,255,255,.3)" strokeWidth="0.03" />
+        <line x1="0" y1="3" x2="1.5" y2="1.5" stroke="rgba(255,255,255,.3)" strokeWidth="0.03" />
       </svg>
     </div>
   );
@@ -1370,11 +1400,10 @@ export function LudoBoard({
       }),
     [seatColors],
   );
-
   return (
     <BoardRotationContext.Provider value={0}>
       <div
-        className="relative w-full aspect-square select-none"
+        className="relative aspect-square w-full select-none overflow-hidden rounded-[6px]"
         style={{
           backgroundColor: "#ffffff",
           boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.78)",
@@ -1400,7 +1429,7 @@ export function LudoBoard({
         <ClassicCenterWinTokens tokens={centerWinTokens} seatColors={seatColors} />
 
         {/* ── Board outer border ───────────────────────────────────────────── */}
-        <div className="pointer-events-none absolute inset-0 z-30 border-[2px] border-[#8a8a8a]" />
+        <div className="pointer-events-none absolute inset-0 z-30 rounded-[6px] border border-[#9d9d9d]" />
 
         <style jsx global>{`
           @keyframes ludo-available-spin {
