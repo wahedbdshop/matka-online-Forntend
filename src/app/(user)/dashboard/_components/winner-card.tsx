@@ -10,7 +10,6 @@ type WinnerCardTheme = "thai" | "kalyan";
 
 const VISIBLE_ITEMS = 5;
 const ITEM_HEIGHT = 56;
-const SCROLL_SPEED = 26;
 
 
 function formatWinnerAmount(value: unknown, theme: WinnerCardTheme) {
@@ -105,11 +104,11 @@ export function WinnerCard({
   bets: any[];
   theme?: WinnerCardTheme;
 }) {
-  const frameRef = useRef<number | null>(null);
+  const listRef = useRef<HTMLDivElement>(null);
+  const animationRef = useRef<Animation | null>(null);
 
   // Keep last non-empty winners — never show empty while waiting for new draw
   const [cachedBets, setCachedBets] = useState<any[]>(bets ?? []);
-  const [offset, setOffset] = useState(0);
   useEffect(() => {
     if (bets?.length) setCachedBets(bets);
   }, [bets]);
@@ -121,36 +120,38 @@ export function WinnerCard({
   const visibleBets = shouldAnimate ? [...cachedBets, ...cachedBets] : cachedBets;
 
   useEffect(() => {
-    setOffset(0);
-  }, [cachedBets]);
+    const el = listRef.current;
+    animationRef.current?.cancel();
+    animationRef.current = null;
 
-  useEffect(() => {
+    if (!el) return;
+
+    el.style.transform = "translate3d(0, 0, 0)";
+
     if (!shouldAnimate || !loopHeight) {
-      setOffset(0);
       return;
     }
 
-    let lastTime = performance.now();
+    const duration = Math.max(14000, cachedBets.length * 1800);
+    const animation = el.animate(
+      [
+        { transform: "translate3d(0, 0, 0)" },
+        { transform: `translate3d(0, -${loopHeight}px, 0)` },
+      ],
+      {
+        duration,
+        iterations: Number.POSITIVE_INFINITY,
+        easing: "linear",
+      },
+    );
 
-    const animate = (time: number) => {
-      const delta = time - lastTime;
-      lastTime = time;
-
-      setOffset((current) => {
-        const next = current + (delta / 1000) * SCROLL_SPEED;
-        return next >= loopHeight ? next - loopHeight : next;
-      });
-
-      frameRef.current = requestAnimationFrame(animate);
-    };
-
-    frameRef.current = requestAnimationFrame(animate);
+    animationRef.current = animation;
 
     return () => {
-      if (frameRef.current !== null) cancelAnimationFrame(frameRef.current);
-      frameRef.current = null;
+      animation.cancel();
+      animationRef.current = null;
     };
-  }, [loopHeight, shouldAnimate]);
+  }, [cachedBets.length, loopHeight, shouldAnimate]);
 
   const styles =
     theme === "kalyan"
@@ -222,9 +223,9 @@ export function WinnerCard({
           style={{ height: `${viewportHeight}px` }}
         >
           <div
+            ref={listRef}
             className=""
             style={{
-              transform: `translateY(-${offset}px)`,
               willChange: shouldAnimate ? "transform" : "auto",
             }}
           >
