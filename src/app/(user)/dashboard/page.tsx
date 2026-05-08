@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { Download, TrendingUp, Trophy, Users } from "lucide-react";
@@ -29,16 +29,6 @@ function matchesGameType(
   return target === "kalyan" ? source === "KALYAN" : source === "THAI";
 }
 
-function getWinAmount(w: Record<string, unknown>) {
-  return Number(
-    w.actualWin ?? w.winningAmount ?? w.winAmount ?? w.payoutAmount ?? 0,
-  );
-}
-
-function sortByAmountDesc(winners: Record<string, unknown>[]) {
-  return [...winners].sort((a, b) => getWinAmount(b) - getWinAmount(a));
-}
-
 function extractList(payload: any): Record<string, unknown>[] {
   if (Array.isArray(payload)) return payload;
   if (Array.isArray(payload?.data)) return payload.data;
@@ -50,42 +40,21 @@ function extractList(payload: any): Record<string, unknown>[] {
   return [];
 }
 
-function filterLatestDraw(winners: Record<string, unknown>[]) {
-  if (!winners.length) return winners;
+function formatCompactCount(value: number) {
+  if (value >= 1000) {
+    return `${Math.round(value / 1000)}K+`;
+  }
 
-  const getDrawKey = (w: Record<string, unknown>) =>
-    String(w.roundId ?? w.drawId ?? w.drawNumber ?? "").trim();
-
-  const withKey = winners.filter((w) => getDrawKey(w));
-  if (!withKey.length) return winners;
-
-  const sorted = [...withKey].sort((a, b) => {
-    const aTime = new Date(String(a.createdAt ?? 0)).getTime();
-    const bTime = new Date(String(b.createdAt ?? 0)).getTime();
-    return bTime - aTime;
-  });
-
-  const latestKey = getDrawKey(sorted[0]);
-  return winners.filter((w) => getDrawKey(w) === latestKey);
+  return `${value}+`;
 }
 
-const ACTIVITY_STATS = [
-  {
-    popular: "10K+",
-    winners: "Rs 100K+",
-    thaiRates: "8",
-  },
-  {
-    popular: "12K+",
-    winners: "Rs 185K+",
-    thaiRates: "10",
-  },
-  {
-    popular: "15K+",
-    winners: "Rs 250K+",
-    thaiRates: "12",
-  },
-];
+function buildActivityStatsPool() {
+  return Array.from({ length: 20 }, (_, index) => ({
+    popular: formatCompactCount(18000 + index * 1700),
+    winners: formatCompactCount(12000 + index * 2100),
+    activeUsers: formatCompactCount(42000 + index * 2600),
+  }));
+}
 
 function AndroidAppLogo() {
   return (
@@ -122,7 +91,7 @@ export default function DashboardPage() {
       thaiWinners: "Last Thai Winners",
       popular: "Popular",
       winners: "Winners",
-      thaiRates: "Thai Rates",
+      activeUsers: "Active Users",
       referralTitle: "Get 5% Referral Bonus",
       referralSubtitle: "For every deposit - lifetime · Level 1~5",
       invite: "Invite",
@@ -141,7 +110,7 @@ export default function DashboardPage() {
       thaiWinners: "সর্বশেষ থাই বিজয়ী",
       popular: "জনপ্রিয়",
       winners: "বিজয়ী",
-      thaiRates: "থাই রেট",
+      activeUsers: "Active Users",
       referralTitle: "৫% রেফারেল বোনাস নিন",
       referralSubtitle: "প্রতিটি ডিপোজিটে - লাইফটাইম · লেভেল ১~৫",
       invite: "ইনভাইট",
@@ -159,7 +128,7 @@ export default function DashboardPage() {
       thaiWinners: "हाल के थाई विजेता",
       popular: "लोकप्रिय",
       winners: "विजेता",
-      thaiRates: "थाई रेट",
+      activeUsers: "Active Users",
       referralTitle: "5% रेफरल बोनस पाएं",
       referralSubtitle: "हर डिपॉजिट पर - लाइफटाइम · लेवल 1~5",
       invite: "इनवाइट",
@@ -198,25 +167,29 @@ export default function DashboardPage() {
     ? home.paymentMethods
     : [];
   const allThaiWinners = extractList(thaiWinnersData);
-  const filteredThaiWinners = filterLatestDraw(allThaiWinners);
-  const thaiWinners = sortByAmountDesc(
-    filteredThaiWinners.length ? filteredThaiWinners : allThaiWinners,
-  );
+  const thaiWinners = allThaiWinners;
   const recentWinners = extractList(kalyanWinnersData);
-  const kalyanWinners = sortByAmountDesc(
-    recentWinners.filter((winner: Record<string, unknown>) =>
-      matchesGameType(winner, "kalyan"),
-    ),
+  const kalyanWinners = recentWinners.filter((winner: Record<string, unknown>) =>
+    matchesGameType(winner, "kalyan"),
   );
-  const activityStats = ACTIVITY_STATS[activityStatsIndex];
+  const activityStatsList = useMemo(() => buildActivityStatsPool(), []);
+
+  const activityStats =
+    activityStatsList[activityStatsIndex] ?? activityStatsList[0] ?? {
+      popular: "10K+",
+      winners: "0",
+      activeUsers: "0",
+    };
 
   useEffect(() => {
+    if (!activityStatsList.length) return;
+
     const intervalId = window.setInterval(() => {
-      setActivityStatsIndex((current) => (current + 1) % ACTIVITY_STATS.length);
-    }, 2600);
+      setActivityStatsIndex((current) => (current + 1) % activityStatsList.length);
+    }, 10000);
 
     return () => window.clearInterval(intervalId);
-  }, []);
+  }, [activityStatsList.length]);
 
   return (
     <>
@@ -255,8 +228,8 @@ export default function DashboardPage() {
             },
             {
               icon: Users,
-              label: text.thaiRates,
-              value: activityStats.thaiRates,
+              label: text.activeUsers,
+              value: activityStats.activeUsers,
               color: "text-purple-600 dark:text-purple-400",
               bg: "from-purple-50 to-white dark:from-purple-500/10 dark:to-purple-600/5",
               border: "border-purple-200 dark:border-purple-500/20",

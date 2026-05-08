@@ -8,6 +8,10 @@ import { PLAY_TYPE_LABEL, type PlayType } from "@/types/kalyan";
 
 type WinnerCardTheme = "thai" | "kalyan";
 
+const VISIBLE_ITEMS = 5;
+const ITEM_HEIGHT = 56;
+const SCROLL_SPEED = 26;
+
 
 function formatWinnerAmount(value: unknown, theme: WinnerCardTheme) {
   const amount = Number(value ?? 0);
@@ -101,38 +105,52 @@ export function WinnerCard({
   bets: any[];
   theme?: WinnerCardTheme;
 }) {
-  const scrollRef = useRef<HTMLDivElement>(null);
+  const frameRef = useRef<number | null>(null);
 
   // Keep last non-empty winners — never show empty while waiting for new draw
   const [cachedBets, setCachedBets] = useState<any[]>(bets ?? []);
+  const [offset, setOffset] = useState(0);
   useEffect(() => {
     if (bets?.length) setCachedBets(bets);
   }, [bets]);
 
+  const shouldAnimate = cachedBets.length > VISIBLE_ITEMS;
+  const loopHeight = cachedBets.length * ITEM_HEIGHT;
+  const viewportHeight =
+    Math.max(1, Math.min(cachedBets.length, VISIBLE_ITEMS)) * ITEM_HEIGHT;
+  const visibleBets = shouldAnimate ? [...cachedBets, ...cachedBets] : cachedBets;
+
   useEffect(() => {
-    const el = scrollRef.current;
-    if (!el || !cachedBets?.length) {
-      if (el) el.scrollTop = 0;
+    setOffset(0);
+  }, [cachedBets]);
+
+  useEffect(() => {
+    if (!shouldAnimate || !loopHeight) {
+      setOffset(0);
       return;
     }
 
-    // Only scroll if content overflows the container
-    if (el.scrollHeight <= el.clientHeight) return;
+    let lastTime = performance.now();
 
-    let animFrame: number;
-    let pos = 0;
-    const speed = 0.5;
+    const animate = (time: number) => {
+      const delta = time - lastTime;
+      lastTime = time;
 
-    const scroll = () => {
-      pos += speed;
-      if (pos >= el.scrollHeight - el.clientHeight) pos = 0;
-      el.scrollTop = pos;
-      animFrame = requestAnimationFrame(scroll);
+      setOffset((current) => {
+        const next = current + (delta / 1000) * SCROLL_SPEED;
+        return next >= loopHeight ? next - loopHeight : next;
+      });
+
+      frameRef.current = requestAnimationFrame(animate);
     };
 
-    animFrame = requestAnimationFrame(scroll);
-    return () => cancelAnimationFrame(animFrame);
-  }, [cachedBets]);
+    frameRef.current = requestAnimationFrame(animate);
+
+    return () => {
+      if (frameRef.current !== null) cancelAnimationFrame(frameRef.current);
+      frameRef.current = null;
+    };
+  }, [loopHeight, shouldAnimate]);
 
   const styles =
     theme === "kalyan"
@@ -145,7 +163,7 @@ export function WinnerCard({
           headerText: "text-[#1b2037]",
           liveBg: "bg-[#1d2645]/12",
           liveText: "text-[#1b2037]",
-          divider: "divide-slate-200 dark:divide-[#40496f]",
+          itemBorder: "border-slate-200 dark:border-[#40496f]",
           avatarBorder: "border-[#65511a]",
           avatarBg: "bg-[#2a2437]",
           avatarText: "text-[#f5c548]",
@@ -162,7 +180,7 @@ export function WinnerCard({
           headerText: "text-[#1b2037]",
           liveBg: "bg-[#1d2645]/12",
           liveText: "text-[#1b2037]",
-          divider: "divide-slate-200 dark:divide-[#40496f]",
+          itemBorder: "border-slate-200 dark:border-[#40496f]",
           avatarBorder: "border-[#65511a]",
           avatarBg: "bg-[#2a2437]",
           avatarText: "text-[#f5c548]",
@@ -200,12 +218,17 @@ export function WinnerCard({
 
       {cachedBets?.length ? (
         <div
-          ref={scrollRef}
-          className="h-[224px] overflow-hidden bg-[radial-gradient(circle_at_top,rgba(15,23,42,0.04),transparent_48%)] dark:bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.04),transparent_48%)]"
-          style={{ scrollBehavior: "auto" }}
+          className="overflow-hidden bg-[radial-gradient(circle_at_top,rgba(15,23,42,0.04),transparent_48%)] dark:bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.04),transparent_48%)]"
+          style={{ height: `${viewportHeight}px` }}
         >
-          <div className={`divide-y ${styles.divider}`}>
-            {cachedBets.map((b: any, i: number) => {
+          <div
+            className=""
+            style={{
+              transform: `translateY(-${offset}px)`,
+              willChange: shouldAnimate ? "transform" : "auto",
+            }}
+          >
+            {visibleBets.map((b: any, i: number) => {
               const amount =
                 b.actualWin ?? b.winningAmount ?? b.winAmount ?? b.payoutAmount ?? 0;
               const username = getUserLabel(b);
@@ -215,7 +238,7 @@ export function WinnerCard({
               return (
                 <div
                   key={`${b.id ?? i}-${i}`}
-                  className="flex items-center justify-between gap-2 px-3 py-2 transition-colors hover:bg-slate-50 dark:hover:bg-white/[0.03]"
+                  className={`flex h-14 box-border items-center justify-between gap-2 border-b px-3 py-2 transition-colors hover:bg-slate-50 dark:hover:bg-white/[0.03] ${styles.itemBorder}`}
                 >
                   <div className="flex items-center gap-2">
                     <div

@@ -335,18 +335,25 @@ export function HomeGameHub({ popularGames }: { popularGames: any[] }) {
                   type="button"
                   onClick={() => setActiveTab(tab.id)}
                   className={cn(
-                    "flex min-w-[76px] shrink-0 flex-col items-center rounded-lg border px-3 py-3 text-center transition-all duration-200",
+                    "relative flex min-w-[76px] shrink-0 flex-col items-center overflow-hidden rounded-[12px] border px-3 py-3 text-center transition-all duration-200",
                     isActive
-                      ? "border-[#f0bf38]/80 bg-amber-50 text-slate-950 shadow-[0_10px_24px_rgba(240,191,56,0.18),inset_0_1px_0_rgba(255,255,255,0.5)] dark:bg-[linear-gradient(180deg,#445186_0%,#37406c_55%,#2d355b_100%)] dark:text-white dark:shadow-[0_10px_24px_rgba(240,191,56,0.18),inset_0_1px_0_rgba(255,255,255,0.14)]"
+                      ? "border-[#ffd86b] bg-[linear-gradient(180deg,#465385_0%,#39446f_55%,#2e375d_100%)] text-white shadow-[0_0_0_1px_rgba(255,216,107,0.9),0_0_0_3px_rgba(255,199,44,0.18),0_14px_26px_rgba(240,191,56,0.18),inset_0_1px_0_rgba(255,255,255,0.18)]"
                       : "border-slate-200 bg-white text-slate-800 hover:border-[#d69d18] hover:bg-amber-50 hover:text-slate-950 dark:border-[#485483] dark:bg-[#36406b] dark:text-[#d5b969] dark:hover:border-[#7b6a2f] dark:hover:bg-[#3b4774] dark:hover:text-white",
                   )}
                 >
+                  {isActive && (
+                    <>
+                      <span className="pointer-events-none absolute inset-0 rounded-[inherit] border border-[#fff0a8]/65 shadow-[inset_0_0_0_1px_rgba(255,240,168,0.18)]" />
+                      <span className="pointer-events-none absolute inset-[3px] rounded-[10px] bg-[linear-gradient(180deg,#48568c_0%,#3a456f_55%,#30395f_100%)]" />
+                      <span className="pointer-events-none absolute inset-x-2.5 bottom-2 h-6 rounded-full bg-[radial-gradient(circle,rgba(255,205,72,0.35)_0%,rgba(255,205,72,0.14)_45%,transparent_78%)] blur-md" />
+                    </>
+                  )}
                   {tab.logoSrc ? (
                     <span
                       className={cn(
-                        "mb-1.5 flex h-6 w-6 items-center justify-center overflow-hidden rounded-full border transition-all",
+                        "relative z-10 mb-1.5 flex h-6 w-6 items-center justify-center overflow-hidden rounded-full border transition-all",
                         isActive
-                          ? "border-[#f0bf38]/60 bg-white shadow-[0_0_12px_rgba(240,191,56,0.25)] dark:bg-white/10 dark:shadow-[0_0_12px_rgba(240,191,56,0.35)]"
+                          ? "border-[#fff0a8] bg-white shadow-[0_0_18px_rgba(255,199,44,0.55)] dark:bg-white/10 dark:shadow-[0_0_18px_rgba(255,199,44,0.55)]"
                           : "border-slate-200 bg-white dark:border-white/5 dark:bg-white/5",
                       )}
                     >
@@ -361,25 +368,25 @@ export function HomeGameHub({ popularGames }: { popularGames: any[] }) {
                   ) : (
                     <Icon
                       className={cn(
-                        "mx-auto mb-1.5 h-4 w-4",
+                        "relative z-10 mx-auto mb-1.5 h-4 w-4",
                         isActive
-                          ? "text-[#b77905] drop-shadow-[0_0_6px_rgba(255,215,94,0.35)] dark:text-[#ffd75e] dark:drop-shadow-[0_0_6px_rgba(255,215,94,0.55)]"
+                          ? "text-[#fff0a8] drop-shadow-[0_0_12px_rgba(255,215,94,0.85)]"
                           : "text-slate-700 dark:text-[#d5b969]",
                       )}
                     />
                   )}
                   <span
                     className={cn(
-                      "text-[11px] font-semibold",
+                      "relative z-10 text-[11px] font-semibold",
                       isActive
-                        ? "text-slate-950 dark:text-[#fff4cc]"
+                        ? "text-[#fff4cc]"
                         : "text-slate-800 dark:text-[#d5b969]",
                     )}
                   >
                     {tab.label}
                   </span>
                   {isActive && (
-                    <span className="mt-1 h-1.5 w-10 rounded-full bg-[linear-gradient(90deg,#f0bf38_0%,#ffe58f_50%,#f0bf38_100%)] shadow-[0_0_10px_rgba(240,191,56,0.45)]" />
+                    <span className="relative z-10 mt-1.5 h-2 w-11 rounded-full bg-[linear-gradient(90deg,#ffc72c_0%,#fff0a8_50%,#ffc72c_100%)] shadow-[0_0_16px_rgba(255,199,44,0.85)]" />
                   )}
                 </button>
               );
