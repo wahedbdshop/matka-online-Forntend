@@ -16,6 +16,7 @@ import {
 import { AdminService } from "@/services/admin.service";
 
 const LIMIT = 20;
+const BDT_SYMBOL = "\u09F3";
 
 const STATUS_STYLE: Record<string, string> = {
   PENDING: "bg-yellow-500/15 text-yellow-400 border-yellow-500/30",
@@ -54,6 +55,11 @@ function getAgentNumbers(deposit: any) {
   }
 
   return [...new Set(numbers)];
+}
+
+function formatBdt(value?: number | string | null, withPlus = false) {
+  const amount = Number(value ?? 0).toLocaleString("en-BD");
+  return `${withPlus ? "+" : ""}${BDT_SYMBOL}${amount}`;
 }
 
 function DepositsContent() {
@@ -100,7 +106,7 @@ function DepositsContent() {
     mutationFn: ({ id, note }: { id: string; note?: string }) =>
       AdminService.approveDeposit(id, note),
     onSuccess: () => {
-      toast.success("Deposit approved â€” balance credited");
+      toast.success("Deposit approved - balance credited");
       setReviewDialog(null);
       setReviewNote("");
       queryClient.invalidateQueries({ queryKey: ["admin-deposits"] });
@@ -300,13 +306,13 @@ function DepositsContent() {
                       {d.senderNumber ?? "-"}
                     </td>
                     <td className="px-4 py-3 text-sm font-bold text-white">
-                      à§³{Number(d.amount).toLocaleString()}
+                      {formatBdt(d.amount)}
                     </td>
                     <td className="px-4 py-3 text-xs text-emerald-400">
-                      +à§³{Number(d.bonus).toLocaleString()}
+                      {formatBdt(d.bonus, true)}
                     </td>
                     <td className="px-4 py-3 text-xs font-semibold text-blue-300">
-                      à§³{Number(d.totalCredit).toLocaleString()}
+                      {formatBdt(d.totalCredit)}
                     </td>
                     <td className="px-4 py-3">
                       <span
@@ -379,7 +385,7 @@ function DepositsContent() {
                           </>
                         )}
                         {d.status !== "PENDING" && (
-                          <span className="text-[10px] text-slate-600">â€”</span>
+                          <span className="text-[10px] text-slate-600">-</span>
                         )}
                       </div>
                     </td>
@@ -432,11 +438,11 @@ function DepositsContent() {
                 ["Agent", detailDialog.agent?.name],
                 ["Transaction ID", detailDialog.transactionId],
                 ["Sender Number", detailDialog.senderNumber],
-                ["Amount", `à§³${Number(detailDialog.amount).toLocaleString()}`],
-                ["Bonus", `+à§³${Number(detailDialog.bonus).toLocaleString()}`],
+                ["Amount", formatBdt(detailDialog.amount)],
+                ["Bonus", formatBdt(detailDialog.bonus, true)],
                 [
                   "Total Credit",
-                  `à§³${Number(detailDialog.totalCredit).toLocaleString()}`,
+                  formatBdt(detailDialog.totalCredit),
                 ],
                 ["Status", detailDialog.status],
                 ["Submitted", new Date(detailDialog.createdAt).toLocaleString()],
@@ -493,16 +499,16 @@ function DepositsContent() {
               <Row label="Sender No." value={reviewDialog.senderNumber || "-"} />
               <Row
                 label="Amount"
-                value={`à§³${Number(reviewDialog.amount).toLocaleString()}`}
+                value={formatBdt(reviewDialog.amount)}
               />
               <Row
                 label="Bonus"
-                value={`+à§³${Number(reviewDialog.bonus).toLocaleString()}`}
+                value={formatBdt(reviewDialog.bonus, true)}
                 highlight="text-emerald-400"
               />
               <Row
                 label="Total Credit"
-                value={`à§³${Number(reviewDialog.totalCredit).toLocaleString()}`}
+                value={formatBdt(reviewDialog.totalCredit)}
                 highlight="text-blue-300 font-bold"
               />
             </div>
