@@ -30,6 +30,7 @@ import { WinnerCard } from "./(user)/dashboard/_components/winner-card";
 import { RateTable } from "./(user)/dashboard/_components/rate-table";
 import { PaymentMethodsRow } from "./(user)/dashboard/_components/payment-methods-row";
 import { AuthPopupProvider } from "@/components/shared/auth-popup";
+import { DomainActionList } from "@/components/shared/domain-action-list";
 import { FloatingChatButton } from "@/components/user/floating-chat-button";
 import { GlobalNoticeBar } from "@/components/shared/global-notice-bar";
 import { ThemeToggle } from "@/components/shared/theme-toggle";
@@ -497,12 +498,18 @@ export default function LandingPage() {
                     {[
                       "5% referral bonus for every deposit - lifetime · Level 1-5",
                       "1% register bonus with quick customer support",
-                      "www.matkaonline24.online",
-                      "www.matkaonline24.com",
-                      "www.matka24.org",
                     ].map((text) => (
                       <p key={text}>{text}</p>
                     ))}
+                    <DomainActionList
+                      domains={[
+                        "www.matka24.org",
+                        "www.matkaonline24.com",
+                        "www.matkaonline24.online",
+                      ]}
+                      className="pt-1"
+                      theme="dark"
+                    />
                   </div>
                 </div>
 
@@ -519,20 +526,16 @@ export default function LandingPage() {
                         Secure APK from our official website. Download and play
                         faster from your Android phone.
                       </p>
-                      <div className="mt-3 flex flex-wrap gap-1.5">
-                        {[
+                      <DomainActionList
+                        domains={[
                           "matka24.org",
                           "matkaonline24.com",
                           "matkaonline24.online",
-                        ].map((site) => (
-                          <span
-                            key={site}
-                            className="rounded-full border border-[#3b5f92] bg-[#10213d] px-2.5 py-1 text-[10px] font-semibold text-[#9fd2ff]"
-                          >
-                            {site}
-                          </span>
-                        ))}
-                      </div>
+                        ]}
+                        className="mt-3"
+                        layout="wrap"
+                        theme="dark"
+                      />
                     </div>
                   </div>
                   <a

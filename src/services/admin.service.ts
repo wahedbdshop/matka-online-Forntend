@@ -53,6 +53,101 @@ export interface AdminUserTransactionsResponse {
   };
 }
 
+export interface AdminUserRegisterInfo {
+  id: string;
+  name: string;
+  username: string;
+  email: string;
+  phone?: string | null;
+  country?: string | null;
+  image?: string | null;
+  createdAt: string;
+  accountCreatedAt: string;
+  latestLoginAt?: string | null;
+  lastLoginAt?: string | null;
+  location?: string | null;
+  ipAddress?: string | null;
+  browser?: string | null;
+  os?: string | null;
+  deviceType: "Mobile" | "Desktop" | "Tablet";
+  deviceName: string;
+  status: "ONLINE" | "OFFLINE" | "BLOCKED" | "SUSPENDED";
+  accountStatus: string;
+  activeSessionId?: string | null;
+  isOnline: boolean;
+}
+
+export interface AdminUserRegisterInformationResponse {
+  users: AdminUserRegisterInfo[];
+  total: number;
+  page: number;
+  limit: number;
+  summary: {
+    todayRegistered: number;
+    selectedDateRegistered: number;
+    selectedDate: string;
+  };
+}
+
+export interface AdminUserRegistrationAudit {
+  id: string;
+  userId: string;
+  name: string;
+  username: string;
+  email: string;
+  phone?: string | null;
+  image?: string | null;
+  accountStatus: string;
+  accountCreatedAt: string;
+  registeredAt: string;
+  ipAddress?: string | null;
+  userAgent?: string | null;
+  origin?: string | null;
+  referer?: string | null;
+  source: string;
+  riskLevel: string;
+  flags: string[];
+  deviceName?: string | null;
+  browser?: string | null;
+  os?: string | null;
+  location?: string | null;
+  sameIpAccountCount: number;
+  isSuspicious: boolean;
+}
+
+export interface AdminUserRegistrationAuditResponse {
+  audits: AdminUserRegistrationAudit[];
+  total: number;
+  page: number;
+  limit: number;
+  summary: {
+    selectedDate: string;
+    highRiskCount: number;
+    directApiCount: number;
+    suspiciousCount: number;
+  };
+}
+
+export interface AdminRegistrationAuditIpAccount {
+  id: string;
+  userId: string;
+  name: string;
+  username: string;
+  email: string;
+  phone?: string | null;
+  accountStatus: string;
+  accountCreatedAt: string;
+  registeredAt: string;
+  source: string;
+  riskLevel: string;
+  flags: string[];
+}
+
+export interface AdminRegistrationAuditIpAccountsResponse {
+  ipAddress: string;
+  accounts: AdminRegistrationAuditIpAccount[];
+}
+
 export const AdminService = {
   // ─── Dashboard ─────────────────────────────────────────────────────────────
   getDashboardStats: async () => {
@@ -132,6 +227,58 @@ export const AdminService = {
     if (params?.phoneVerified !== undefined)
       query.set("phoneVerified", String(params.phoneVerified));
     const res = await api.get<ApiResponse<any>>(`/admin/users?${query}`);
+    return res.data;
+  },
+
+  getUserRegisterInformation: async (params?: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    status?: "ONLINE" | "OFFLINE" | "BLOCKED" | "SUSPENDED";
+    country?: string;
+    date?: string;
+  }) => {
+    const query = new URLSearchParams();
+    if (params?.page) query.set("page", String(params.page));
+    if (params?.limit) query.set("limit", String(params.limit));
+    if (params?.search) query.set("search", params.search);
+    if (params?.status) query.set("status", params.status);
+    if (params?.country) query.set("country", params.country);
+    if (params?.date) query.set("date", params.date);
+    const res = await api.get<ApiResponse<AdminUserRegisterInformationResponse>>(
+      `/admin/users/register-information?${query}`,
+    );
+    return res.data;
+  },
+
+  getUserRegistrationAudit: async (params?: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    source?: string;
+    riskLevel?: string;
+    date?: string;
+    suspiciousOnly?: boolean;
+  }) => {
+    const query = new URLSearchParams();
+    if (params?.page) query.set("page", String(params.page));
+    if (params?.limit) query.set("limit", String(params.limit));
+    if (params?.search) query.set("search", params.search);
+    if (params?.source) query.set("source", params.source);
+    if (params?.riskLevel) query.set("riskLevel", params.riskLevel);
+    if (params?.date) query.set("date", params.date);
+    if (params?.suspiciousOnly) query.set("suspiciousOnly", "true");
+    const res = await api.get<ApiResponse<AdminUserRegistrationAuditResponse>>(
+      `/admin/users/registration-audit?${query}`,
+    );
+    return res.data;
+  },
+
+  getRegistrationAuditAccountsByIp: async (ipAddress: string) => {
+    const query = new URLSearchParams({ ipAddress });
+    const res = await api.get<ApiResponse<AdminRegistrationAuditIpAccountsResponse>>(
+      `/admin/users/registration-audit/by-ip?${query}`,
+    );
     return res.data;
   },
 
@@ -243,6 +390,20 @@ export const AdminService = {
   },
 
   // ─── Transfer ──────────────────────────────────────────────────
+  forceLogoutUser: async (userId: string) => {
+    const res = await api.delete<ApiResponse<{ deletedCount: number }>>(
+      `/admin/users/${userId}/sessions`,
+    );
+    return res.data;
+  },
+
+  deleteUser: async (userId: string) => {
+    const res = await api.delete<ApiResponse<{ id: string; isDeleted: boolean }>>(
+      `/admin/users/${userId}`,
+    );
+    return res.data;
+  },
+
   getAllTransfers: async (params?: {
     page?: number;
     limit?: number;
@@ -369,6 +530,9 @@ export const AdminService = {
     limit?: number;
     userId?: string;
     search?: string;
+    fromDate?: string;
+    toDate?: string;
+    useTodayDefault?: boolean;
   }) => {
     const query = new URLSearchParams({
       page: String(params?.page || 1),
@@ -376,6 +540,9 @@ export const AdminService = {
       ...(params?.status ? { status: params.status } : {}),
       ...(params?.userId ? { userId: params.userId } : {}),
       ...(params?.search ? { search: params.search } : {}),
+      ...(params?.fromDate ? { fromDate: params.fromDate } : {}),
+      ...(params?.toDate ? { toDate: params.toDate } : {}),
+      ...(params?.useTodayDefault ? { useTodayDefault: "true" } : {}),
     });
     const res = await api.get<ApiResponse<any>>(`/deposit?${query}`);
     return res.data;
@@ -385,6 +552,11 @@ export const AdminService = {
     const res = await api.patch<ApiResponse<any>>(`/deposit/${id}/approve`, {
       note,
     });
+    return res.data;
+  },
+
+  getDepositById: async (id: string) => {
+    const res = await api.get<ApiResponse<any>>(`/deposit/${id}`);
     return res.data;
   },
 
@@ -509,6 +681,9 @@ export const AdminService = {
     limit?: number;
     userId?: string;
     search?: string;
+    fromDate?: string;
+    toDate?: string;
+    useTodayDefault?: boolean;
   }) => {
     const query = new URLSearchParams({
       page: String(params?.page || 1),
@@ -516,8 +691,16 @@ export const AdminService = {
       ...(params?.status ? { status: params.status } : {}),
       ...(params?.userId ? { userId: params.userId } : {}),
       ...(params?.search ? { search: params.search } : {}),
+      ...(params?.fromDate ? { fromDate: params.fromDate } : {}),
+      ...(params?.toDate ? { toDate: params.toDate } : {}),
+      ...(params?.useTodayDefault ? { useTodayDefault: "true" } : {}),
     });
     const res = await api.get<ApiResponse<any>>(`/withdrawal?${query}`);
+    return res.data;
+  },
+
+  getWithdrawalById: async (id: string) => {
+    const res = await api.get<ApiResponse<any>>(`/withdrawal/${id}`);
     return res.data;
   },
 

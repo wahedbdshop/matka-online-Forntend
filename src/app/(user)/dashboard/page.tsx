@@ -7,6 +7,7 @@ import Link from "next/link";
 import { Download, TrendingUp, Trophy, Users } from "lucide-react";
 import { FloatingChatButton } from "@/components/user/floating-chat-button";
 import { GlobalNoticeBar } from "@/components/shared/global-notice-bar";
+import { DomainActionList } from "@/components/shared/domain-action-list";
 import { HomeService } from "@/services/home.service";
 import { ThaiLotteryUserService } from "@/services/thai-lottery.service";
 import { cn } from "@/lib/utils";
@@ -319,12 +320,18 @@ export default function DashboardPage() {
             {[
               `* ${text.seo1}`,
               `* ${text.seo2}`,
-              "www.matkaonline24.online",
-              "www.matkaonline24.com",
-              "www.matka24.org",
             ].map((item) => (
               <p key={item}>{item}</p>
             ))}
+            <DomainActionList
+              domains={[
+                "www.matka24.org",
+                "www.matkaonline24.com",
+                "www.matkaonline24.online",
+              ]}
+              className="pt-1"
+              theme="adaptive"
+            />
           </div>
         </div>
 
@@ -341,20 +348,16 @@ export default function DashboardPage() {
                 Secure APK from our official websites. Download and play faster
                 from your Android phone.
               </p>
-              <div className="mt-3 flex flex-wrap gap-1.5">
-                {[
+              <DomainActionList
+                domains={[
                   "matka24.org",
                   "matkaonline24.com",
                   "matkaonline24.online",
-                ].map((site) => (
-                  <span
-                    key={site}
-                    className="rounded-full border border-sky-500 bg-sky-200 px-2.5 py-1 text-[10px] font-black text-slate-950 shadow-sm dark:border-sky-700 dark:bg-sky-950 dark:text-sky-100 dark:shadow-none"
-                  >
-                    {site}
-                  </span>
-                ))}
-              </div>
+                ]}
+                className="mt-3"
+                layout="wrap"
+                theme="adaptive"
+              />
             </div>
           </div>
           <a

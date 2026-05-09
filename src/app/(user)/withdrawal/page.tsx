@@ -483,9 +483,13 @@ export default function WithdrawPage() {
     queryFn: () => DepositService.getMyDeposits(1, 5),
     enabled: isWithdrawOn,
   });
-  const hasPendingDeposit = (depositData?.data?.deposits ?? []).some(
-    (d: any) => d.status === "PENDING" && !!d.transactionId,
+  const latestSubmittedDeposit = (depositData?.data?.deposits ?? []).find(
+    (d: any) => !!d.transactionId,
   );
+  const hasPendingDeposit =
+    latestSubmittedDeposit?.status === "PENDING" &&
+    (!latestSubmittedDeposit.expiresAt ||
+      new Date(latestSubmittedDeposit.expiresAt).getTime() > Date.now());
 
   // ── Derived ───────────────────────────────────────────────
   const isBank = selectedMethod?.type === "BANK";

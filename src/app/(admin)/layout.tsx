@@ -147,6 +147,16 @@ const navItems: NavItem[] = [
     label: "Manage Users",
     children: [
       { href: "/admin/users", icon: Users, label: "All Users" },
+      {
+        href: "/admin/users/register-information",
+        icon: Smartphone,
+        label: "User Register Info",
+      },
+      {
+        href: "/admin/users/registration-audit",
+        icon: Smartphone,
+        label: "Registration Audit",
+      },
       { href: "/admin/users/active", icon: Users, label: "Active Users" },
       { href: "/admin/users/banned", icon: XCircle, label: "Banned Users" },
       {
@@ -185,6 +195,11 @@ const navItems: NavItem[] = [
     children: [
       { href: "/admin/deposits", icon: ListChecks, label: "Deposit Requests" },
       {
+        href: "/admin/deposits/history",
+        icon: History,
+        label: "User Deposit History",
+      },
+      {
         href: "/admin/manual-deposit",
         icon: HandCoins,
         label: "Manual Deposit",
@@ -216,6 +231,11 @@ const navItems: NavItem[] = [
         href: "/admin/withdrawals",
         icon: ListChecks,
         label: "Withdrawal Requests",
+      },
+      {
+        href: "/admin/withdrawals/history",
+        icon: History,
+        label: "User Withdrawal History",
       },
       {
         href: "/admin/payment-methods",

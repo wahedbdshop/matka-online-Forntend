@@ -100,7 +100,7 @@ function DepositsContent() {
     mutationFn: ({ id, note }: { id: string; note?: string }) =>
       AdminService.approveDeposit(id, note),
     onSuccess: () => {
-      toast.success("Deposit approved — balance credited");
+      toast.success("Deposit approved â€” balance credited");
       setReviewDialog(null);
       setReviewNote("");
       queryClient.invalidateQueries({ queryKey: ["admin-deposits"] });
@@ -143,11 +143,10 @@ function DepositsContent() {
 
   return (
     <div className="space-y-5">
-      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl font-bold text-white">Deposit Requests</h1>
-          <p className="text-xs text-slate-400 mt-0.5">{total} total</p>
+          <p className="mt-0.5 text-xs text-slate-400">{total} total</p>
         </div>
         {userIdFilter && (
           <span className="rounded-full border border-blue-500/30 bg-blue-500/10 px-3 py-1 text-xs text-blue-400">
@@ -156,8 +155,7 @@ function DepositsContent() {
         )}
       </div>
 
-      {/* Tabs + Search */}
-      <div className="flex flex-wrap gap-3 items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex gap-2">
           {["PENDING", "APPROVED", "REJECTED", "ALL"].map((s) => (
             <button
@@ -179,13 +177,13 @@ function DepositsContent() {
 
         <div className="flex gap-2">
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+            <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
             <input
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleSearch()}
               placeholder="Name, TXN ID, phone..."
-              className="w-56 rounded-lg border border-slate-600 bg-slate-800 pl-9 pr-3 py-1.5 text-xs text-white outline-none placeholder:text-slate-500 focus:border-blue-500"
+              className="w-56 rounded-lg border border-slate-600 bg-slate-800 py-1.5 pl-9 pr-3 text-xs text-white outline-none placeholder:text-slate-500 focus:border-blue-500"
             />
           </div>
           <button
@@ -209,8 +207,7 @@ function DepositsContent() {
         </div>
       </div>
 
-      {/* Table */}
-      <div className="rounded-xl border border-slate-700 bg-slate-800/50 overflow-x-auto">
+      <div className="overflow-x-auto rounded-xl border border-slate-700 bg-slate-800/50">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-slate-700 text-left">
@@ -231,7 +228,7 @@ function DepositsContent() {
               ].map((h) => (
                 <th
                   key={h}
-                  className="px-4 py-3 text-xs font-medium text-slate-400 whitespace-nowrap"
+                  className="whitespace-nowrap px-4 py-3 text-xs font-medium text-slate-400"
                 >
                   {h}
                 </th>
@@ -251,10 +248,7 @@ function DepositsContent() {
               ))
             ) : deposits.length === 0 ? (
               <tr>
-                <td
-                  colSpan={13}
-                  className="px-4 py-10 text-center text-slate-500"
-                >
+                <td colSpan={13} className="px-4 py-10 text-center text-slate-500">
                   No deposit requests found
                 </td>
               </tr>
@@ -306,13 +300,13 @@ function DepositsContent() {
                       {d.senderNumber ?? "-"}
                     </td>
                     <td className="px-4 py-3 text-sm font-bold text-white">
-                      ৳{Number(d.amount).toLocaleString()}
+                      à§³{Number(d.amount).toLocaleString()}
                     </td>
                     <td className="px-4 py-3 text-xs text-emerald-400">
-                      +৳{Number(d.bonus).toLocaleString()}
+                      +à§³{Number(d.bonus).toLocaleString()}
                     </td>
                     <td className="px-4 py-3 text-xs font-semibold text-blue-300">
-                      ৳{Number(d.totalCredit).toLocaleString()}
+                      à§³{Number(d.totalCredit).toLocaleString()}
                     </td>
                     <td className="px-4 py-3">
                       <span
@@ -334,14 +328,12 @@ function DepositsContent() {
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-1.5">
-                        {/* Detail button */}
                         <button
                           onClick={() => setDetailDialog(d)}
                           className="flex items-center gap-1 rounded-lg border border-slate-600 bg-slate-700 px-2 py-1 text-[10px] text-slate-300 hover:bg-slate-600"
                         >
                           <Eye className="h-3 w-3" />
                         </button>
-                        {/* Approve / Reject */}
                         {d.status === "PENDING" && (
                           <>
                             <button
@@ -387,7 +379,7 @@ function DepositsContent() {
                           </>
                         )}
                         {d.status !== "PENDING" && (
-                          <span className="text-[10px] text-slate-600">—</span>
+                          <span className="text-[10px] text-slate-600">â€”</span>
                         )}
                       </div>
                     </td>
@@ -399,7 +391,6 @@ function DepositsContent() {
         </table>
       </div>
 
-      {/* Pagination */}
       {totalPages > 1 && (
         <div className="flex items-center justify-between">
           <button
@@ -422,7 +413,6 @@ function DepositsContent() {
         </div>
       )}
 
-      {/* Detail Modal */}
       {detailDialog && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4"
@@ -430,7 +420,7 @@ function DepositsContent() {
             if (e.target === e.currentTarget) setDetailDialog(null);
           }}
         >
-          <div className="w-full max-w-sm rounded-[20px] border border-slate-700 bg-slate-900 p-5 space-y-3">
+          <div className="w-full max-w-sm space-y-3 rounded-[20px] border border-slate-700 bg-slate-900 p-5">
             <h2 className="text-sm font-bold text-white">Deposit Detail</h2>
             <div className="space-y-2 text-xs">
               {[
@@ -442,23 +432,20 @@ function DepositsContent() {
                 ["Agent", detailDialog.agent?.name],
                 ["Transaction ID", detailDialog.transactionId],
                 ["Sender Number", detailDialog.senderNumber],
-                ["Amount", `৳${Number(detailDialog.amount).toLocaleString()}`],
-                ["Bonus", `+৳${Number(detailDialog.bonus).toLocaleString()}`],
+                ["Amount", `à§³${Number(detailDialog.amount).toLocaleString()}`],
+                ["Bonus", `+à§³${Number(detailDialog.bonus).toLocaleString()}`],
                 [
                   "Total Credit",
-                  `৳${Number(detailDialog.totalCredit).toLocaleString()}`,
+                  `à§³${Number(detailDialog.totalCredit).toLocaleString()}`,
                 ],
                 ["Status", detailDialog.status],
-                [
-                  "Submitted",
-                  new Date(detailDialog.createdAt).toLocaleString(),
-                ],
+                ["Submitted", new Date(detailDialog.createdAt).toLocaleString()],
                 ["Expires", new Date(detailDialog.expiresAt).toLocaleString()],
                 ["Review Note", detailDialog.reviewNote ?? "-"],
               ].map(([label, value]) => (
                 <div key={label} className="flex justify-between gap-4">
                   <span className="text-slate-500">{label}</span>
-                  <span className="text-white text-right font-medium">
+                  <span className="text-right font-medium text-white">
                     {value ?? "-"}
                   </span>
                 </div>
@@ -474,7 +461,6 @@ function DepositsContent() {
         </div>
       )}
 
-      {/* Review Modal */}
       {reviewDialog?.open && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4"
@@ -485,14 +471,14 @@ function DepositsContent() {
             }
           }}
         >
-          <div className="w-full max-w-sm rounded-[20px] border border-slate-700 bg-slate-900 p-5 space-y-4">
+          <div className="w-full max-w-sm space-y-4 rounded-[20px] border border-slate-700 bg-slate-900 p-5">
             <h2
               className={`text-sm font-bold ${reviewDialog.type === "approve" ? "text-green-400" : "text-red-400"}`}
             >
               {reviewDialog.type === "approve" ? "Approve" : "Reject"} Deposit
             </h2>
 
-            <div className="rounded-lg border border-slate-700 bg-slate-800 p-3 space-y-2">
+            <div className="space-y-2 rounded-lg border border-slate-700 bg-slate-800 p-3">
               <Row label="User" value={reviewDialog.user} />
               <Row label="Method" value={reviewDialog.method} />
               <Row
@@ -504,22 +490,19 @@ function DepositsContent() {
                 }
               />
               <Row label="TXN ID" value={reviewDialog.txnId} />
-              <Row
-                label="Sender No."
-                value={reviewDialog.senderNumber || "-"}
-              />
+              <Row label="Sender No." value={reviewDialog.senderNumber || "-"} />
               <Row
                 label="Amount"
-                value={`৳${Number(reviewDialog.amount).toLocaleString()}`}
+                value={`à§³${Number(reviewDialog.amount).toLocaleString()}`}
               />
               <Row
                 label="Bonus"
-                value={`+৳${Number(reviewDialog.bonus).toLocaleString()}`}
+                value={`+à§³${Number(reviewDialog.bonus).toLocaleString()}`}
                 highlight="text-emerald-400"
               />
               <Row
                 label="Total Credit"
-                value={`৳${Number(reviewDialog.totalCredit).toLocaleString()}`}
+                value={`à§³${Number(reviewDialog.totalCredit).toLocaleString()}`}
                 highlight="text-blue-300 font-bold"
               />
             </div>
@@ -595,7 +578,7 @@ function Row({
 
 export default function AdminDepositsPage() {
   return (
-    <Suspense fallback={<div className="text-slate-400 p-4">Loading...</div>}>
+    <Suspense fallback={<div className="p-4 text-slate-400">Loading...</div>}>
       <DepositsContent />
     </Suspense>
   );

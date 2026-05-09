@@ -34,6 +34,62 @@ import {
 import { getClientAccessTokenCookie } from "@/lib/auth-cookie";
 import { isAdminPortalRole } from "@/lib/auth-role";
 
+function normalizeMetricKey(value: string) {
+  return value.replace(/[^a-z0-9]/gi, "").toLowerCase();
+}
+
+function pickMetricValue(source: any, ...paths: string[]) {
+  for (const path of paths) {
+    const value = path.split(".").reduce<any>((acc, key) => acc?.[key], source);
+    if (value !== undefined && value !== null && value !== "") {
+      return Array.isArray(value) ? value.length : value;
+    }
+  }
+
+  return undefined;
+}
+
+function findMetricDeep(source: any, targetKeys: string[]) {
+  if (!source || typeof source !== "object") return undefined;
+
+  const normalizedTargets = targetKeys.map(normalizeMetricKey);
+  const visited = new WeakSet<object>();
+
+  const walk = (value: any): any => {
+    if (!value || typeof value !== "object") return undefined;
+    if (visited.has(value)) return undefined;
+    visited.add(value);
+
+    for (const [key, child] of Object.entries(value)) {
+      const normalizedKey = normalizeMetricKey(key);
+      if (
+        normalizedTargets.some(
+          (target) => normalizedKey === target || normalizedKey.includes(target),
+        )
+      ) {
+        if (child !== undefined && child !== null && child !== "") {
+          return Array.isArray(child) ? child.length : child;
+        }
+      }
+
+      const nested = walk(child);
+      if (nested !== undefined) return nested;
+    }
+
+    return undefined;
+  };
+
+  return walk(source);
+}
+
+function pickFirstMetric(...values: any[]) {
+  for (const value of values) {
+    if (value !== undefined && value !== null && value !== "") return value;
+  }
+
+  return 0;
+}
+
 export default function UserDetailPage({
   params,
 }: {
@@ -276,6 +332,53 @@ export default function UserDetailPage({
   const isBanned = user.status === "BANNED";
   const totalBets =
     (user._count?.thaiBets ?? 0) + (user._count?.kalyanBets ?? 0);
+  const depositCount = pickFirstMetric(
+    pickMetricValue(
+      user,
+      "_count.deposits",
+      "depositCount",
+      "depositsCount",
+      "counts.deposits",
+      "stats.deposits.count",
+      "summary.deposits.count",
+      "deposits.length",
+    ),
+    findMetricDeep(user, [
+      "depositCount",
+      "depositsCount",
+      "totalDeposits",
+      "deposits",
+    ]),
+  );
+  const withdrawalCount = pickFirstMetric(
+    pickMetricValue(
+      user,
+      "_count.withdrawals",
+      "withdrawalCount",
+      "withdrawalsCount",
+      "counts.withdrawals",
+      "stats.withdrawals.count",
+      "summary.withdrawals.count",
+      "withdrawals.length",
+    ),
+    findMetricDeep(user, [
+      "withdrawalCount",
+      "withdrawalsCount",
+      "totalWithdrawals",
+      "withdrawals",
+    ]),
+  );
+  const referralCount = pickFirstMetric(
+    pickMetricValue(
+      user,
+      "_count.referrals",
+      "referralCount",
+      "referralsCount",
+      "counts.referrals",
+      "referrals.length",
+    ),
+    findMetricDeep(user, ["referralCount", "referralsCount", "referrals"]),
+  );
 
   const statCards = [
     {
@@ -288,7 +391,7 @@ export default function UserDetailPage({
     },
     {
       label: "Deposits",
-      value: user._count?.deposits ?? 0,
+      value: depositCount,
       sub: `৳${Number(user.depositTotal ?? 0).toLocaleString()} total`,
       icon: ArrowDownToLine,
       color: "from-[#1a3fa8] to-[#2651c7]",
@@ -297,7 +400,7 @@ export default function UserDetailPage({
     },
     {
       label: "Withdrawals",
-      value: user._count?.withdrawals ?? 0,
+      value: withdrawalCount,
       sub: `৳${Number(user.withdrawalTotal ?? 0).toLocaleString()} total`,
       icon: ArrowUpFromLine,
       color: "from-[#0d6e5e] to-[#0e8a75]",
@@ -322,7 +425,7 @@ export default function UserDetailPage({
     },
     {
       label: "Referrals",
-      value: user._count?.referrals ?? 0,
+      value: referralCount,
       icon: ArrowLeftRight,
       color: "from-[#1a5c1a] to-[#24802b]",
       border: "border-green-400/30",
