@@ -429,7 +429,7 @@ function LudoResultOverlay({
         )}>
           {isWin ? "CONGRATULATIONS!" : "BETTER LUCK NEXT TIME"}
         </h1>
-        <p className="mt-4 text-lg font-black text-white">
+        <p className="mt-4 text-lg font-black text-white drop-shadow-[0_2px_10px_rgba(0,0,0,0.55)]">
           {isWin ? `${playerName}, you win!` : `Played by ${playerName}`}
         </p>
         {isWin ? (
@@ -443,7 +443,7 @@ function LudoResultOverlay({
               </p>
             </div>
           ) : (
-            <p className="mt-5 text-base font-black uppercase tracking-[0.24em] text-yellow-100/85">
+            <p className="mt-5 text-base font-black uppercase tracking-[0.24em] text-yellow-100 drop-shadow-[0_2px_10px_rgba(0,0,0,0.45)]">
               Free Match Winner
             </p>
           )
@@ -460,7 +460,7 @@ function LudoResultOverlay({
               onClick={onPlayAgain}
               className={cn(
                 "flex h-12 items-center justify-center gap-2 rounded-2xl text-sm font-black shadow-lg",
-                isWin ? "bg-yellow-300 text-yellow-950" : "bg-blue-300 text-blue-950",
+                isWin ? "bg-yellow-300 text-yellow-950" : "bg-blue-300 text-slate-950",
               )}
             >
               <RefreshCw className="h-4 w-4" />
@@ -469,7 +469,7 @@ function LudoResultOverlay({
             <button
               type="button"
               onClick={onHome}
-              className="flex h-12 items-center justify-center gap-2 rounded-2xl border border-white/20 bg-white/12 text-sm font-black text-white shadow-lg"
+              className="flex h-12 items-center justify-center gap-2 rounded-2xl border border-white/25 bg-white/16 text-sm font-black text-white shadow-lg backdrop-blur"
             >
               <Home className="h-4 w-4" />
               Back to Home
@@ -530,6 +530,7 @@ export default function LudoRoomPage() {
   const [resultActionsVisible, setResultActionsVisible] = useState(false);
   const latestRoomRef = useRef<LudoRoom | null>(null);
   const pendingRoomUpdateRef = useRef<unknown | null>(null);
+  const pendingCombinedRollRoomRef = useRef<LudoRoom | null>(null);
   const applyRoomUpdateRef = useRef<(incoming: unknown) => void>(() => {});
   const tokenPathHistoryRef = useRef<Map<string, number[]>>(new Map());
   const audioContextRef = useRef<AudioContext | null>(null);
@@ -563,6 +564,8 @@ export default function LudoRoomPage() {
   const LOCAL_DICE_ROLL_MS = 520;
   const REMOTE_DICE_ROLL_MS = 320;
   const DICE_SETTLE_MS = 280;
+  const LOCAL_DICE_ANIMATION_MS = LOCAL_DICE_ROLL_MS + DICE_SETTLE_MS;
+  const REMOTE_DICE_ANIMATION_MS = REMOTE_DICE_ROLL_MS + DICE_SETTLE_MS;
   const [rollCountdown, setRollCountdown] = useState<number | null>(null);
   const rollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const rollAutoRef     = useRef<ReturnType<typeof setTimeout>  | null>(null);
@@ -732,6 +735,13 @@ export default function LudoRoomPage() {
         diceRollStartRef.current = null;
       }, DICE_SETTLE_MS);
     }, remainingRollMs);
+  }, [DICE_SETTLE_MS]);
+
+  const getRemainingDiceAnimationMs = useCallback((minimumRollMs: number) => {
+    const elapsed =
+      diceRollStartRef.current == null ? 0 : Date.now() - diceRollStartRef.current;
+
+    return Math.max(0, minimumRollMs - elapsed) + DICE_SETTLE_MS;
   }, [DICE_SETTLE_MS]);
 
   useEffect(() => {
@@ -966,17 +976,36 @@ export default function LudoRoomPage() {
 
   function applyNormalizedRoomUpdate(nextRoom: LudoRoom) {
     const previousRoom = latestRoomRef.current;
-
-    if (
+    const nextDiceValue =
+      typeof nextRoom.lastDiceValue === "number" ? nextRoom.lastDiceValue : null;
+    const didDiceChange = Boolean(
       previousRoom &&
-      typeof nextRoom.lastDiceValue === "number" &&
-      nextRoom.lastDiceValue !== previousRoom.lastDiceValue
-    ) {
+      nextDiceValue !== null &&
+      nextDiceValue !== previousRoom.lastDiceValue,
+    );
+
+    if (didDiceChange && previousRoom) {
       startDiceSound(360);
       if (!localRollPendingRef.current) {
         startDiceRollVisual();
-        settleDiceRollVisual(nextRoom.lastDiceValue, REMOTE_DICE_ROLL_MS);
+        settleDiceRollVisual(nextDiceValue!, REMOTE_DICE_ROLL_MS);
       }
+    }
+
+    if (didDiceChange && previousRoom && findTokenMoveAnimation(previousRoom, nextRoom)) {
+      animTimersRef.current.forEach(clearTimeout);
+      animTimersRef.current = [];
+      latestRoomRef.current = nextRoom;
+      setRoomState(nextRoom);
+      setAnimRoom(previousRoom);
+      isAnimatingRef.current = true;
+
+      const timer = setTimeout(() => {
+        playTokenMoveAnimation(previousRoom, nextRoom);
+      }, getRemainingDiceAnimationMs(REMOTE_DICE_ROLL_MS));
+
+      animTimersRef.current.push(timer);
+      return;
     }
 
     if (previousRoom && playTokenMoveAnimation(previousRoom, nextRoom)) {
@@ -1092,21 +1121,6 @@ export default function LudoRoomPage() {
     return true;
   }, [findTokenMoveAnimation, finishMoveAnimation, playStepSound, roomWithMoveProgress]);
 
-  const applyThirdSixFallback = useCallback((room: LudoRoom, previousTurnUserId?: string | null) => {
-    if (!room.currentTurnUserId || room.currentTurnUserId !== previousTurnUserId) {
-      return room;
-    }
-
-    const opponentPlayer =
-      room.players.find((player) => player.userId !== room.currentTurnUserId) ?? null;
-
-    return {
-      ...room,
-      availableTokenIds: [],
-      currentTurnUserId: opponentPlayer?.userId ?? null,
-    };
-  }, []);
-
   // Normalize any socket/API payload and preserve per-client yourColor.
   // Server broadcasts the same room object to all clients so yourColor is absent.
   const applyRoomUpdate = useCallback((incoming: unknown) => {
@@ -1138,8 +1152,35 @@ export default function LudoRoomPage() {
       ...normalized,
       yourColor: previousRoom?.yourColor ?? normalized.yourColor,
     };
+
+    const moveVersionDelta =
+      previousRoom && typeof nextRoom.moveVersion === "number"
+        ? (nextRoom.moveVersion ?? 0) - (previousRoom.moveVersion ?? 0)
+        : 0;
+    const hasImmediateTokenMove =
+      previousRoom ? findTokenMoveAnimation(previousRoom, nextRoom) !== null : false;
+
+    if (
+      previousRoom &&
+      payloadDiceValue == null &&
+      (nextRoom.lastDiceValue ?? null) == null &&
+      moveVersionDelta >= 2 &&
+      hasImmediateTokenMove
+    ) {
+      pendingCombinedRollRoomRef.current = nextRoom;
+      return;
+    }
+
+    if (
+      payloadDiceValue != null &&
+      pendingCombinedRollRoomRef.current &&
+      (nextRoom.moveVersion ?? 0) <= (pendingCombinedRollRoomRef.current.moveVersion ?? 0)
+    ) {
+      pendingCombinedRollRoomRef.current = null;
+    }
+
     applyNormalizedRoomUpdate(nextRoom);
-  }, [applyNormalizedRoomUpdate]);
+  }, [applyNormalizedRoomUpdate, findTokenMoveAnimation]);
   applyRoomUpdateRef.current = applyRoomUpdate;
 
   const rollMutation = useMutation({
@@ -1156,10 +1197,13 @@ export default function LudoRoomPage() {
         diceRollStartRef.current = null;
       }
       if (fromRoom && autoMovedByRoll) {
+        latestRoomRef.current = data;
+        setRoomState(data);
+        setAnimRoom(fromRoom);
         isAnimatingRef.current = true;
         const timer = setTimeout(() => {
           playTokenMoveAnimation(fromRoom, data);
-        }, LOCAL_DICE_ROLL_MS);
+        }, getRemainingDiceAnimationMs(LOCAL_DICE_ROLL_MS));
         animTimersRef.current.push(timer);
       } else {
         latestRoomRef.current = data;
@@ -1169,17 +1213,18 @@ export default function LudoRoomPage() {
       // Notify room so the opponent's client gets the update instantly
       emitEvent("ludo:room:join", roomId);
 
-      // Three consecutive 6s rule
+      // Backend is the source of truth for triple-six penalties. We only
+      // track the streak locally so we can show a clear warning to the user.
       if (data.lastDiceValue === 6) {
         consecutiveSixRef.current += 1;
         if (consecutiveSixRef.current >= 3) {
           consecutiveSixRef.current = 0;
-          const penalizedRoom = applyThirdSixFallback(data, fromRoom?.currentTurnUserId);
-          latestRoomRef.current = penalizedRoom;
-          rememberTokenPaths(penalizedRoom);
-          setRoomState(penalizedRoom);
-          toast.warning("3 consecutive 6s! Turn passed.");
-          emitEvent("ludo:room:join", roomId);
+          if (
+            data.currentTurnUserId !== authUserId &&
+            (data.availableTokenIds?.length ?? 0) === 0
+          ) {
+            toast.warning("3 consecutive 6s! 3rd 6 miss, turn passed.");
+          }
         }
       } else {
         consecutiveSixRef.current = 0;
@@ -1278,21 +1323,13 @@ export default function LudoRoomPage() {
   }, [applyRoomUpdate, emitEvent, isConnected, onEvent, roomId]);
 
   const serverRoom = roomData?.data ?? null;
-  const shouldPreferServerRoom =
-    Boolean(
-      serverRoom &&
-      (
-        !roomState?.currentTurnUserId ||
-        (serverRoom.moveVersion ?? 0) >= (roomState?.moveVersion ?? 0) ||
-        serverRoom.currentTurnUserId !== roomState?.currentTurnUserId ||
-        serverRoom.lastDiceValue !== roomState?.lastDiceValue
-      )
-    );
   const room =
     serverRoom?.status === "FINISHED" || serverRoom?.status === "CANCELLED"
       ? serverRoom
-      : shouldPreferServerRoom
-        ? serverRoom
+      : serverRoom && roomState
+        ? (serverRoom.moveVersion ?? 0) > (roomState.moveVersion ?? 0)
+          ? serverRoom
+          : roomState
         : roomState ?? serverRoom;
   const me =
     room?.players.find((p) => p.userId === authUserId) ??
@@ -1389,6 +1426,12 @@ export default function LudoRoomPage() {
       clearTimeout(timer);
     };
   }, [playLossSound, playWinSound, resultType, room?.id]);
+
+  useEffect(() => {
+    if (!isFinished) return;
+    void router.prefetch("/games/ludo");
+    void router.prefetch("/dashboard");
+  }, [isFinished, router]);
 
   // Reset consecutive-6 tracking whenever the turn passes away from us.
   useEffect(() => {
@@ -1616,11 +1659,11 @@ export default function LudoRoomPage() {
       )}
 
       {/* ── Board ── */}
-      <div className="relative z-10 flex min-h-0 flex-1 items-center justify-center px-2 py-2 sm:px-4 sm:py-3">
+      <div className="relative z-10 flex min-h-0 flex-1 items-center justify-center px-1 py-1 sm:px-4 sm:py-3">
         <div
           className="aspect-square overflow-hidden rounded-[8px] bg-white p-[2px]"
           style={{
-            width: "min(calc(100vw - 18px), 470px, calc(100vh - 160px))",
+            width: "min(calc(100vw - 12px), 464px, calc(100vh - 156px))",
             boxShadow: "0 0 0 1px rgba(255,255,255,0.18), 0 16px 28px rgba(0,0,0,0.34)",
           }}
         >
@@ -1799,8 +1842,8 @@ export default function LudoRoomPage() {
           countdown={resultCountdown}
           showActions={resultActionsVisible}
           stakeAmount={Number(room?.stakeAmount ?? 0)}
-          onPlayAgain={() => router.push("/games/ludo")}
-          onHome={() => router.push("/dashboard")}
+          onPlayAgain={() => router.replace("/games/ludo")}
+          onHome={() => router.replace("/dashboard")}
         />
       )}
 

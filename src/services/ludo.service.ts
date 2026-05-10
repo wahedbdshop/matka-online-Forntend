@@ -98,6 +98,33 @@ export type LudoMatchOpponent = {
   username?: string | null;
 };
 
+export type LudoInviteUser = {
+  id: string;
+  name: string;
+  username: string;
+};
+
+export type SendLudoInvitePayload = {
+  inviteeUserId: string;
+  stake: LudoStakeAmount;
+  preferredColor?: "RED" | "GREEN";
+  pieceMode?: "FOUR";
+  isFree?: boolean;
+};
+
+export type RespondLudoInvitePayload = {
+  accept: boolean;
+};
+
+export type LudoInviteEventPayload = {
+  inviteId: string;
+  inviter: LudoInviteUser;
+  stakeAmount: LudoStakeAmount;
+  isFree: boolean;
+  pieceMode: "FOUR";
+  expiresAt: string;
+};
+
 type LudoRoomResponse = ApiResponse<
   LudoRoom | { room?: LudoRoom; snapshot?: LudoRoom; diceValue?: number }
 >;
@@ -210,6 +237,36 @@ export const LudoService = {
     const res = await api.post<ApiResponse<{ queueId: string }>>(
       `/ludo/queue/${queueId}/leave`,
     );
+
+    return res.data;
+  },
+
+  async sendInvite(payload: SendLudoInvitePayload) {
+    const res = await api.post<
+      ApiResponse<{
+        inviteId: string;
+        inviteeUserId: string;
+        inviter: LudoInviteUser;
+        stakeAmount: LudoStakeAmount;
+        isFree: boolean;
+        pieceMode: "FOUR";
+        expiresAt: string;
+      }>
+    >("/ludo/invites/send", payload);
+
+    return res.data;
+  },
+
+  async respondToInvite(inviteId: string, payload: RespondLudoInvitePayload) {
+    const res = await api.post<
+      ApiResponse<{
+        accepted: boolean;
+        roomId: string | null;
+        matchId: string | null;
+        stakeAmount?: LudoStakeAmount;
+        pieceMode?: "FOUR";
+      }>
+    >(`/ludo/invites/${inviteId}/respond`, payload);
 
     return res.data;
   },

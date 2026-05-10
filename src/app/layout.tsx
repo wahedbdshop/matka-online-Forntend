@@ -33,10 +33,7 @@ export default async function RootLayout({
 
   return (
     <html lang={initialLanguage} suppressHydrationWarning>
-      <body
-        className={geist.className}
-        style={{ backgroundColor: "#020617", color: "#f8fafc" }}
-      >
+      <body className={`${geist.className} bg-slate-50 text-slate-950 dark:bg-slate-950 dark:text-slate-50`}>
         <QueryProvider>
           <LanguageProvider initialLanguage={initialLanguage}>
             <ThemeProvider>

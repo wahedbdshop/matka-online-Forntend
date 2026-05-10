@@ -14,7 +14,8 @@ import {
   Percent,
   Clock,
   CheckSquare,
-  Square,
+  Plus,
+  X,
   Image as ImageIcon,
   Gift,
 } from "lucide-react";
@@ -23,8 +24,6 @@ import { LudoAdminService } from "@/services/ludoAdmin.service";
 import { AdminService } from "@/services/admin.service";
 import { getLudoConfig } from "@/lib/ludo-settings";
 import { cn } from "@/lib/utils";
-
-const ALL_STAKES = [250, 500, 1000, 2000];
 
 function StatCard({
   label,
@@ -145,6 +144,7 @@ export default function LudoAdminPage() {
   const [commissionInput, setCommissionInput] = useState<string>("");
   const [queueInput, setQueueInput] = useState<string>("");
   const [turnInput, setTurnInput] = useState<string>("");
+  const [stakeInput, setStakeInput] = useState<string>("");
 
   const { mutate: toggleFreeMode, isPending: savingFreeMode } = useMutation({
     mutationFn: async (nextValue: boolean) => {
@@ -171,11 +171,46 @@ export default function LudoAdminPage() {
     ? settings.allowedStakes
     : [];
 
-  const toggleStake = (stake: number) => {
-    const next = allowedStakes.includes(stake)
-      ? allowedStakes.filter((s) => s !== stake)
-      : [...allowedStakes, stake].sort((a, b) => a - b);
-    updateSettings({ allowedStakes: next });
+  const syncAllowedStakes = (nextStakes: number[]) => {
+    const normalized = Array.from(
+      new Set(
+        nextStakes.filter(
+          (stake): stake is number => Number.isFinite(stake) && stake > 0,
+        ),
+      ),
+    ).sort((a, b) => a - b);
+
+    if (normalized.length === 0) {
+      toast.error("At least one stake is required");
+      return;
+    }
+
+    updateSettings({ allowedStakes: normalized });
+    saveSetting({
+      key: "ludo_stake_options",
+      value: normalized.join(","),
+    });
+  };
+
+  const addStake = () => {
+    const nextStake = Number(stakeInput);
+
+    if (!Number.isInteger(nextStake) || nextStake <= 0) {
+      toast.error("Enter a valid positive stake amount");
+      return;
+    }
+
+    if (allowedStakes.includes(nextStake)) {
+      toast.error("This stake already exists");
+      return;
+    }
+
+    syncAllowedStakes([...allowedStakes, nextStake]);
+    setStakeInput("");
+  };
+
+  const removeStake = (stake: number) => {
+    syncAllowedStakes(allowedStakes.filter((item) => item !== stake));
   };
 
   const isLoading = loadingStats || loadingSettings;
@@ -457,40 +492,70 @@ export default function LudoAdminPage() {
                 </button>
               </div>
 
-              {/* Allowed Stakes */}
+                            {/* Allowed Stakes */}
               <div
                 className={cn(
                   "rounded-xl border border-slate-700 bg-slate-900/60 px-4 py-3 space-y-2",
                   isFreeMode && "opacity-50",
                 )}
               >
-                <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
-                  Allowed Stakes (৳)
-                </p>
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+                    Allowed Stakes (BDT)
+                  </p>
+                  <p className="text-[10px] text-slate-500">
+                    Add or remove custom amounts
+                  </p>
+                </div>
+                <div className="flex gap-2">
+                  <input
+                    type="number"
+                    min={1}
+                    step={1}
+                    value={stakeInput}
+                    onChange={(e) => setStakeInput(e.target.value)}
+                    placeholder="Enter stake amount"
+                    disabled={saving || savingBanner || isFreeMode}
+                    className="h-9 w-full rounded-lg border border-slate-600 bg-slate-800 px-3 text-sm text-white outline-none placeholder:text-slate-500 focus:border-purple-500"
+                  />
+                  <button
+                    onClick={addStake}
+                    disabled={
+                      saving ||
+                      savingBanner ||
+                      isFreeMode ||
+                      stakeInput.trim() === ""
+                    }
+                    className="flex items-center gap-1 rounded-lg bg-emerald-600 px-3 text-xs font-bold text-white hover:bg-emerald-700 disabled:opacity-40"
+                  >
+                    <Plus className="h-3.5 w-3.5" />
+                    Add
+                  </button>
+                </div>
                 <div className="flex flex-wrap gap-2">
-                  {ALL_STAKES.map((stake) => {
-                    const active = allowedStakes.includes(stake);
-                    return (
+                  {allowedStakes.map((stake) => (
+                    <div
+                      key={stake}
+                      className="flex items-center gap-2 rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-3 py-1.5 text-xs font-bold text-emerald-400"
+                    >
+                      <CheckSquare className="h-3.5 w-3.5" />
+                      <span>Tk {stake}</span>
                       <button
-                        key={stake}
-                        onClick={() => toggleStake(stake)}
-                        disabled={saving || isFreeMode}
-                        className={cn(
-                          "flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-bold transition-all",
-                          active
-                            ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-400"
-                            : "border-slate-600 bg-slate-800 text-slate-400",
-                        )}
+                        type="button"
+                        onClick={() => removeStake(stake)}
+                        disabled={saving || savingBanner || isFreeMode}
+                        className="rounded-full p-0.5 text-emerald-300 transition-colors hover:bg-emerald-400/15 hover:text-white disabled:opacity-40"
+                        aria-label={`Remove ${stake} stake`}
                       >
-                        {active ? (
-                          <CheckSquare className="h-3.5 w-3.5" />
-                        ) : (
-                          <Square className="h-3.5 w-3.5" />
-                        )}
-                        ৳{stake}
+                        <X className="h-3 w-3" />
                       </button>
-                    );
-                  })}
+                    </div>
+                  ))}
+                  {allowedStakes.length === 0 ? (
+                    <div className="rounded-lg border border-dashed border-slate-600 px-3 py-2 text-xs text-slate-500">
+                      No stake added yet
+                    </div>
+                  ) : null}
                 </div>
               </div>
 
@@ -658,3 +723,4 @@ export default function LudoAdminPage() {
     </div>
   );
 }
+

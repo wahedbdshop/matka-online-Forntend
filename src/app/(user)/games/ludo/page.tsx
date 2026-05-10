@@ -5,17 +5,28 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import Image from "next/image";
-import { Loader2, Users, Crown, Swords, Clock, Gift } from "lucide-react";
+import {
+  Loader2,
+  Users,
+  Crown,
+  Swords,
+  Clock,
+  Gift,
+  Search,
+  UserPlus,
+} from "lucide-react";
 import { toast } from "sonner";
 import { useSocket } from "@/hooks/use-socket";
 import { AdminService } from "@/services/admin.service";
 import { getLudoConfig } from "@/lib/ludo-settings";
 import { hasClientAuthCookie } from "@/lib/auth-cookie";
+import { TransferService } from "@/services/transfer.service";
 import { useAuthStore } from "@/store/auth.store";
 import {
   LudoService,
   type JoinLudoQueuePayload,
   type LudoMatchOpponent,
+  type LudoInviteUser,
   type LudoStakeAmount,
 } from "@/services/ludo.service";
 
@@ -42,6 +53,10 @@ type MatchmakingState = {
   roomId?: string | null;
   matchId?: string | null;
   opponentName?: string | null;
+};
+
+type SearchableLudoUser = LudoInviteUser & {
+  email?: string;
 };
 
 const STALE_LUDO_STATE_ERROR =
@@ -265,6 +280,14 @@ export default function LudoPage() {
   const [authChecked, setAuthChecked] = useState(false);
   const [matchmaking, setMatchmaking] = useState<MatchmakingState | null>(null);
   const roomRedirectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const inviteSearchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [inviteQuery, setInviteQuery] = useState("");
+  const [inviteSearchResults, setInviteSearchResults] = useState<
+    SearchableLudoUser[]
+  >([]);
+  const [isInviteSearching, setIsInviteSearching] = useState(false);
+  const [selectedInviteStake, setSelectedInviteStake] =
+    useState<LudoStakeAmount>(0);
 
   useEffect(() => {
     queueMicrotask(() => {
@@ -281,6 +304,9 @@ export default function LudoPage() {
     () => () => {
       if (roomRedirectTimerRef.current) {
         clearTimeout(roomRedirectTimerRef.current);
+      }
+      if (inviteSearchTimerRef.current) {
+        clearTimeout(inviteSearchTimerRef.current);
       }
     },
     [],
@@ -497,10 +523,11 @@ export default function LudoPage() {
     if (isFreeMode) return [];
 
     const live = lobby?.stakes ?? [];
+    const liveStakeOptions = live
+      .map((item) => Number(item.amount))
+      .filter((amount) => Number.isFinite(amount) && amount > 0);
     const stakeOptions =
-      ludoConfig.stakes.length > 0
-        ? ludoConfig.stakes
-        : live.map((item) => Number(item.amount));
+      liveStakeOptions.length > 0 ? liveStakeOptions : ludoConfig.stakes;
 
     return stakeOptions.map((amount) => {
       const match = live.find((item) => Number(item.amount) === amount);
@@ -538,6 +565,60 @@ export default function LudoPage() {
     };
   }, [isQueueSearching, lobby?.stakes, ludoConfig.freeStake, searchingStakeAmount]);
 
+  useEffect(() => {
+    if (isFreeMode) {
+      setSelectedInviteStake(ludoConfig.freeStake);
+      return;
+    }
+
+    if (mergedStakes.length > 0) {
+      setSelectedInviteStake((current) =>
+        mergedStakes.some((stake) => stake.amount === current)
+          ? current
+          : mergedStakes[0]!.amount,
+      );
+    }
+  }, [isFreeMode, ludoConfig.freeStake, mergedStakes]);
+
+  useEffect(() => {
+    if (inviteQuery.trim().length < 2) {
+      if (inviteSearchTimerRef.current) {
+        clearTimeout(inviteSearchTimerRef.current);
+      }
+      setInviteSearchResults([]);
+      setIsInviteSearching(false);
+      return;
+    }
+
+    if (inviteSearchTimerRef.current) {
+      clearTimeout(inviteSearchTimerRef.current);
+    }
+
+    setIsInviteSearching(true);
+    inviteSearchTimerRef.current = setTimeout(async () => {
+      try {
+        const response = await TransferService.searchUser(inviteQuery.trim());
+        const users = Array.isArray(response?.data) ? response.data : [];
+        setInviteSearchResults(
+          users.filter(
+            (user): user is SearchableLudoUser =>
+              Boolean(user?.id) && user.id !== currentUser?.id,
+          ),
+        );
+      } catch {
+        setInviteSearchResults([]);
+      } finally {
+        setIsInviteSearching(false);
+      }
+    }, 350);
+
+    return () => {
+      if (inviteSearchTimerRef.current) {
+        clearTimeout(inviteSearchTimerRef.current);
+      }
+    };
+  }, [currentUser?.id, inviteQuery]);
+
   const getStakeStatusLabel = (stake: (typeof mergedStakes)[number]) => {
     const isCurrentStakeSearching =
       isQueueSearching && Number(searchingStakeAmount) === stake.amount;
@@ -558,6 +639,10 @@ export default function LudoPage() {
   };
 
   const isSearching = isQueueSearching;
+  const inviteStakeLabel =
+    isFreeMode || Number(selectedInviteStake) <= 0
+      ? "Free"
+      : `Tk ${Number(selectedInviteStake).toLocaleString("en-BD")}`;
   const livePlayerCount = lobby?.activePlayerCount ?? 2;
   const playerDisplayName =
     currentUser?.name?.trim() || currentUser?.username?.trim() || "You";
@@ -569,13 +654,35 @@ export default function LudoPage() {
           stake: searchingStakeAmount,
         } satisfies MatchmakingState)
       : null);
+  const sendInviteMutation = useMutation({
+    mutationFn: async (invitee: SearchableLudoUser) =>
+      LudoService.sendInvite({
+        inviteeUserId: invitee.id,
+        stake: isFreeMode ? ludoConfig.freeStake : selectedInviteStake,
+        preferredColor: selectedColor,
+        pieceMode: "FOUR",
+        isFree: isFreeMode || Number(selectedInviteStake) <= 0,
+      }),
+    onSuccess: ({ data }, invitee) => {
+      toast.success(
+        `Invite sent to ${invitee.name || `@${invitee.username}`}${
+          data.isFree ? " for free play" : ` for Tk ${Number(data.stakeAmount).toLocaleString("en-BD")}`
+        }`,
+      );
+      setInviteQuery("");
+      setInviteSearchResults([]);
+    },
+    onError: (error: unknown) => {
+      toast.error(getErrorMessage(error, "Failed to send Ludo invite"));
+    },
+  });
   if (!authChecked) return null;
 
   if (settingsLoading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[#0d0a1e] px-4">
-        <div className="flex items-center gap-3 rounded-2xl border border-purple-500/20 bg-[#1a1040] px-5 py-4 text-purple-100">
-          <Loader2 className="h-5 w-5 animate-spin text-purple-400" />
+      <div className="flex min-h-screen items-center justify-center bg-[radial-gradient(circle_at_top,#eef4ff_0%,#f8fafc_48%,#eef2ff_100%)] px-4 dark:bg-[radial-gradient(circle_at_top,#1a1040_0%,#0d0a1e_58%,#090611_100%)]">
+        <div className="flex items-center gap-3 rounded-2xl border border-violet-200 bg-white px-5 py-4 text-slate-700 shadow-sm dark:border-purple-500/20 dark:bg-[#1a1040] dark:text-purple-100 dark:shadow-none">
+          <Loader2 className="h-5 w-5 animate-spin text-violet-500 dark:text-purple-400" />
           Loading Ludo lobby...
         </div>
       </div>
@@ -584,7 +691,7 @@ export default function LudoPage() {
 
   if (!isLudoEnabled) {
     return (
-      <div className="min-h-screen bg-[#0d0a1e]">
+      <div className="min-h-screen bg-[radial-gradient(circle_at_top,#eef4ff_0%,#f8fafc_48%,#eef2ff_100%)] dark:bg-[radial-gradient(circle_at_top,#1a1040_0%,#0d0a1e_58%,#090611_100%)]">
         {/* Banner Image */}
         {ludoConfig.bannerImage ? (
           <div className="relative w-full overflow-hidden" style={{ maxHeight: 320 }}>
@@ -597,35 +704,35 @@ export default function LudoPage() {
               unoptimized
               priority
             />
-            <div className="absolute inset-0 bg-linear-to-b from-transparent via-transparent to-[#0d0a1e]" />
+            <div className="absolute inset-0 bg-linear-to-b from-transparent via-transparent to-slate-50 dark:to-[#0d0a1e]" />
           </div>
         ) : (
-          <div className="flex h-48 items-center justify-center bg-linear-to-br from-[#180f2f] to-[#0d0a1e]">
-            <div className="flex h-20 w-20 items-center justify-center rounded-full bg-purple-500/15 ring-4 ring-purple-500/20">
-              <Crown className="h-10 w-10 text-purple-300" />
+          <div className="flex h-48 items-center justify-center bg-linear-to-br from-violet-100 via-indigo-50 to-white dark:from-[#180f2f] dark:to-[#0d0a1e]">
+            <div className="flex h-20 w-20 items-center justify-center rounded-full bg-violet-500/10 ring-4 ring-violet-400/20 dark:bg-purple-500/15 dark:ring-purple-500/20">
+              <Crown className="h-10 w-10 text-violet-600 dark:text-purple-300" />
             </div>
           </div>
         )}
 
         {/* Content */}
         <div className="mx-auto max-w-md px-5 pb-10 pt-6 text-center">
-          <div className="inline-flex items-center gap-2 rounded-full border border-amber-400/30 bg-amber-500/10 px-4 py-1.5 text-xs font-bold uppercase tracking-widest text-amber-300">
+          <div className="inline-flex items-center gap-2 rounded-full border border-amber-300 bg-amber-50 px-4 py-1.5 text-xs font-bold uppercase tracking-widest text-amber-700 dark:border-amber-400/30 dark:bg-amber-500/10 dark:text-amber-300">
             <Clock className="h-3.5 w-3.5" />
             Coming Soon
           </div>
 
-          <h1 className="mt-4 text-3xl font-black text-white">
+          <h1 className="mt-4 text-3xl font-black text-slate-950 dark:text-white">
             {ludoConfig.bannerTitle}
           </h1>
 
-          <p className="mt-3 text-sm leading-relaxed text-slate-400">
+          <p className="mt-3 text-sm leading-relaxed text-slate-600 dark:text-slate-400">
             {ludoConfig.bannerMessage}
           </p>
 
           <div className="mt-8 flex items-center justify-center gap-3">
             <Link
               href="/games"
-              className="rounded-full border border-white/10 bg-white/5 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-white/10"
+              className="rounded-full border border-slate-200 bg-white px-5 py-2.5 text-sm font-semibold text-slate-800 transition-colors hover:bg-slate-50 dark:border-white/10 dark:bg-white/5 dark:text-white dark:hover:bg-white/10"
             >
               Back to Games
             </Link>
@@ -642,17 +749,17 @@ export default function LudoPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0d0a1e] pb-10">
+    <div className="min-h-screen bg-[radial-gradient(circle_at_top,#eef4ff_0%,#f8fafc_42%,#eef2ff_100%)] pb-10 text-slate-900 dark:bg-[radial-gradient(circle_at_top,#1a1040_0%,#0d0a1e_52%,#090611_100%)] dark:text-white">
       <div className="pointer-events-none fixed inset-0 overflow-hidden">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(59,130,246,0.12)_0%,transparent_55%)]" />
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom,rgba(239,68,68,0.1)_0%,transparent_60%)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(59,130,246,0.14)_0%,transparent_55%)] dark:bg-[radial-gradient(ellipse_at_top,rgba(59,130,246,0.12)_0%,transparent_55%)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom,rgba(168,85,247,0.08)_0%,transparent_60%)] dark:bg-[radial-gradient(ellipse_at_bottom,rgba(239,68,68,0.1)_0%,transparent_60%)]" />
       </div>
 
       <div className="relative mx-auto max-w-6xl px-4 pt-6">
         {/* Header */}
         <div className="mb-5 flex items-center justify-center gap-3">
           <Crown className="h-7 w-7 text-[#ffd700] drop-shadow-[0_0_8px_rgba(255,215,0,0.8)]" />
-          <h1 className="text-3xl font-black tracking-wide text-white drop-shadow-[0_0_12px_rgba(160,120,255,0.6)]">
+          <h1 className="text-3xl font-black tracking-wide text-slate-900 dark:text-white dark:drop-shadow-[0_0_12px_rgba(160,120,255,0.6)]">
             LUDO MATKA
           </h1>
           <Crown className="h-7 w-7 text-[#ffd700] drop-shadow-[0_0_8px_rgba(255,215,0,0.8)]" />
@@ -662,9 +769,9 @@ export default function LudoPage() {
           <div className="absolute inset-x-12 top-8 h-40 rounded-full bg-[radial-gradient(circle,rgba(125,89,255,0.28)_0%,transparent_72%)] blur-3xl" />
           <div className="relative">
             <LudoPreviewBoard />
-            <div className="absolute -right-24 top-3 flex items-center gap-2 rounded-full border border-[#2dc653]/45 bg-[#081a11] px-4 py-2 shadow-[0_0_16px_rgba(45,198,83,0.26)]">
+            <div className="absolute -right-24 top-3 flex items-center gap-2 rounded-full border border-emerald-300 bg-white/95 px-4 py-2 shadow-[0_10px_24px_rgba(16,185,129,0.18)] dark:border-[#2dc653]/45 dark:bg-[#081a11] dark:shadow-[0_0_16px_rgba(45,198,83,0.26)]">
               <span className="h-2.5 w-2.5 rounded-full bg-[#2dc653] shadow-[0_0_8px_#2dc653]" />
-              <span className="text-sm font-bold text-[#69f28d]">
+              <span className="text-sm font-bold text-emerald-700 dark:text-[#69f28d]">
                 {livePlayerCount} Online
               </span>
             </div>
@@ -675,11 +782,11 @@ export default function LudoPage() {
         <div className="mb-4 flex items-center gap-3">
           <div className="h-px flex-1 bg-gradient-to-r from-transparent to-purple-500/40" />
           <div className="flex items-center gap-2">
-            <Swords className="h-4 w-4 text-purple-300" />
-            <span className="text-sm font-bold uppercase tracking-widest text-purple-200">
+            <Swords className="h-4 w-4 text-violet-500 dark:text-purple-300" />
+            <span className="text-sm font-bold uppercase tracking-widest text-violet-700 dark:text-purple-200">
               {isFreeMode ? "Free Play" : "Select Stake"}
             </span>
-            <Swords className="h-4 w-4 text-purple-300" />
+            <Swords className="h-4 w-4 text-violet-500 dark:text-purple-300" />
           </div>
           <div className="h-px flex-1 bg-gradient-to-l from-transparent to-purple-500/40" />
         </div>
@@ -767,12 +874,12 @@ export default function LudoPage() {
 
         {/* Matchmaking list */}
         {(activeMatchmaking || joinQueueMutation.isPending) && (
-          <div className="mt-4 rounded-2xl border border-purple-500/30 bg-[#1a1040] px-4 py-4 shadow-[0_0_20px_rgba(120,80,255,0.2)]">
-            <div className="mb-3 flex items-center justify-center gap-2 text-sm font-black text-purple-100">
+          <div className="mt-4 rounded-2xl border border-violet-200 bg-white/95 px-4 py-4 shadow-[0_14px_34px_rgba(99,102,241,0.12)] dark:border-purple-500/30 dark:bg-[#1a1040] dark:shadow-[0_0_20px_rgba(120,80,255,0.2)]">
+            <div className="mb-3 flex items-center justify-center gap-2 text-sm font-black text-violet-700 dark:text-purple-100">
               {activeMatchmaking?.status === "matched" ? (
                 <span className="h-2.5 w-2.5 rounded-full bg-[#2dc653] shadow-[0_0_8px_#2dc653]" />
               ) : (
-                <Loader2 className="h-4 w-4 animate-spin text-purple-300" />
+                <Loader2 className="h-4 w-4 animate-spin text-violet-500 dark:text-purple-300" />
               )}
               {activeMatchmaking?.status === "matched"
                 ? "Match found - starting game"
@@ -780,12 +887,12 @@ export default function LudoPage() {
             </div>
 
             <div className="grid gap-2">
-              <div className="flex items-center justify-between rounded-xl border border-white/10 bg-white/5 px-3 py-2.5">
+              <div className="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 dark:border-white/10 dark:bg-white/5">
                 <div className="min-w-0">
-                  <p className="truncate text-sm font-black text-white">
+                  <p className="truncate text-sm font-black text-slate-900 dark:text-white">
                     {playerDisplayName}
                   </p>
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-purple-200/60">
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-violet-500/70 dark:text-purple-200/60">
                     Player 1
                   </p>
                 </div>
@@ -794,14 +901,14 @@ export default function LudoPage() {
                 </span>
               </div>
 
-              <div className="flex items-center justify-between rounded-xl border border-white/10 bg-white/5 px-3 py-2.5">
+              <div className="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 dark:border-white/10 dark:bg-white/5">
                 <div className="min-w-0">
-                  <p className="truncate text-sm font-black text-white">
+                  <p className="truncate text-sm font-black text-slate-900 dark:text-white">
                     {activeMatchmaking?.status === "matched"
                       ? activeMatchmaking.opponentName || "Opponent"
                       : "Searching..."}
                   </p>
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-purple-200/60">
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-violet-500/70 dark:text-purple-200/60">
                     Player 2
                   </p>
                 </div>
@@ -820,20 +927,120 @@ export default function LudoPage() {
         )}
 
         {/* Footer links */}
-        <div className="mt-6 flex justify-center gap-6 text-xs font-semibold text-purple-300/70">
+        <div className="mt-6 flex justify-center gap-6 text-xs font-semibold text-violet-700/80 dark:text-purple-300/70">
           <Link
             href="/games"
-            className="underline underline-offset-4 hover:text-purple-200 transition-colors"
+            className="underline underline-offset-4 transition-colors hover:text-violet-900 dark:hover:text-purple-200"
           >
             Game Rules
           </Link>
-          <span className="text-purple-500/40">|</span>
+          <span className="text-violet-400/60 dark:text-purple-500/40">|</span>
           <Link
             href="/dashboard"
-            className="underline underline-offset-4 hover:text-purple-200 transition-colors"
+            className="underline underline-offset-4 transition-colors hover:text-violet-900 dark:hover:text-purple-200"
           >
             My History
           </Link>
+        </div>
+
+        <div className="mt-5 rounded-[28px] border border-violet-200 bg-white/95 p-4 shadow-[0_18px_45px_rgba(99,102,241,0.12)] dark:border-purple-500/20 dark:bg-[#150d2b]/85 dark:shadow-[0_18px_45px_rgba(0,0,0,0.24)]">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="text-sm font-black uppercase tracking-[0.22em] text-cyan-700 dark:text-cyan-200">
+                Invite Friend
+              </p>
+              <p className="mt-1 text-xs text-slate-600 dark:text-slate-400">
+                Search by username and send a direct Ludo invite.
+              </p>
+            </div>
+            <div className="rounded-full border border-emerald-300 bg-emerald-50 px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-emerald-700 dark:border-emerald-400/25 dark:bg-emerald-500/10 dark:text-emerald-300">
+              {inviteStakeLabel}
+            </div>
+          </div>
+
+          {!isFreeMode && mergedStakes.length > 0 ? (
+            <div className="mt-4 flex flex-wrap gap-2">
+              {mergedStakes.map((stake) => {
+                const selected = stake.amount === selectedInviteStake;
+
+                return (
+                  <button
+                    key={`invite-${stake.amount}`}
+                    type="button"
+                    onClick={() => setSelectedInviteStake(stake.amount)}
+                    className={`rounded-full border px-3 py-1.5 text-xs font-bold transition-colors ${
+                      selected
+                        ? "border-cyan-300 bg-cyan-400/15 text-cyan-200"
+                        : "border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100 dark:border-white/10 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10"
+                    }`}
+                  >
+                    Tk {stake.amount.toLocaleString("en-BD")}
+                  </button>
+                );
+              })}
+            </div>
+          ) : null}
+
+          <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50/80 p-3 dark:border-white/10 dark:bg-black/15">
+            <div className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-3 py-3 dark:border-white/10 dark:bg-white/5">
+              <Search className="h-4 w-4 text-cyan-500 dark:text-cyan-300" />
+              <input
+                type="text"
+                value={inviteQuery}
+                onChange={(event) => setInviteQuery(event.target.value)}
+                placeholder="Search username"
+                className="w-full bg-transparent text-sm text-slate-900 outline-none placeholder:text-slate-500 dark:text-white"
+              />
+              {isInviteSearching ? (
+                <Loader2 className="h-4 w-4 animate-spin text-slate-400" />
+              ) : null}
+            </div>
+
+            <div className="mt-3 space-y-2">
+              {inviteSearchResults.map((user) => (
+                <div
+                  key={user.id}
+                  className="flex items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white px-3 py-3 dark:border-white/10 dark:bg-white/5"
+                >
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-bold text-slate-900 dark:text-white">
+                      {user.name}
+                    </p>
+                    <p className="truncate text-xs text-slate-500 dark:text-slate-400">
+                      @{user.username}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => sendInviteMutation.mutate(user)}
+                    disabled={sendInviteMutation.isPending || isSearching}
+                    className="flex shrink-0 items-center gap-2 rounded-full border border-cyan-400 bg-cyan-50 px-3 py-2 text-xs font-black text-cyan-700 transition-colors hover:bg-cyan-100 disabled:opacity-60 dark:border-cyan-300 dark:bg-cyan-400/15 dark:text-cyan-100 dark:hover:bg-cyan-400/25"
+                  >
+                    {sendInviteMutation.isPending ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <UserPlus className="h-3.5 w-3.5" />
+                    )}
+                    Invite
+                  </button>
+                </div>
+              ))}
+
+              {inviteQuery.trim().length >= 2 &&
+              !isInviteSearching &&
+              inviteSearchResults.length === 0 ? (
+                <div className="rounded-2xl border border-dashed border-slate-200 bg-white px-3 py-4 text-center text-xs text-slate-500 dark:border-white/10 dark:bg-white/[0.03] dark:text-slate-400">
+                  No users found.
+                </div>
+              ) : null}
+
+              {inviteQuery.trim().length < 2 ? (
+                <div className="rounded-2xl border border-dashed border-slate-200 bg-white px-3 py-4 text-center text-xs text-slate-500 dark:border-white/10 dark:bg-white/[0.03] dark:text-slate-400">
+                  Type at least 2 letters to search by username.
+                </div>
+              ) : null}
+            </div>
+          </div>
         </div>
       </div>
     </div>
