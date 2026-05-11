@@ -27,17 +27,34 @@ function normalizeOwnRows(payload: unknown) {
       ? ((payload as { rounds: Array<Record<string, unknown>> }).rounds ?? [])
       : [];
 
+  const resolveDisplayDate = (item: Record<string, unknown>) =>
+    String(
+      item.publicResultPublishedAt ??
+        item.resultedAt ??
+        item.drawDate ??
+        "",
+    );
+
   return rounds.map((item, index) => ({
     id: String(item.id ?? `own-${index}`),
-    drawDate: String(item.drawDate ?? item.resultedAt ?? ""),
-    drawLabel: String(item.drawDate ?? item.resultedAt ?? ""),
+    drawDate: resolveDisplayDate(item),
+    drawLabel: resolveDisplayDate(item),
     firstPrize: "",
     firstThreeDigits: [],
     lastThreeDigits: [],
     lastTwoDigits: "",
     threeUpDirect: String(item.publicResultThreeUpDirect ?? ""),
     downDirect: String(item.publicResultDownDirect ?? ""),
-  }));
+  })).sort((a, b) => {
+    const aTime = Date.parse(a.drawDate || "");
+    const bTime = Date.parse(b.drawDate || "");
+
+    if (Number.isNaN(aTime) || Number.isNaN(bTime)) {
+      return 0;
+    }
+
+    return bTime - aTime;
+  });
 }
 
 export const ThaiPublicResultService = {
