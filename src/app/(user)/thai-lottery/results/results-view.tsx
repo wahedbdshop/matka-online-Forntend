@@ -35,7 +35,7 @@ function ResultBox({
     <div
       className={`thai-result-number-box thai-result-number-box--${tone} flex min-h-[52px] items-center justify-center rounded-[10px] px-2 py-2 text-center sm:min-h-[60px] sm:px-3 sm:py-3 ${className}`}
     >
-      <span className="thai-result-number text-[17px] font-black tracking-[0.04em] sm:text-[20px]">
+      <span className="thai-result-number text-[18px] font-black tracking-[0.03em] sm:text-[21px]">
         {value}
       </span>
     </div>
@@ -565,7 +565,7 @@ export default function ThaiLotteryResultsView({
                   <div key={item.id ?? index} className="thai-result-row-shell rounded-[10px] p-[1px]">
                     <div className="thai-result-row grid grid-cols-[1.35fr_0.9fr_0.9fr_0.9fr] items-center gap-2 rounded-[10px] px-3 py-2.5 sm:gap-3 sm:px-4 sm:py-3">
                       <div className="min-w-0 px-1 py-1 sm:px-3">
-                        <p className="thai-result-date whitespace-nowrap text-[12px] font-medium tracking-[0.01em] sm:text-[15px]">
+                        <p className="thai-result-date whitespace-nowrap text-[13px] font-extrabold tracking-[0.005em] sm:text-[16px]">
                           {formatDate(item.drawDate)}
                         </p>
                       </div>
