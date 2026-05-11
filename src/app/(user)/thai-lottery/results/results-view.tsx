@@ -35,7 +35,7 @@ function ResultBox({
     <div
       className={`thai-result-number-box thai-result-number-box--${tone} flex min-h-[52px] items-center justify-center rounded-[10px] px-2 py-2 text-center sm:min-h-[60px] sm:px-3 sm:py-3 ${className}`}
     >
-      <span className="thai-result-number text-[17px] font-bold tracking-[0.04em] sm:text-[20px]">
+      <span className="thai-result-number text-[17px] font-black tracking-[0.04em] sm:text-[20px]">
         {value}
       </span>
     </div>
