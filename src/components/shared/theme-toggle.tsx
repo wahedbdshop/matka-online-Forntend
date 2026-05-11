@@ -6,7 +6,8 @@ import { cn } from "@/lib/utils";
 import { useUIStore } from "@/store/ui.store";
 
 export const ThemeToggle = ({ className }: { className?: string }) => {
-  const { theme, toggleTheme } = useUIStore();
+  const theme = useUIStore((state) => state.theme);
+  const toggleTheme = useUIStore((state) => state.toggleTheme);
 
   return (
     <Button

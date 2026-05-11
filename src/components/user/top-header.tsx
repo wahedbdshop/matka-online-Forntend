@@ -2,7 +2,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { useEffect, useState } from "react";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { Bell, Eye, EyeOff, IndianRupee, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -40,6 +40,7 @@ export const TopHeader = ({
 }) => {
   const { t } = useLanguage();
   const pathname = usePathname();
+  const router = useRouter();
   const isAuthStore = useAuthStore((s) => s.isAuthenticated);
   const isAuthReady = useAuthStore((s) => s.isAuthReady);
   const hasCookie =
@@ -95,6 +96,11 @@ export const TopHeader = ({
       String(showBalance),
     );
   }, [showBalance]);
+
+  useEffect(() => {
+    if (!showAuthenticatedUi) return;
+    void router.prefetch("/notifications");
+  }, [router, showAuthenticatedUi]);
 
   return (
     <header className="sticky top-0 z-40 border-b border-slate-200 bg-white/95 shadow-sm backdrop-blur dark:border-slate-700 dark:bg-slate-900/95 dark:shadow-none">
@@ -169,7 +175,7 @@ export const TopHeader = ({
           <ThemeToggle />
 
           {showAuthenticatedUi ? (
-            <Link href="/notifications" className="relative">
+            <Link href="/notifications" prefetch className="relative">
               <Button
                 variant="ghost"
                 size="icon"

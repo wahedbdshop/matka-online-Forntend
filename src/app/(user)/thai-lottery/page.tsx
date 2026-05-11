@@ -3,7 +3,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -223,6 +223,12 @@ const formatLocalCloseTime = (value: unknown) => {
 export default function ThaiLotteryPage() {
   const router = useRouter();
   const queryClient = useQueryClient();
+
+  useEffect(() => {
+    for (const item of QUICK_ACTIONS) {
+      void router.prefetch(item.href);
+    }
+  }, [router]);
 
   const [selectedPlayType, setSelectedPlayType] = useState<UIPlayType | null>(
     null,
@@ -656,6 +662,7 @@ export default function ThaiLotteryPage() {
                   <Link
                     key={item.label}
                     href={item.href}
+                    prefetch
                     className="thai-lottery-action-card flex min-h-[60px] flex-col items-center justify-center gap-1 rounded-[16px] border border-slate-700/70 bg-slate-800/55 px-1 py-1.5 text-center transition-colors hover:bg-slate-800"
                   >
                     <div className={`rounded-xl p-1 ${item.color}`}>

@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { useEffect } from "react";
+import { usePathname, useRouter } from "next/navigation";
 import {
   LayoutDashboard,
   ArrowDownToLine,
@@ -26,7 +27,16 @@ const navItems = [
 export const BottomNav = () => {
   const { t } = useLanguage();
   const pathname = usePathname();
+  const router = useRouter();
   const isBanned = useAuthStore((state) => state.user?.status === "BANNED");
+
+  useEffect(() => {
+    for (const item of navItems) {
+      const isProfileItem = item.href === "/profile";
+      if (isBanned && !isProfileItem) continue;
+      void router.prefetch(item.href);
+    }
+  }, [isBanned, router]);
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-slate-200 bg-white shadow-[0_-10px_30px_rgba(15,23,42,0.08)] dark:border-slate-700 dark:bg-slate-900 dark:shadow-none">
@@ -41,6 +51,7 @@ export const BottomNav = () => {
             <Link
               key={item.href}
               href={disabled ? "#" : item.href}
+              prefetch={!disabled}
               aria-disabled={disabled}
               className={cn(
                 "flex flex-col items-center gap-1 px-3 py-1 rounded-lg transition-colors",
