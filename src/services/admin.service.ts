@@ -1190,6 +1190,17 @@ export const AdminService = {
     return res.data;
   },
 
+  updateSessionCustomName: async (
+    sessionId: string,
+    payload: { customName?: string | null },
+  ) => {
+    const res = await api.patch<ApiResponse<any>>(
+      `/admin/sessions/${sessionId}`,
+      payload,
+    );
+    return res.data;
+  },
+
   revokeAllSessions: async () => {
     const res = await api.delete<ApiResponse<any>>("/admin/sessions");
     return res.data;

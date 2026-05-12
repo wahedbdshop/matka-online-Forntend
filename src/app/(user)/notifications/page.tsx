@@ -2,7 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Bell, CheckCheck } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -55,13 +55,24 @@ function saveStoredBonusNotificationIds(ids: string[]) {
   window.localStorage.setItem(BONUS_NOTIFICATION_READ_KEY, JSON.stringify(ids));
 }
 
+function formatNotificationDate(createdAt?: string) {
+  if (!createdAt) return "";
+
+  const date = new Date(createdAt);
+  if (Number.isNaN(date.getTime())) return "";
+
+  return new Intl.DateTimeFormat("en-BD", {
+    dateStyle: "medium",
+    timeStyle: "short",
+    timeZone: "Asia/Dhaka",
+  }).format(date);
+}
+
 export default function NotificationsPage() {
   const { language } = useLanguage();
   const queryClient = useQueryClient();
   const [pendingReadIds, setPendingReadIds] = useState<string[]>([]);
-  const [readBonusIds, setReadBonusIds] = useState<string[]>(
-    readStoredBonusNotificationIds,
-  );
+  const [readBonusIds, setReadBonusIds] = useState<string[]>([]);
   const text = {
     en: {
       title: "Notifications",
@@ -108,6 +119,10 @@ export default function NotificationsPage() {
     },
   });
 
+  useEffect(() => {
+    setReadBonusIds(readStoredBonusNotificationIds());
+  }, []);
+
   const notificationsData = data?.data as NotificationsResponse | undefined;
   const notifications = useMemo(
     () => notificationsData?.notifications ?? [],
@@ -134,7 +149,7 @@ export default function NotificationsPage() {
           status: readBonusIds.includes(id) ? "READ" : "UNREAD",
           isRead: readBonusIds.includes(id),
           link: "/profile/bonus",
-          createdAt: item.createdAt ?? new Date().toISOString(),
+          createdAt: item.createdAt ?? "1970-01-01T00:00:00.000Z",
         };
       }),
     [bonusHistory, readBonusIds],
@@ -264,7 +279,7 @@ export default function NotificationsPage() {
                     {notification.message}
                   </p>
                   <p className="text-slate-500 text-[10px] mt-1 dark:text-slate-500">
-                    {new Date(notification.createdAt).toLocaleString()}
+                    {formatNotificationDate(notification.createdAt)}
                   </p>
                 </div>
                 </div>

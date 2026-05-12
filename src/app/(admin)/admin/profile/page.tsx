@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
+import Link from "next/link";
 import { useState, useRef, useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -87,6 +88,17 @@ function normalizeBoolean(value: unknown) {
   return false;
 }
 
+function getSessionCustomName(session: any) {
+  const customName = pickSessionValue(session, [
+    "customName",
+    "custom_name",
+    "deviceCustomName",
+    "device.customName",
+  ]);
+
+  return typeof customName === "string" ? customName : "";
+}
+
 // ─── Active Session Row ────────────────────────────────────────
 function SessionRow({
   session,
@@ -104,6 +116,7 @@ function SessionRow({
   const sessionId = String(
     pickSessionValue(session, ["id", "_id", "sessionId", "session_id", "sid"]) ?? "",
   );
+  const customName = getSessionCustomName(session);
   const isCurrent = normalizeBoolean(
     pickSessionValue(session, [
       "isCurrent",
@@ -168,23 +181,22 @@ function SessionRow({
     "createdAt",
     "created_at",
   ]);
-
   return (
     <div
       className={cn(
-        "flex items-center gap-3 rounded-xl border bg-slate-900/60 px-4 py-3",
+        "flex flex-col gap-3 rounded-2xl border bg-[linear-gradient(135deg,rgba(33,18,66,0.88),rgba(11,18,36,0.96))] px-4 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] md:flex-row md:items-center",
         isCurrent
-          ? "border-purple-500/30"
-          : "border-slate-700/40",
+          ? "border-violet-500/25 shadow-[0_0_0_1px_rgba(76,29,149,0.12)]"
+          : "border-slate-700/60",
       )}
     >
       {/* Device icon */}
       <div
         className={cn(
-          "flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border",
+          "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border",
           isCurrent
-            ? "bg-purple-500/10 border-purple-500/30 text-purple-400"
-            : "bg-slate-800 border-slate-700/60 text-slate-400",
+            ? "border-cyan-500/30 bg-cyan-500/10 text-cyan-300"
+            : "border-slate-700/60 bg-slate-800 text-slate-400",
         )}
       >
         <Monitor className="h-4 w-4" />
@@ -193,22 +205,27 @@ function SessionRow({
       {/* Info */}
       <div className="min-w-0 flex-1 space-y-1">
         {/* Device name + badge */}
-        <div className="flex items-center gap-2 flex-wrap">
-          <p className="text-xs font-semibold text-white truncate">
+        <div className="flex flex-wrap items-center gap-2">
+          <p className="truncate text-xs font-semibold text-white">
             {deviceLabel}
           </p>
+          {customName && customName.trim() && (
+            <span className="shrink-0 rounded-full border border-violet-500/30 bg-violet-500/10 px-2 py-0.5 text-[8px] font-bold uppercase tracking-[0.16em] text-violet-200">
+              {customName.trim()}
+            </span>
+          )}
           {sessionId && (
-            <span className="shrink-0 rounded-full border border-slate-600/60 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-slate-400">
+            <span className="shrink-0 rounded-full border border-slate-600/70 bg-slate-900/70 px-2 py-0.5 text-[8px] font-bold uppercase tracking-[0.16em] text-slate-400">
               {sessionId}
             </span>
           )}
           {isCurrent && (
-            <span className="shrink-0 rounded-full bg-green-500/15 border border-green-500/30 px-2 py-0.5 text-[9px] font-bold text-green-400 uppercase tracking-wide">
+            <span className="shrink-0 rounded-full border border-emerald-500/35 bg-emerald-500/15 px-2 py-0.5 text-[8px] font-bold uppercase tracking-[0.16em] text-emerald-300">
               Current
             </span>
           )}
           {!isCurrent && !isActive && (
-            <span className="shrink-0 rounded-full bg-slate-500/10 border border-slate-600/40 px-2 py-0.5 text-[9px] font-bold text-slate-400 uppercase tracking-wide">
+            <span className="shrink-0 rounded-full border border-slate-600/50 bg-slate-500/10 px-2 py-0.5 text-[8px] font-bold uppercase tracking-[0.16em] text-slate-400">
               Logged out
             </span>
           )}
@@ -244,21 +261,30 @@ function SessionRow({
       </div>
 
       {/* Action buttons */}
-      {!isCurrent && sessionId && (
-        <div className="shrink-0 flex items-center gap-1.5">
-          <button
-            onClick={() => onBlockIp(sessionId)}
-            disabled={blockingIp}
-            title="Block this IP address"
-            className="flex items-center gap-1.5 rounded-lg border border-orange-500/20 bg-orange-500/10 px-2.5 py-1.5 text-[11px] font-medium text-orange-400 hover:bg-orange-500/20 hover:border-orange-500/40 transition-all disabled:opacity-40"
+      {sessionId && (
+        <div className="shrink-0 flex items-center gap-1.5 self-end md:self-center">
+          <Link
+            href={`/admin/profile/sessions/${encodeURIComponent(sessionId)}`}
+            className="flex items-center gap-1.5 rounded-lg border border-cyan-500/20 bg-cyan-500/10 px-2.5 py-1.5 text-[11px] font-medium text-cyan-300 transition-all hover:bg-cyan-500/20 hover:border-cyan-500/40"
           >
-            {blockingIp ? (
-              <Loader2 className="h-3 w-3 animate-spin" />
-            ) : (
-              <ShieldBan className="h-3 w-3" />
-            )}
-            Block IP
-          </button>
+            <Eye className="h-3 w-3" />
+            View
+          </Link>
+          {!isCurrent && (
+            <button
+              onClick={() => onBlockIp(sessionId)}
+              disabled={blockingIp}
+              title="Block this IP address"
+              className="flex items-center gap-1.5 rounded-lg border border-orange-500/20 bg-orange-500/10 px-2.5 py-1.5 text-[11px] font-medium text-orange-400 hover:bg-orange-500/20 hover:border-orange-500/40 transition-all disabled:opacity-40"
+            >
+              {blockingIp ? (
+                <Loader2 className="h-3 w-3 animate-spin" />
+              ) : (
+                <ShieldBan className="h-3 w-3" />
+              )}
+              Block IP
+            </button>
+          )}
           <button
             onClick={() => onRevoke(sessionId)}
             disabled={revoking}
@@ -269,7 +295,7 @@ function SessionRow({
             ) : (
               <Trash2 className="h-3 w-3" />
             )}
-            Remove
+            Remove Device
           </button>
         </div>
       )}
@@ -490,16 +516,16 @@ export default function AdminProfilePage() {
   }
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
+    <div className="mx-auto grid max-w-6xl gap-4 rounded-[28px] border border-slate-800/80 bg-[radial-gradient(circle_at_top_left,rgba(88,28,135,0.22),transparent_28%),linear-gradient(180deg,rgba(13,20,40,0.98),rgba(6,11,24,0.98))] p-4 shadow-[0_30px_80px_rgba(2,6,23,0.55)] xl:grid-cols-[1.45fr_0.95fr] xl:grid-rows-[auto_auto]">
 
       {/* ══════════════════════════════════════
           Profile Info
       ══════════════════════════════════════ */}
-      <div className="rounded-2xl border border-slate-700/60 bg-slate-800/50 overflow-hidden">
+      <div className="overflow-hidden rounded-[24px] border border-slate-700/70 bg-[linear-gradient(180deg,rgba(22,29,51,0.94),rgba(10,15,29,0.98))] shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] xl:col-start-1 xl:row-start-1">
         {/* Header */}
-        <div className="border-b border-slate-700/40 px-5 py-4 flex items-center justify-between">
+        <div className="flex items-center justify-between border-b border-slate-700/50 px-4 py-3 md:px-5">
           <div className="flex items-center gap-3">
-            <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-purple-500/10 border border-purple-500/30 text-purple-400">
+            <div className="flex h-9 w-9 items-center justify-center rounded-2xl border border-violet-500/25 bg-violet-500/10 text-violet-300">
               <User className="h-4 w-4" />
             </div>
             <h2 className="text-sm font-semibold text-white">
@@ -509,7 +535,7 @@ export default function AdminProfilePage() {
           {!isEditing ? (
             <button
               onClick={() => setIsEditing(true)}
-              className="flex items-center gap-1.5 rounded-lg border border-slate-700 bg-slate-800 px-3 py-1.5 text-xs text-slate-300 hover:border-purple-500/50 hover:text-purple-400 transition-all"
+              className="flex items-center gap-1.5 rounded-xl border border-slate-600/80 bg-slate-900/70 px-3 py-1.5 text-xs text-slate-200 transition-all hover:border-violet-400/40 hover:text-violet-200"
             >
               <Pencil className="h-3 w-3" />
               Edit
@@ -517,7 +543,7 @@ export default function AdminProfilePage() {
           ) : (
             <button
               onClick={handleCancelEdit}
-              className="flex items-center gap-1.5 rounded-lg border border-slate-700 bg-slate-800 px-3 py-1.5 text-xs text-slate-400 hover:text-white transition-colors"
+              className="flex items-center gap-1.5 rounded-xl border border-slate-600/80 bg-slate-900/70 px-3 py-1.5 text-xs text-slate-400 transition-colors hover:text-white"
             >
               <X className="h-3 w-3" />
               Cancel
@@ -525,15 +551,15 @@ export default function AdminProfilePage() {
           )}
         </div>
 
-        <div className="p-5 space-y-5">
+        <div className="space-y-5 px-4 py-4 md:px-5 md:py-5">
           {/* Avatar */}
           <div className="flex items-center gap-4">
             <div className="relative">
-              <Avatar className="h-16 w-16">
+              <Avatar className="h-16 w-16 rounded-2xl ring-4 ring-violet-500/10">
                 {avatarPreview && (
                   <AvatarImage src={avatarPreview} alt="avatar" />
                 )}
-                <AvatarFallback className="bg-linear-to-br from-purple-600 to-indigo-600 text-xl font-bold text-white">
+                <AvatarFallback className="bg-linear-to-br from-violet-600 to-fuchsia-600 text-xl font-bold text-white">
                   {(user?.name ?? "A").charAt(0).toUpperCase()}
                 </AvatarFallback>
               </Avatar>
@@ -541,7 +567,7 @@ export default function AdminProfilePage() {
                 <>
                   <button
                     onClick={() => fileRef.current?.click()}
-                    className="absolute -bottom-1 -right-1 flex h-6 w-6 items-center justify-center rounded-full bg-purple-600 border-2 border-slate-800 hover:bg-purple-500 transition-colors"
+                    className="absolute -bottom-1 -right-1 flex h-6 w-6 items-center justify-center rounded-full border-2 border-slate-900 bg-violet-600 transition-colors hover:bg-violet-500"
                   >
                     <Camera className="h-3 w-3 text-white" />
                   </button>
@@ -556,16 +582,16 @@ export default function AdminProfilePage() {
               )}
             </div>
             <div>
-              <p className="text-sm font-semibold text-white">
+              <p className="text-lg font-semibold text-white">
                 {user?.name ?? "Admin"}
               </p>
-              <p className="text-xs text-slate-400 capitalize">
+              <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-slate-500">
                 {user?.role ?? "admin"}
               </p>
               {isEditing && (
                 <button
                   onClick={() => fileRef.current?.click()}
-                  className="mt-1 text-[11px] text-purple-400 hover:text-purple-300"
+                  className="mt-1 text-[11px] text-violet-300 hover:text-violet-200"
                 >
                   Change photo
                 </button>
@@ -575,12 +601,12 @@ export default function AdminProfilePage() {
 
           {/* ── View mode ── */}
           {!isEditing && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div className="space-y-1.5">
-                <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-500">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">
                   Full Name
                 </p>
-                <div className="flex items-center gap-2.5 rounded-xl border border-slate-700/50 bg-slate-900/70 px-3 py-2.5">
+                <div className="flex items-center gap-2.5 rounded-2xl border border-slate-700/60 bg-slate-950/55 px-3 py-2.5">
                   <User className="h-3.5 w-3.5 text-slate-500 shrink-0" />
                   <span className="text-sm text-white">
                     {user?.name ?? "—"}
@@ -588,10 +614,10 @@ export default function AdminProfilePage() {
                 </div>
               </div>
               <div className="space-y-1.5">
-                <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-500">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">
                   Email Address
                 </p>
-                <div className="flex items-center gap-2.5 rounded-xl border border-slate-700/50 bg-slate-900/70 px-3 py-2.5">
+                <div className="flex items-center gap-2.5 rounded-2xl border border-slate-700/60 bg-slate-950/55 px-3 py-2.5">
                   <Mail className="h-3.5 w-3.5 text-slate-500 shrink-0" />
                   <span className="text-sm text-white truncate">
                     {user?.email ?? "—"}
@@ -604,7 +630,7 @@ export default function AdminProfilePage() {
           {/* ── Edit mode ── */}
           {isEditing && (
             <>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div className="space-y-1.5">
                   <Label htmlFor="name" className="text-xs font-medium text-slate-400">
                     Full Name
@@ -616,7 +642,7 @@ export default function AdminProfilePage() {
                       value={name}
                       onChange={(e) => setName(e.target.value)}
                       placeholder="Admin name"
-                      className="bg-slate-900 border-slate-700 text-white text-sm pl-9"
+                      className="border-slate-700 bg-slate-950/70 pl-9 text-sm text-white"
                     />
                   </div>
                 </div>
@@ -632,7 +658,7 @@ export default function AdminProfilePage() {
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       placeholder="admin@example.com"
-                      className="bg-slate-900 border-slate-700 text-white text-sm pl-9"
+                      className="border-slate-700 bg-slate-950/70 pl-9 text-sm text-white"
                     />
                   </div>
                 </div>
@@ -640,7 +666,7 @@ export default function AdminProfilePage() {
               <Button
                 onClick={() => saveProfile()}
                 disabled={savingProfile}
-                className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700 text-white text-sm"
+                className="flex items-center gap-2 rounded-xl bg-violet-600 text-white text-sm hover:bg-violet-500"
               >
                 {savingProfile ? (
                   <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -657,11 +683,11 @@ export default function AdminProfilePage() {
       {/* ══════════════════════════════════════
           Active Sessions
       ══════════════════════════════════════ */}
-      <div className="rounded-2xl border border-slate-700/60 bg-slate-800/50 overflow-hidden">
+      <div className="overflow-hidden rounded-[24px] border border-slate-700/70 bg-[linear-gradient(180deg,rgba(18,28,48,0.94),rgba(10,15,29,0.98))] shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] xl:col-span-2 xl:col-start-1 xl:row-start-2">
         {/* Header */}
-        <div className="border-b border-slate-700/40 px-5 py-4 flex items-center justify-between">
+        <div className="flex items-center justify-between border-b border-slate-700/50 px-4 py-3 md:px-5">
           <div className="flex items-center gap-3">
-            <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-cyan-500/10 border border-cyan-500/30 text-cyan-400">
+            <div className="flex h-9 w-9 items-center justify-center rounded-2xl border border-cyan-500/25 bg-cyan-500/10 text-cyan-300">
               <Monitor className="h-4 w-4" />
             </div>
             <div>
@@ -673,34 +699,32 @@ export default function AdminProfilePage() {
               </p>
             </div>
           </div>
-          {otherSessions.length > 0 && (
-            <button
-              onClick={() => revokeAll()}
-              disabled={revokingAll}
-              className="flex items-center gap-1.5 rounded-lg border border-red-500/20 bg-red-500/10 px-3 py-1.5 text-xs font-medium text-red-400 hover:bg-red-500/20 transition-all disabled:opacity-50"
-            >
-              {revokingAll ? (
-                <Loader2 className="h-3 w-3 animate-spin" />
-              ) : (
-                <LogOut className="h-3 w-3" />
-              )}
-              Remove All Others
-            </button>
-          )}
+          <button
+            onClick={() => revokeAll()}
+            disabled={revokingAll || otherSessions.length === 0}
+            className="flex items-center gap-1.5 rounded-xl border border-red-500/20 bg-red-500/10 px-3 py-1.5 text-xs font-medium text-red-300 transition-all hover:bg-red-500/20 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {revokingAll ? (
+              <Loader2 className="h-3 w-3 animate-spin" />
+            ) : (
+              <LogOut className="h-3 w-3" />
+            )}
+            Remove All Devices
+          </button>
         </div>
 
-        <div className="p-4 space-y-2">
+        <div className="space-y-3 px-4 py-4 md:px-5">
           {sessionsLoading ? (
-            <div className="space-y-2">
+            <div className="space-y-3">
               {[1, 2].map((i) => (
                 <div
                   key={i}
-                  className="h-16 rounded-xl bg-slate-900/60 animate-pulse border border-slate-700/30"
+                  className="h-20 rounded-2xl border border-slate-700/30 bg-slate-900/60 animate-pulse"
                 />
               ))}
             </div>
           ) : sessions.length === 0 ? (
-            <div className="rounded-xl border border-slate-700/30 bg-slate-900/40 px-4 py-8 text-center">
+            <div className="rounded-2xl border border-slate-700/30 bg-slate-900/40 px-4 py-8 text-center">
               <Monitor className="h-8 w-8 text-slate-700 mx-auto mb-2" />
               <p className="text-xs text-slate-500">
                 No active session data available
@@ -724,15 +748,15 @@ export default function AdminProfilePage() {
       {/* ══════════════════════════════════════
           Change Password
       ══════════════════════════════════════ */}
-      <div className="rounded-2xl border border-slate-700/60 bg-slate-800/50 overflow-hidden">
-        <div className="border-b border-slate-700/40 px-5 py-4 flex items-center gap-3">
-          <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-yellow-500/10 border border-yellow-500/30 text-yellow-400">
+      <div className="overflow-hidden rounded-[24px] border border-slate-700/70 bg-[linear-gradient(180deg,rgba(18,24,43,0.96),rgba(9,14,28,0.98))] shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] xl:col-start-2 xl:row-start-1">
+        <div className="flex items-center gap-3 border-b border-slate-700/50 px-4 py-3 md:px-5">
+          <div className="flex h-9 w-9 items-center justify-center rounded-2xl border border-yellow-500/25 bg-yellow-500/10 text-yellow-300">
             <Lock className="h-4 w-4" />
           </div>
           <h2 className="text-sm font-semibold text-white">Change Password</h2>
         </div>
 
-        <form onSubmit={handlePasswordSubmit} className="p-5 space-y-4">
+        <form onSubmit={handlePasswordSubmit} className="space-y-4 px-4 py-4 md:px-5 md:py-5">
           {(
             [
               {
@@ -776,12 +800,12 @@ export default function AdminProfilePage() {
                   value={f.value}
                   onChange={(e) => f.set(e.target.value)}
                   required
-                  className="bg-slate-900 border-slate-700 text-white text-sm pl-9 pr-9"
+                  className="rounded-2xl border-slate-700 bg-slate-950/70 pl-9 pr-9 text-sm text-white"
                 />
                 <button
                   type="button"
                   onClick={f.toggle}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 transition-colors hover:text-slate-300"
                 >
                   {f.show ? (
                     <EyeOff className="h-3.5 w-3.5" />
@@ -793,7 +817,7 @@ export default function AdminProfilePage() {
             </div>
           ))}
 
-          <div className="flex items-center gap-2 rounded-xl border border-yellow-500/20 bg-yellow-500/5 px-3 py-2">
+          <div className="flex items-center gap-2 rounded-2xl border border-yellow-500/20 bg-yellow-500/5 px-3 py-2">
             <ShieldCheck className="h-3.5 w-3.5 text-yellow-400 shrink-0" />
             <p className="text-[11px] text-yellow-300/80">
               Use a strong password with at least 6 characters.
@@ -803,7 +827,7 @@ export default function AdminProfilePage() {
           <Button
             type="submit"
             disabled={changingPassword}
-            className="flex items-center gap-2 bg-yellow-600 hover:bg-yellow-700 text-white text-sm"
+            className="flex items-center gap-2 rounded-xl bg-yellow-600 text-white text-sm hover:bg-yellow-500"
           >
             {changingPassword ? (
               <Loader2 className="h-3.5 w-3.5 animate-spin" />
