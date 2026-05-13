@@ -12,6 +12,18 @@ interface NotificationPayload {
   body?: string;
 }
 
+function shouldSuppressNotificationPopup(title: string, message: string) {
+  const normalizedTitle = title.trim().toLowerCase();
+  const normalizedMessage = message.trim().toLowerCase();
+
+  return (
+    normalizedTitle.includes("bet placed successfully") ||
+    (normalizedMessage.includes("your kalyan bet") &&
+      normalizedMessage.includes("has been placed")) ||
+    normalizedMessage.includes("bet has been placed")
+  );
+}
+
 export function NotificationPopup() {
   const user = useAuthStore((s) => s.user);
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
@@ -42,6 +54,9 @@ export function NotificationPopup() {
       const title = data.title ?? "নতুন বার্তা";
       const message = data.message ?? data.body ?? "";
       queryClient.invalidateQueries({ queryKey: ["notifications"] });
+      if (shouldSuppressNotificationPopup(title, message)) {
+        return;
+      }
       setNotif({ title, message });
       setShow(true);
     });

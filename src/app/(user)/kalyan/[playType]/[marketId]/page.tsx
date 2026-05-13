@@ -356,7 +356,6 @@ export default function GamePlayPage() {
       const res = await KalyanUserService.createEntrySlip(payload);
 
       if (res.success) {
-        toast.success("Bet placed successfully!");
         reset();
         router.push("/kalyan/bet-history?status=ACTIVE");
       } else {
