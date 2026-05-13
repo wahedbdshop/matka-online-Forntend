@@ -8,6 +8,7 @@ export type LudoStakeSlot = {
   waitingPlayers: number;
   activeMatches: number;
   onlinePlayers: number;
+  commissionPct?: number;
 };
 
 export type LudoLobby = {
@@ -15,7 +16,39 @@ export type LudoLobby = {
   freeMode?: boolean;
   activePlayerCount: number;
   disabledColors: Array<"RED" | "GREEN" | "YELLOW" | "BLUE">;
+  commissionPct?: number;
   stakes: LudoStakeSlot[];
+};
+
+export type LudoHistoryMatch = {
+  id: string;
+  status: string;
+  stakeAmount: number;
+  pieceMode?: string | null;
+  winnerUserId?: string | null;
+  cancelReason?: string | null;
+  startedAt?: string | null;
+  finishedAt?: string | null;
+  createdAt?: string | null;
+  updatedAt?: string | null;
+  roomId?: string | null;
+  roomStatus?: string | null;
+  result: "WON" | "LOST";
+  opponent?: {
+    id?: string | null;
+    name?: string | null;
+    username?: string | null;
+  } | null;
+};
+
+export type LudoHistoryResponse = {
+  stats: {
+    totalMatches: number;
+    wins: number;
+    losses: number;
+    totalWagered: number;
+  };
+  matches: LudoHistoryMatch[];
 };
 
 export type JoinLudoQueuePayload = {
@@ -211,6 +244,11 @@ const normalizeLudoRoomResponse = (response: LudoRoomResponse) => {
 export const LudoService = {
   async getLobby() {
     const res = await api.get<ApiResponse<LudoLobby>>("/ludo/lobby");
+    return res.data;
+  },
+
+  async getMyHistory() {
+    const res = await api.get<ApiResponse<LudoHistoryResponse>>("/ludo/history");
     return res.data;
   },
 

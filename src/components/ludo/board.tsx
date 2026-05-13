@@ -340,151 +340,7 @@ function TokenPin({
   fill?: string;
   onMove?: (id: string) => void;
 }) {
-  const boardRotation = useContext(BoardRotationContext);
-  const hex  = PALETTE[token.color].main;
-  const dark = PALETTE[token.color].dark;
-  const gid  = token.color.toLowerCase();
-  const rotationStyle =
-    boardRotation !== 0
-      ? {
-          transform: `rotate(${-boardRotation}deg)`,
-          transformOrigin: "center",
-        }
-      : undefined;
-
-  const finishedEl = (
-    <svg
-      viewBox="0 0 40 40"
-      style={{
-        width: fill,
-        height: fill,
-        flexShrink: 0,
-        ...rotationStyle,
-      }}
-      className="drop-shadow-[0_0_7px_rgba(250,204,21,0.75)]"
-    >
-      <circle cx="20" cy="20" r="15" fill={hex} />
-      <circle cx="20" cy="20" r="15" fill="none" stroke="rgba(255,255,255,0.75)" strokeWidth="2" />
-      <circle cx="20" cy="20" r="11" fill="rgba(255,255,255,0.16)" />
-      <path
-        d="M20 8.5 22.8 15.6 30.4 16.1 24.5 20.9 26.4 28.3 20 24.2 13.6 28.3 15.5 20.9 9.6 16.1 17.2 15.6 20 8.5Z"
-        fill="#facc15"
-        stroke="rgba(255,255,255,0.85)"
-        strokeWidth="1"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-
-  // Teardrop path — arc flag 0,1 = clockwise → upper semicircle via top ✓
-  const pinPath = "M20 36 C15 29 9 24 9 16 C9 9.4 13.9 4.5 20 4.5 C26.1 4.5 31 9.4 31 16 C31 24 25 29 20 36 Z";
-  // Slightly enlarged dark rim path for depth/outline
-  const rimPath = "M20 38.5 C14.2 30.7 6.5 25.6 6.5 16 C6.5 8 12.5 2 20 2 C27.5 2 33.5 8 33.5 16 C33.5 25.6 25.8 30.7 20 38.5 Z";
-
-  const svgEl = token.finished ? finishedEl : (
-    <svg
-      viewBox="0 0 40 40"
-      style={{
-        width: fill,
-        height: fill,
-        flexShrink: 0,
-        // Counter-rotate so the pin tip always points downward toward the player
-        ...rotationStyle,
-      }}
-      className={cn(token.available && "drop-shadow-[0_0_10px_rgba(253,224,71,1)]")}
-    >
-      <defs>
-        {/* 3-D radial gradient: bright white top-left → full colour → dark bottom-right */}
-        <radialGradient id={`pg-${gid}`} cx="36%" cy="27%" r="65%">
-          <stop offset="0%" stopColor="white" stopOpacity="1" />
-          <stop offset="55%" stopColor="#f8fafc" stopOpacity="1" />
-          <stop offset="100%" stopColor="#cbd5e1" stopOpacity="1" />
-        </radialGradient>
-        <radialGradient id={`cg-${gid}`} cx="36%" cy="27%" r="65%">
-          <stop offset="0%" stopColor="white" stopOpacity="0.72" />
-          <stop offset="35%" stopColor={hex} stopOpacity="1" />
-          <stop offset="100%" stopColor={dark} stopOpacity="1" />
-        </radialGradient>
-      </defs>
-
-      {/* Ground shadow at pin tip */}
-      <ellipse cx="22" cy="36" rx="8.5" ry="3" fill="rgba(0,0,0,0.28)" />
-
-      {/* Dark outer rim — creates depth and outline */}
-      <path d={rimPath} fill="rgba(15,23,42,0.42)" />
-
-      {/* Main coloured body with 3-D gradient */}
-      <path d={pinPath} fill={`url(#pg-${gid})`} stroke="rgba(15,23,42,0.28)" strokeWidth="1.2" />
-
-      {/* Ambient shadow on the lower half of the body */}
-      <circle cx="20" cy="16" r="11.8" fill={hex} opacity="0.24" />
-
-      {/* White outline stroke — makes pin visible on same-coloured backgrounds */}
-      <circle cx="20" cy="16" r="10.2" fill="none" stroke={hex} strokeWidth="2.5" />
-
-      {/* White rim around the circular head */}
-      <circle cx="20" cy="16" r="7" fill={`url(#cg-${gid})`} />
-
-      {/* Inner white ring — Ludo King style detail */}
-      <ellipse cx="16" cy="11" rx="3.2" ry="2.1" fill="rgba(255,255,255,0.7)" transform="rotate(-22 16 11)" />
-
-      {/* Specular highlight — large soft zone, top-left */}
-      <path d="M11 23 C14 28 17 31 20 35 C23 31 26 28 29 23" fill="none" stroke="rgba(255,255,255,0.72)" strokeWidth="2" strokeLinecap="round" />
-      {/* Specular core — tiny bright spot */}
-      
-
-      {/* Available glow ring */}
-      {token.available && (
-        <path d={pinPath} fill="none" stroke="#fbbf24" strokeWidth="3" opacity="0.98" />
-      )}
-    </svg>
-  );
-
-  const tokenContent = (
-    <div
-      className="relative flex items-center justify-center overflow-visible"
-      style={{ width: fill, height: fill }}
-    >
-      {token.available && (
-        <>
-          <span className="absolute -inset-[18%] rounded-full border-2 border-yellow-300 shadow-[0_0_14px_rgba(250,204,21,0.95)]" />
-          <span className="absolute -inset-[26%] hidden rounded-full border-2 border-yellow-200/80 sm:block sm:animate-ping" />
-        </>
-      )}
-      <span className="relative z-10 flex h-full w-full items-center justify-center overflow-visible">
-        {svgEl}
-      </span>
-    </div>
-  );
-
-  if (!onMove) {
-    return (
-      <div
-        className="relative z-20 flex items-center justify-center overflow-visible"
-        style={{ width: fill, height: fill }}
-      >
-        {tokenContent}
-      </div>
-    );
-  }
-
-  return (
-    <button
-      type="button"
-      onPointerDown={() => onMove(token.id)}
-      onKeyDown={(e) => e.key === "Enter" && onMove(token.id)}
-      className="absolute inset-0 z-20 flex items-center justify-center overflow-visible focus:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400"
-      style={{
-        background: "transparent",
-        border: "none",
-        padding: 0,
-        cursor: "pointer",
-        touchAction: "manipulation",
-      }}
-    >
-      {tokenContent}
-    </button>
-  );
+  return <ClassicTokenPin token={token} fill={fill} onMove={onMove} />;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -689,19 +545,19 @@ function MultiTokens({
   const positionsByCount: Record<number, Array<{ left: string; top: string; size: string }>> = {
     1: [{ left: "50%", top: "50%", size: "80%" }],
     2: [
-      { left: "40%", top: "50%", size: "62%" },
-      { left: "60%", top: "50%", size: "62%" },
+      { left: "38%", top: "50%", size: "64%" },
+      { left: "62%", top: "50%", size: "64%" },
     ],
     3: [
-      { left: "50%", top: "38%", size: "58%" },
-      { left: "38%", top: "62%", size: "58%" },
-      { left: "62%", top: "62%", size: "58%" },
+      { left: "50%", top: "32%", size: "56%" },
+      { left: "32%", top: "66%", size: "56%" },
+      { left: "68%", top: "66%", size: "56%" },
     ],
     4: [
-      { left: "39%", top: "39%", size: "52%" },
-      { left: "61%", top: "39%", size: "52%" },
-      { left: "39%", top: "61%", size: "52%" },
-      { left: "61%", top: "61%", size: "52%" },
+      { left: "32%", top: "32%", size: "50%" },
+      { left: "68%", top: "32%", size: "50%" },
+      { left: "32%", top: "68%", size: "50%" },
+      { left: "68%", top: "68%", size: "50%" },
     ],
   };
   const positions = positionsByCount[visibleTokens.length] ?? positionsByCount[4];
@@ -756,28 +612,40 @@ function ClassicTokenPin({
         }
       : undefined;
 
-  const finishedEl = (
-    <svg
-      viewBox="0 0 40 40"
-      style={{ width: fill, height: fill, flexShrink: 0, ...rotationStyle }}
-      className="drop-shadow-[0_0_7px_rgba(250,204,21,0.75)]"
-    >
-      <circle cx="20" cy="20" r="15" fill="#ffffff" stroke={shellDark} strokeWidth="1.4" />
-      <circle cx="20" cy="20" r="11.5" fill={hex} opacity="0.16" />
-      <path
-        d="M20 8.5 22.8 15.6 30.4 16.1 24.5 20.9 26.4 28.3 20 24.2 13.6 28.3 15.5 20.9 9.6 16.1 17.2 15.6 20 8.5Z"
-        fill="#facc15"
-        stroke="rgba(146,64,14,0.7)"
-        strokeWidth="1"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-
   const pinPath =
     "M20 37 C16.1 32 10 26.1 10 17.5 C10 10.1 14.5 5 20 5 C25.5 5 30 10.1 30 17.5 C30 26.1 23.9 32 20 37 Z";
   const innerPinPath =
     "M20 34.4 C17.1 30.5 13 25.6 13 18.1 C13 12.2 16.2 8.6 20 8.6 C23.8 8.6 27 12.2 27 18.1 C27 25.6 22.9 30.5 20 34.4 Z";
+
+  const finishedEl = (
+    <svg
+      viewBox="0 0 40 40"
+      style={{ width: fill, height: fill, flexShrink: 0, ...rotationStyle }}
+      className="drop-shadow-[0_0_8px_rgba(255,255,255,0.45)]"
+    >
+      <defs>
+        <radialGradient id={`shell-finished-${gid}`} cx="35%" cy="24%" r="72%">
+          <stop offset="0%" stopColor="#ffffff" />
+          <stop offset="50%" stopColor="#f8fafc" />
+          <stop offset="100%" stopColor="#cfd8e3" />
+        </radialGradient>
+        <radialGradient id={`core-finished-${gid}`} cx="35%" cy="26%" r="70%">
+          <stop offset="0%" stopColor="#ffffff" stopOpacity="0.95" />
+          <stop offset="22%" stopColor={hex} />
+          <stop offset="100%" stopColor={dark} />
+        </radialGradient>
+      </defs>
+
+      <ellipse cx="20.3" cy="36.6" rx="7.8" ry="2.4" fill="rgba(15,23,42,0.18)" />
+      <path d={pinPath} fill={`url(#shell-finished-${gid})`} stroke={shellDark} strokeWidth="1.45" />
+      <path d={innerPinPath} fill="rgba(255,255,255,0.86)" />
+      <circle cx="20" cy="17.4" r="8.2" fill="white" stroke="rgba(148,163,184,0.78)" strokeWidth="0.95" />
+      <circle cx="20" cy="17.4" r="6.75" fill={`url(#core-finished-${gid})`} stroke={dark} strokeWidth="1.1" />
+      <ellipse cx="17.1" cy="13.1" rx="3.2" ry="1.95" fill="rgba(255,255,255,0.62)" transform="rotate(-22 17.1 13.1)" />
+      <path d="M16 29.6 C17.5 31.6 18.7 33 20 34.7 C21.3 33 22.5 31.6 24 29.6" fill="none" stroke="rgba(255,255,255,0.84)" strokeWidth="1.15" strokeLinecap="round" />
+      <ellipse cx="20" cy="31.4" rx="3.5" ry="1.1" fill="rgba(51,65,85,0.26)" />
+    </svg>
+  );
 
   const svgEl = token.finished ? (
     finishedEl

@@ -40,6 +40,7 @@ import {
   resolvePreferredLanguage,
 } from "@/lib/language";
 import { useLanguage } from "@/providers/language-provider";
+import ProfileLoading from "./loading";
 
 const menuItems = [
   {
@@ -141,6 +142,8 @@ export default function ProfilePage() {
   });
 
   const profile = data?.data;
+  const shouldShowLoading =
+    !isAuthReady || (isAuthenticated && isLoading && !profile);
   const profileLanguage = resolvePreferredLanguage(
     profile?.preferredLanguage ?? profile?.language ?? language,
   );
@@ -186,18 +189,8 @@ export default function ProfilePage() {
     logout();
   };
 
-  if (isLoading) {
-    return (
-      <div className="space-y-4 animate-pulse">
-        <div className="h-44 rounded-[24px] bg-slate-200 dark:bg-slate-800" />
-        <div className="grid grid-cols-2 gap-3">
-          <div className="h-24 rounded-[20px] bg-slate-200 dark:bg-slate-800" />
-          <div className="h-24 rounded-[20px] bg-slate-200 dark:bg-slate-800" />
-        </div>
-        <div className="h-32 rounded-[20px] bg-slate-200 dark:bg-slate-800" />
-        <div className="h-64 rounded-[20px] bg-slate-200 dark:bg-slate-800" />
-      </div>
-    );
+  if (shouldShowLoading) {
+    return <ProfileLoading />;
   }
 
   return (

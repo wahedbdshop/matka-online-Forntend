@@ -1,5 +1,6 @@
 "use client";
 
+import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState, useCallback } from "react";
 import { Bell, X, GripVertical } from "lucide-react";
 import { useSocket } from "@/hooks/use-socket";
@@ -14,6 +15,7 @@ interface NotificationPayload {
 export function NotificationPopup() {
   const user = useAuthStore((s) => s.user);
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const queryClient = useQueryClient();
 
   const [show, setShow] = useState(false);
   const [notif, setNotif] = useState<{ title: string; message: string }>({
@@ -39,12 +41,13 @@ export function NotificationPopup() {
     const unsub = onEvent("new_notification", (data: NotificationPayload) => {
       const title = data.title ?? "নতুন বার্তা";
       const message = data.message ?? data.body ?? "";
+      queryClient.invalidateQueries({ queryKey: ["notifications"] });
       setNotif({ title, message });
       setShow(true);
     });
 
     return unsub;
-  }, [onEvent, isAuthenticated]);
+  }, [onEvent, isAuthenticated, queryClient]);
 
   const onPointerDown = useCallback(
     (e: React.PointerEvent<HTMLDivElement>) => {

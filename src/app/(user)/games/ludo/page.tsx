@@ -6,10 +6,10 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import Image from "next/image";
 import {
+  ArrowLeft,
   Loader2,
   Users,
   Crown,
-  Swords,
   Clock,
   Gift,
   Search,
@@ -18,8 +18,15 @@ import {
 import { toast } from "sonner";
 import { useSocket } from "@/hooks/use-socket";
 import { AdminService } from "@/services/admin.service";
+import { LudoAdminService } from "@/services/ludoAdmin.service";
 import { getLudoConfig } from "@/lib/ludo-settings";
 import { hasClientAuthCookie } from "@/lib/auth-cookie";
+import {
+  calculateLudoNetPrize,
+  extractLudoCommissionPct,
+  formatLudoPrizeAmount,
+  storeLudoCommissionPct,
+} from "@/lib/ludo-payout";
 import { TransferService } from "@/services/transfer.service";
 import { useAuthStore } from "@/store/auth.store";
 import {
@@ -57,6 +64,12 @@ type MatchmakingState = {
 
 type SearchableLudoUser = LudoInviteUser & {
   email?: string;
+};
+
+type StakePreviewState = {
+  amount: LudoStakeAmount;
+  waitingPlayers: number;
+  isFree: boolean;
 };
 
 const STALE_LUDO_STATE_ERROR =
@@ -288,6 +301,8 @@ export default function LudoPage() {
   const [isInviteSearching, setIsInviteSearching] = useState(false);
   const [selectedInviteStake, setSelectedInviteStake] =
     useState<LudoStakeAmount>(0);
+  const [selectedStakePreview, setSelectedStakePreview] =
+    useState<StakePreviewState | null>(null);
 
   useEffect(() => {
     queueMicrotask(() => {
@@ -313,7 +328,7 @@ export default function LudoPage() {
   );
 
   const { isConnected, emitEvent, onEvent } = useSocket();
-  const [selectedColor] = useState<"RED" | "GREEN">("RED");
+  const [selectedColor, setSelectedColor] = useState<"RED" | "GREEN">("RED");
   const [queueState, setQueueState] = useState<QueueStatus | null>(null);
   const { data: globalData, isLoading: settingsLoading } = useQuery({
     queryKey: ["public-settings"],
@@ -342,6 +357,23 @@ export default function LudoPage() {
     queryKey: ["ludo-my-state"],
     queryFn: () => LudoService.getMyState(),
     refetchInterval: 5000,
+    enabled: isLudoEnabled,
+  });
+  const { data: ludoSettingsSnapshot } = useQuery<
+    { data?: Record<string, unknown> } | null
+  >({
+    queryKey: ["ludo-user-settings-snapshot"],
+    queryFn: async () => {
+      try {
+        return (await LudoAdminService.getSettingsSnapshot()) as {
+          data?: Record<string, unknown>;
+        };
+      } catch {
+        return null;
+      }
+    },
+    retry: false,
+    staleTime: 30000,
     enabled: isLudoEnabled,
   });
 
@@ -519,6 +551,31 @@ export default function LudoPage() {
     joinQueueMutation.mutate(payload);
   };
 
+  const openStakePreview = (stake: StakePreviewState) => {
+    setSelectedStakePreview(stake);
+  };
+
+  const closeStakePreview = () => {
+    setSelectedStakePreview(null);
+  };
+
+  const confirmStakePreview = () => {
+    if (!selectedStakePreview) return;
+
+    startJoinQueue({
+      stake: selectedStakePreview.amount,
+      preferredColor: selectedColor,
+      pieceMode: "FOUR",
+      ...(selectedStakePreview.isFree
+        ? {
+            isFree: true,
+            freeMode: true,
+          }
+        : {}),
+    });
+    setSelectedStakePreview(null);
+  };
+
   const mergedStakes = useMemo(() => {
     if (isFreeMode) return [];
 
@@ -646,6 +703,37 @@ export default function LudoPage() {
   const livePlayerCount = lobby?.activePlayerCount ?? 2;
   const playerDisplayName =
     currentUser?.name?.trim() || currentUser?.username?.trim() || "You";
+  const queueCards = useMemo(() => {
+    if (isFreeMode) {
+      return [
+        {
+          amount: ludoConfig.freeStake,
+          waitingPlayers: freeStakeStatus.waitingPlayers,
+          activeMatches: freeStakeStatus.activeMatches,
+          onlinePlayers: freeStakeStatus.onlinePlayers,
+          isFree: true,
+        },
+      ];
+    }
+
+    return mergedStakes.map((stake) => ({
+      ...stake,
+      isFree: false,
+    }));
+  }, [freeStakeStatus.activeMatches, freeStakeStatus.onlinePlayers, freeStakeStatus.waitingPlayers, isFreeMode, ludoConfig.freeStake, mergedStakes]);
+  const ludoCommissionPct = useMemo(
+    () =>
+      extractLudoCommissionPct(
+        ludoSettingsSnapshot?.data,
+        lobbyData?.data,
+        myStateData?.data,
+        globalData?.data,
+      ),
+    [globalData?.data, lobbyData?.data, ludoSettingsSnapshot?.data, myStateData?.data],
+  );
+  useEffect(() => {
+    storeLudoCommissionPct(ludoCommissionPct);
+  }, [ludoCommissionPct]);
   const activeMatchmaking =
     matchmaking ??
     (isSearching && searchingStakeAmount !== null
@@ -749,137 +837,99 @@ export default function LudoPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_top,#eef4ff_0%,#f8fafc_42%,#eef2ff_100%)] pb-10 text-slate-900 dark:bg-[radial-gradient(circle_at_top,#1a1040_0%,#0d0a1e_52%,#090611_100%)] dark:text-white">
+    <div className="min-h-screen bg-[radial-gradient(circle_at_top,#eef4ff_0%,#f8fafc_42%,#eef2ff_100%)] pb-10 text-slate-900 dark:bg-[radial-gradient(circle_at_top,#1a1040_0%,#0d1120_44%,#090611_100%)] dark:text-white">
       <div className="pointer-events-none fixed inset-0 overflow-hidden">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(59,130,246,0.14)_0%,transparent_55%)] dark:bg-[radial-gradient(ellipse_at_top,rgba(59,130,246,0.12)_0%,transparent_55%)]" />
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom,rgba(168,85,247,0.08)_0%,transparent_60%)] dark:bg-[radial-gradient(ellipse_at_bottom,rgba(239,68,68,0.1)_0%,transparent_60%)]" />
+        <div className="absolute inset-0 opacity-[0.08] bg-[radial-gradient(circle_at_1px_1px,#4338ca_1.1px,transparent_0)] bg-size-[18px_18px] dark:opacity-[0.13] dark:bg-[radial-gradient(circle_at_1px_1px,white_1.2px,transparent_0)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(59,130,246,0.12)_0%,transparent_42%)] dark:bg-[radial-gradient(circle_at_top,rgba(124,58,237,0.22)_0%,transparent_38%)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_bottom,rgba(124,58,237,0.08)_0%,transparent_48%)] dark:bg-[radial-gradient(circle_at_bottom,rgba(59,130,246,0.14)_0%,transparent_44%)]" />
+        <div className="absolute inset-x-0 top-0 h-24 bg-[linear-gradient(180deg,rgba(255,255,255,0.45),transparent)] dark:bg-[linear-gradient(180deg,rgba(255,255,255,0.08),transparent)]" />
       </div>
 
-      <div className="relative mx-auto max-w-6xl px-4 pt-6">
-        {/* Header */}
-        <div className="mb-5 flex items-center justify-center gap-3">
-          <Crown className="h-7 w-7 text-[#ffd700] drop-shadow-[0_0_8px_rgba(255,215,0,0.8)]" />
-          <h1 className="text-3xl font-black tracking-wide text-slate-900 dark:text-white dark:drop-shadow-[0_0_12px_rgba(160,120,255,0.6)]">
-            LUDO MATKA
-          </h1>
-          <Crown className="h-7 w-7 text-[#ffd700] drop-shadow-[0_0_8px_rgba(255,215,0,0.8)]" />
-        </div>
-
-        <div className="relative mb-7 flex justify-center">
-          <div className="absolute inset-x-12 top-8 h-40 rounded-full bg-[radial-gradient(circle,rgba(125,89,255,0.28)_0%,transparent_72%)] blur-3xl" />
-          <div className="relative">
-            <LudoPreviewBoard />
-            <div className="absolute -right-24 top-3 flex items-center gap-2 rounded-full border border-emerald-300 bg-white/95 px-4 py-2 shadow-[0_10px_24px_rgba(16,185,129,0.18)] dark:border-[#2dc653]/45 dark:bg-[#081a11] dark:shadow-[0_0_16px_rgba(45,198,83,0.26)]">
-              <span className="h-2.5 w-2.5 rounded-full bg-[#2dc653] shadow-[0_0_8px_#2dc653]" />
-              <span className="text-sm font-bold text-emerald-700 dark:text-[#69f28d]">
-                {livePlayerCount} Online
-              </span>
+      <div className="relative mx-auto max-w-md px-4 pt-7">
+        <div className="mb-7 flex flex-col items-center">
+          <div className="relative flex h-28 w-56 items-center justify-center">
+            <div className="absolute h-24 w-24 rotate-45 rounded-[24px] border-[5px] border-white/85 bg-[radial-gradient(circle_at_30%_28%,#ffe47a_0%,#f6b638_35%,#d24e34_66%,#3b5fdd_100%)] shadow-[0_16px_30px_rgba(0,0,0,0.28)]" />
+            <div className="absolute h-16 w-16 rotate-45 rounded-[18px] bg-[radial-gradient(circle,#f8e392_0%,rgba(255,255,255,0)_70%)] opacity-80" />
+            <div className="relative flex items-end text-[3rem] font-black italic leading-none tracking-[-0.08em] drop-shadow-[0_4px_0_rgba(14,25,76,0.8)]">
+              <span className="text-[#f58c4c]">LU</span>
+              <span className="text-[#ffd34e]">DO</span>
+              <span className="text-[#59a4ff]">BET</span>
             </div>
+          </div>
+          <div className="mt-2 flex items-center gap-2 rounded-full border border-violet-200 bg-white/90 px-4 py-1.5 text-xs font-bold uppercase tracking-[0.22em] text-violet-700 shadow-[0_8px_18px_rgba(15,23,42,0.08)] backdrop-blur dark:border-violet-400/20 dark:bg-white/8 dark:text-violet-100 dark:shadow-[0_8px_18px_rgba(0,0,0,0.16)]">
+            <span className="h-2 w-2 rounded-full bg-emerald-400" />
+            {livePlayerCount} online
           </div>
         </div>
 
-        {/* Select stake label */}
-        <div className="mb-4 flex items-center gap-3">
-          <div className="h-px flex-1 bg-gradient-to-r from-transparent to-purple-500/40" />
-          <div className="flex items-center gap-2">
-            <Swords className="h-4 w-4 text-violet-500 dark:text-purple-300" />
-            <span className="text-sm font-bold uppercase tracking-widest text-violet-700 dark:text-purple-200">
-              {isFreeMode ? "Free Play" : "Select Stake"}
-            </span>
-            <Swords className="h-4 w-4 text-violet-500 dark:text-purple-300" />
-          </div>
-          <div className="h-px flex-1 bg-gradient-to-l from-transparent to-purple-500/40" />
-        </div>
+        <div className="space-y-4">
+          {queueCards.map((stake) => {
+            const isCurrentStakeSearching =
+              isQueueSearching && Number(searchingStakeAmount) === Number(stake.amount);
+            const lineCount = Math.max(0, Number(stake.waitingPlayers ?? 0));
+            const amountLabel = stake.isFree
+              ? "FREE PLAY"
+              : `BDT ${Number(stake.amount).toLocaleString("en-BD")}`;
 
-        {/* Stake buttons */}
-        {isFreeMode ? (
-          <button
-            type="button"
-            disabled={joinQueueMutation.isPending || isSearching}
-            onClick={() =>
-              startJoinQueue({
-                stake: ludoConfig.freeStake,
-                preferredColor: selectedColor,
-                pieceMode: "FOUR",
-                isFree: true,
-                freeMode: true,
-              })
-            }
-            className="group relative w-full overflow-hidden rounded-2xl border border-cyan-300 bg-gradient-to-b from-cyan-400 to-emerald-500 p-0 shadow-[0_6px_28px_rgba(34,211,238,0.42)] transition-all duration-200 active:scale-95 hover:scale-[1.02] disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            <div className="absolute inset-x-0 top-0 h-1/2 bg-gradient-to-b from-white/25 to-transparent" />
-            <div className="absolute inset-x-2 bottom-0 h-[3px] rounded-full bg-black/30" />
-
-            <div className="relative px-4 py-5">
-              <div className="mb-2 flex items-center justify-center gap-2 text-2xl font-black tracking-tight text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.45)]">
-                <Gift className="h-6 w-6" />
-                Free Play
-              </div>
-              <div className="mx-auto mb-2 h-px w-3/4 bg-white/35" />
-              <div className="flex items-center justify-center gap-1.5">
-                <Users className="h-3.5 w-3.5 text-white/85" />
-                <span className="text-xs font-semibold text-white/95">
-                  {isQueueSearching && Number(searchingStakeAmount) === ludoConfig.freeStake
-                    ? "Searching..."
-                    : freeStakeStatus.waitingPlayers === 1
-                      ? "Opponent available"
-                      : "Join free match"}
-                </span>
-              </div>
-            </div>
-          </button>
-        ) : (
-        <div className="grid grid-cols-2 gap-3">
-          {mergedStakes.map((stake, idx) => {
-            const color = stakeColors[idx % stakeColors.length];
             return (
               <button
                 key={stake.amount}
                 type="button"
-                  disabled={joinQueueMutation.isPending || isSearching}
-                  onClick={() =>
-                    startJoinQueue({
-                      stake: stake.amount,
-                      preferredColor: selectedColor,
-                      pieceMode: "FOUR",
+                disabled={joinQueueMutation.isPending || isSearching}
+                onClick={() =>
+                  openStakePreview({
+                    amount: stake.amount,
+                    waitingPlayers: lineCount,
+                    isFree: stake.isFree,
                   })
                 }
-                className={`group relative overflow-hidden rounded-2xl border ${color.border} bg-gradient-to-b ${color.gradient} ${color.shadow} p-0 transition-all duration-200 active:scale-95 hover:scale-[1.03] disabled:cursor-not-allowed disabled:opacity-60`}
+                className={`group relative flex w-full items-center gap-3 rounded-[22px] border px-4 py-4 text-left shadow-[0_10px_18px_rgba(15,23,42,0.08)] transition duration-200 active:scale-[0.985] disabled:cursor-not-allowed disabled:opacity-60 dark:shadow-[0_10px_18px_rgba(0,0,0,0.2)] ${
+                  isCurrentStakeSearching
+                    ? "border-violet-300 bg-[linear-gradient(135deg,#f8f2ff_0%,#eef4ff_100%)] shadow-[0_0_0_3px_rgba(167,139,250,0.16),0_12px_22px_rgba(15,23,42,0.12)] dark:border-violet-300 dark:bg-[linear-gradient(135deg,#f8f2ff_0%,#eef4ff_100%)] dark:shadow-[0_0_0_3px_rgba(167,139,250,0.16),0_12px_22px_rgba(0,0,0,0.24)]"
+                    : "border-slate-200 bg-[linear-gradient(135deg,rgba(255,255,255,0.98)_0%,rgba(241,245,249,0.96)_100%)] dark:border-slate-200 dark:bg-[linear-gradient(135deg,rgba(255,255,255,0.98)_0%,rgba(241,245,249,0.96)_100%)]"
+                }`}
               >
-                {/* Shine sweep */}
-                <div className="absolute inset-x-0 top-0 h-1/2 bg-gradient-to-b from-white/20 to-transparent" />
-                {/* Bottom shadow edge */}
-                <div className="absolute inset-x-2 bottom-0 h-[3px] rounded-full bg-black/30" />
+                <div className="flex h-[54px] w-[54px] shrink-0 items-center justify-center rounded-[16px] border-[2px] border-[#d7def8] bg-white shadow-[inset_0_1px_0_rgba(255,255,255,0.9)]">
+                  <div className="grid h-10 w-10 grid-cols-2 overflow-hidden rounded-[10px] border border-slate-300">
+                    <span className="bg-[#ef4444]" />
+                    <span className="bg-[#22c55e]" />
+                    <span className="bg-[#3b82f6]" />
+                    <span className="bg-[#facc15]" />
+                  </div>
+                </div>
 
-                <div className="relative px-4 py-4">
-                  {/* Amount */}
-                  <div className="mb-1 text-center text-2xl font-black tracking-tight text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)]">
-                    ৳{stake.amount.toLocaleString()}
+                <div className="min-w-0 flex-1">
+                  <p className="text-[1.05rem] font-black leading-none tracking-[-0.02em] text-[#1a237e]">
+                    {amountLabel}
+                  </p>
+                  <div className="mt-1 flex items-center gap-2 text-[0.86rem] font-bold text-[#1a237e]">
+                    <span>2 players</span>
+                    {isCurrentStakeSearching ? (
+                      <span className="rounded-full bg-[#1a237e]/10 px-2 py-0.5 text-[10px] uppercase tracking-[0.18em] text-[#1a237e]">
+                        Searching
+                      </span>
+                    ) : null}
                   </div>
-                  {/* Divider */}
-                  <div className="mx-auto mb-2 h-px w-3/4 bg-white/30" />
-                  {/* Players */}
-                  <div className="flex items-center justify-center gap-1.5">
-                    <Users className="h-3.5 w-3.5 text-white/80" />
-                    <span className="text-xs font-semibold text-white/90">
-                      {getStakeStatusLabel(stake)}
-                    </span>
-                  </div>
+                </div>
+
+                <div className="ml-auto flex shrink-0 items-center gap-2 text-[#f0b53a]">
+                  <Users className="h-5 w-5 fill-current" />
+                  <span className="min-w-6 text-right text-[2rem] font-black leading-none tracking-[-0.06em] text-[#1a237e]">
+                    {lineCount}
+                  </span>
                 </div>
               </button>
             );
           })}
         </div>
-        )}
 
-        {/* Matchmaking list */}
         {(activeMatchmaking || joinQueueMutation.isPending) && (
-          <div className="mt-4 rounded-2xl border border-violet-200 bg-white/95 px-4 py-4 shadow-[0_14px_34px_rgba(99,102,241,0.12)] dark:border-purple-500/30 dark:bg-[#1a1040] dark:shadow-[0_0_20px_rgba(120,80,255,0.2)]">
-            <div className="mb-3 flex items-center justify-center gap-2 text-sm font-black text-violet-700 dark:text-purple-100">
+          <div className="mt-4 rounded-[22px] border border-violet-200 bg-white px-4 py-4 text-slate-900 shadow-[0_14px_30px_rgba(15,23,42,0.08)] dark:border-violet-400/18 dark:bg-[linear-gradient(135deg,rgba(32,18,67,0.96),rgba(15,17,32,0.92))] dark:text-white dark:shadow-[0_14px_30px_rgba(0,0,0,0.2)]">
+            <div className="mb-3 flex items-center justify-center gap-2 text-sm font-black !text-violet-700 dark:!text-violet-50">
               {activeMatchmaking?.status === "matched" ? (
                 <span className="h-2.5 w-2.5 rounded-full bg-[#2dc653] shadow-[0_0_8px_#2dc653]" />
               ) : (
-                <Loader2 className="h-4 w-4 animate-spin text-violet-500 dark:text-purple-300" />
+                <Loader2 className="h-4 w-4 animate-spin !text-violet-500 dark:!text-violet-300" />
               )}
               {activeMatchmaking?.status === "matched"
                 ? "Match found - starting game"
@@ -887,36 +937,36 @@ export default function LudoPage() {
             </div>
 
             <div className="grid gap-2">
-              <div className="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 dark:border-white/10 dark:bg-white/5">
+              <div className="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 dark:border-white/10 dark:bg-white/8">
                 <div className="min-w-0">
-                  <p className="truncate text-sm font-black text-slate-900 dark:text-white">
+                  <p className="truncate text-sm font-black !text-slate-900 dark:!text-white">
                     {playerDisplayName}
                   </p>
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-violet-500/70 dark:text-purple-200/60">
+                  <p className="text-[10px] font-bold uppercase tracking-widest !text-slate-500 dark:!text-white/55">
                     Player 1
                   </p>
                 </div>
-                <span className="rounded-full bg-emerald-500/15 px-2.5 py-1 text-[10px] font-black text-emerald-300">
+                <span className="rounded-full bg-emerald-100 px-2.5 py-1 text-[10px] font-black !text-emerald-700 dark:bg-emerald-500/18 dark:!text-emerald-200">
                   Ready
                 </span>
               </div>
 
-              <div className="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 dark:border-white/10 dark:bg-white/5">
+              <div className="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 dark:border-white/10 dark:bg-white/8">
                 <div className="min-w-0">
-                  <p className="truncate text-sm font-black text-slate-900 dark:text-white">
+                  <p className="truncate text-sm font-black !text-slate-900 dark:!text-white">
                     {activeMatchmaking?.status === "matched"
                       ? activeMatchmaking.opponentName || "Opponent"
                       : "Searching..."}
                   </p>
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-violet-500/70 dark:text-purple-200/60">
+                  <p className="text-[10px] font-bold uppercase tracking-widest !text-slate-500 dark:!text-white/55">
                     Player 2
                   </p>
                 </div>
                 <span
                   className={`rounded-full px-2.5 py-1 text-[10px] font-black ${
                     activeMatchmaking?.status === "matched"
-                      ? "bg-emerald-500/15 text-emerald-300"
-                      : "bg-amber-500/15 text-amber-300"
+                      ? "bg-emerald-100 !text-emerald-700 dark:bg-emerald-500/18 dark:!text-emerald-200"
+                      : "bg-amber-100 !text-amber-700 dark:bg-amber-400/18 dark:!text-amber-100"
                   }`}
                 >
                   {activeMatchmaking?.status === "matched" ? "Matched" : "Waiting"}
@@ -926,34 +976,143 @@ export default function LudoPage() {
           </div>
         )}
 
-        {/* Footer links */}
-        <div className="mt-6 flex justify-center gap-6 text-xs font-semibold text-violet-700/80 dark:text-purple-300/70">
+        <div className="mt-6 flex flex-col items-center gap-2 text-center text-sm font-semibold text-violet-700/90 dark:text-violet-100/90">
           <Link
-            href="/games"
-            className="underline underline-offset-4 transition-colors hover:text-violet-900 dark:hover:text-purple-200"
+            href="/games/ludo/rules"
+            className="underline underline-offset-4 transition-colors hover:text-violet-900 dark:hover:text-white"
           >
-            Game Rules
+            rules of Ludo
           </Link>
-          <span className="text-violet-400/60 dark:text-purple-500/40">|</span>
           <Link
-            href="/dashboard"
-            className="underline underline-offset-4 transition-colors hover:text-violet-900 dark:hover:text-purple-200"
+            href="/games/ludo/history"
+            className="underline underline-offset-4 transition-colors hover:text-violet-900 dark:hover:text-white"
           >
-            My History
+            my game history
           </Link>
         </div>
 
-        <div className="mt-5 rounded-[28px] border border-violet-200 bg-white/95 p-4 shadow-[0_18px_45px_rgba(99,102,241,0.12)] dark:border-purple-500/20 dark:bg-[#150d2b]/85 dark:shadow-[0_18px_45px_rgba(0,0,0,0.24)]">
+        {selectedStakePreview ? (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 px-4 backdrop-blur-[2px]">
+            <div className="w-full max-w-[380px] rounded-[26px] border border-[#5d88ff] bg-[linear-gradient(180deg,#5f92ff_0%,#4b79eb_100%)] p-4 shadow-[0_24px_60px_rgba(15,23,42,0.38)]">
+              <div className="rounded-[22px] bg-[linear-gradient(180deg,#fffef9_0%,#f6f0df_100%)] px-5 pb-6 pt-5 text-center shadow-[0_10px_18px_rgba(15,23,42,0.18)]">
+                <div className="flex items-center">
+                  <button
+                    type="button"
+                    onClick={closeStakePreview}
+                    className="flex h-10 w-10 items-center justify-center rounded-full text-[#27408f] transition-colors hover:bg-[#27408f]/8"
+                    aria-label="Back"
+                  >
+                    <ArrowLeft className="h-6 w-6" />
+                  </button>
+                  <div className="flex-1 pr-10">
+                    <p className="text-[2rem] font-black leading-none tracking-[-0.04em] text-[#29409b]">
+                      {selectedStakePreview.isFree
+                        ? "FREE PLAY"
+                        : `BDT ${Number(selectedStakePreview.amount).toLocaleString("en-BD")}`}
+                    </p>
+                    <p className="mt-1 text-lg font-black uppercase tracking-[0.08em] text-[#29409b]">
+                      2 Players
+                    </p>
+                  </div>
+                </div>
+
+                <div className="mt-8 rounded-[18px] bg-[#37488d] px-4 py-4 text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-3">
+                      <span className="text-2xl">🏆</span>
+                      <div className="text-left">
+                        <p className="text-xl font-black">1st Prize</p>
+                        <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-white/65">
+                          After admin commission
+                        </p>
+                      </div>
+                    </div>
+                    <span className="text-3xl font-black tracking-[-0.04em]">
+                      {selectedStakePreview.isFree
+                        ? "FREE"
+                        : formatLudoPrizeAmount(
+                            calculateLudoNetPrize(
+                              Number(selectedStakePreview.amount),
+                              ludoCommissionPct,
+                            ),
+                          )}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="mt-9">
+                  <p className="mb-3 text-center text-[11px] font-black uppercase tracking-[0.22em] text-[#4a5c99]">
+                    Choose Color
+                  </p>
+                  <div className="flex items-center justify-center gap-5">
+                    {[
+                      { value: "RED" as const, color: "#c2410c", label: "Red" },
+                      { value: "GREEN" as const, color: "#16a34a", label: "Green" },
+                    ].map((pin) => {
+                      const isSelected = selectedColor === pin.value;
+
+                      return (
+                        <button
+                          key={pin.value}
+                          type="button"
+                          onClick={() => setSelectedColor(pin.value)}
+                          className="flex flex-col items-center gap-3 rounded-2xl px-2 py-1 transition-transform hover:scale-[1.03] active:scale-[0.98]"
+                          aria-pressed={isSelected}
+                          aria-label={`Choose ${pin.label} color`}
+                        >
+                          <div
+                            className={`relative h-11 w-11 transition-transform ${
+                              isSelected ? "scale-105" : "opacity-75"
+                            }`}
+                          >
+                            <span
+                              className="absolute inset-x-[7px] top-0 h-7 rounded-full border-[3px] border-white shadow-[0_4px_8px_rgba(15,23,42,0.2)]"
+                              style={{ backgroundColor: pin.color }}
+                            />
+                            <span className="absolute left-1/2 top-6 h-4 w-[3px] -translate-x-1/2 rounded-full bg-[#4b5f99]" />
+                            <span className="absolute left-1/2 top-[34px] h-[5px] w-7 -translate-x-1/2 rounded-full bg-[#4966c7]" />
+                          </div>
+                          <span
+                            className={`flex h-6 min-w-6 items-center justify-center rounded-sm border px-1 text-sm font-black ${
+                              isSelected
+                                ? "border-slate-300 bg-[#e8e1cb] text-slate-950"
+                                : "border-transparent bg-slate-300/85 text-transparent"
+                            }`}
+                          >
+                            {isSelected ? "✓" : "•"}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex justify-center pt-5">
+                <button
+                  type="button"
+                  onClick={confirmStakePreview}
+                  disabled={joinQueueMutation.isPending || isSearching}
+                  className="inline-flex min-w-[162px] items-center justify-center rounded-[18px] bg-[linear-gradient(180deg,#ffd34e_0%,#f0a928_100%)] px-8 py-4 text-[2rem] font-black uppercase leading-none tracking-[-0.04em] text-[#7b4200] shadow-[0_9px_0_#bf7715,0_18px_26px_rgba(15,23,42,0.2)] transition-transform hover:translate-y-[1px] active:translate-y-[2px] disabled:opacity-60"
+                >
+                  {joinQueueMutation.isPending || isSearching ? "..." : "Start"}
+                </button>
+              </div>
+            </div>
+          </div>
+        ) : null}
+
+        <div className="mt-6 rounded-[28px] border border-violet-200/60 bg-[linear-gradient(135deg,rgba(255,255,255,0.98),rgba(248,250,252,0.96))] p-4 text-slate-900 shadow-[0_18px_45px_rgba(15,23,42,0.08)] dark:border-violet-400/18 dark:bg-[linear-gradient(135deg,rgba(255,255,255,0.98),rgba(248,250,252,0.96))] dark:shadow-[0_18px_45px_rgba(0,0,0,0.2)]">
           <div className="flex items-center justify-between gap-3">
             <div>
-              <p className="text-sm font-black uppercase tracking-[0.22em] text-cyan-700 dark:text-cyan-200">
+              <p className="text-sm font-black uppercase tracking-[0.22em] text-violet-700">
                 Invite Friend
               </p>
-              <p className="mt-1 text-xs text-slate-600 dark:text-slate-400">
+              <p className="mt-1 text-xs text-slate-600">
                 Search by username and send a direct Ludo invite.
               </p>
             </div>
-            <div className="rounded-full border border-emerald-300 bg-emerald-50 px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-emerald-700 dark:border-emerald-400/25 dark:bg-emerald-500/10 dark:text-emerald-300">
+            <div className="rounded-full border border-emerald-300 bg-emerald-50 px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-emerald-700">
               {inviteStakeLabel}
             </div>
           </div>
@@ -970,8 +1129,8 @@ export default function LudoPage() {
                     onClick={() => setSelectedInviteStake(stake.amount)}
                     className={`rounded-full border px-3 py-1.5 text-xs font-bold transition-colors ${
                       selected
-                        ? "border-cyan-300 bg-cyan-400/15 text-cyan-200"
-                        : "border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100 dark:border-white/10 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10"
+                        ? "border-violet-300 bg-violet-500/12 text-violet-700"
+                        : "border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100"
                     }`}
                   >
                     Tk {stake.amount.toLocaleString("en-BD")}
@@ -981,15 +1140,15 @@ export default function LudoPage() {
             </div>
           ) : null}
 
-          <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50/80 p-3 dark:border-white/10 dark:bg-black/15">
-            <div className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-3 py-3 dark:border-white/10 dark:bg-white/5">
-              <Search className="h-4 w-4 text-cyan-500 dark:text-cyan-300" />
+          <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50/80 p-3">
+            <div className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-3 py-3">
+              <Search className="h-4 w-4 text-violet-500" />
               <input
                 type="text"
                 value={inviteQuery}
                 onChange={(event) => setInviteQuery(event.target.value)}
                 placeholder="Search username"
-                className="w-full bg-transparent text-sm text-slate-900 outline-none placeholder:text-slate-500 dark:text-white"
+                className="w-full bg-transparent text-sm text-slate-900 outline-none placeholder:text-slate-500"
               />
               {isInviteSearching ? (
                 <Loader2 className="h-4 w-4 animate-spin text-slate-400" />
@@ -1000,13 +1159,13 @@ export default function LudoPage() {
               {inviteSearchResults.map((user) => (
                 <div
                   key={user.id}
-                  className="flex items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white px-3 py-3 dark:border-white/10 dark:bg-white/5"
+                  className="flex items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white px-3 py-3"
                 >
                   <div className="min-w-0">
-                    <p className="truncate text-sm font-bold text-slate-900 dark:text-white">
+                    <p className="truncate text-sm font-bold text-slate-900">
                       {user.name}
                     </p>
-                    <p className="truncate text-xs text-slate-500 dark:text-slate-400">
+                    <p className="truncate text-xs text-slate-500">
                       @{user.username}
                     </p>
                   </div>
@@ -1014,7 +1173,7 @@ export default function LudoPage() {
                     type="button"
                     onClick={() => sendInviteMutation.mutate(user)}
                     disabled={sendInviteMutation.isPending || isSearching}
-                    className="flex shrink-0 items-center gap-2 rounded-full border border-cyan-400 bg-cyan-50 px-3 py-2 text-xs font-black text-cyan-700 transition-colors hover:bg-cyan-100 disabled:opacity-60 dark:border-cyan-300 dark:bg-cyan-400/15 dark:text-cyan-100 dark:hover:bg-cyan-400/25"
+                    className="flex shrink-0 items-center gap-2 rounded-full border border-violet-300 bg-violet-50 px-3 py-2 text-xs font-black text-violet-700 transition-colors hover:bg-violet-100 disabled:opacity-60"
                   >
                     {sendInviteMutation.isPending ? (
                       <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -1029,13 +1188,13 @@ export default function LudoPage() {
               {inviteQuery.trim().length >= 2 &&
               !isInviteSearching &&
               inviteSearchResults.length === 0 ? (
-                <div className="rounded-2xl border border-dashed border-slate-200 bg-white px-3 py-4 text-center text-xs text-slate-500 dark:border-white/10 dark:bg-white/[0.03] dark:text-slate-400">
+                <div className="rounded-2xl border border-dashed border-slate-200 bg-white px-3 py-4 text-center text-xs text-slate-500">
                   No users found.
                 </div>
               ) : null}
 
               {inviteQuery.trim().length < 2 ? (
-                <div className="rounded-2xl border border-dashed border-slate-200 bg-white px-3 py-4 text-center text-xs text-slate-500 dark:border-white/10 dark:bg-white/[0.03] dark:text-slate-400">
+                <div className="rounded-2xl border border-dashed border-slate-200 bg-white px-3 py-4 text-center text-xs text-slate-500">
                   Type at least 2 letters to search by username.
                 </div>
               ) : null}

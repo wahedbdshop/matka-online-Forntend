@@ -10,6 +10,14 @@ export const LudoAdminService = {
     return res.data;
   },
 
+  getSettingsSnapshot: async () => {
+    const res = await api.get<ApiResponse<any>>(`${BASE}/settings`, {
+      skipAuthRedirect: true,
+      skipAuthRefresh: true,
+    } as any);
+    return res.data;
+  },
+
   updateSettings: async (payload: {
     isEnabled?: boolean;
     isFreeMode?: boolean;

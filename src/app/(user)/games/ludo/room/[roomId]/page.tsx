@@ -3,9 +3,14 @@
 import { useParams, useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { ArrowLeft, DoorOpen, Home, Loader2, RefreshCw, Trophy, Volume2, VolumeX } from "lucide-react";
+import { ArrowLeft, DoorOpen, Loader2, RefreshCw, Trophy, Volume2, VolumeX } from "lucide-react";
 import { toast } from "sonner";
 import { useSocket } from "@/hooks/use-socket";
+import {
+  calculateLudoNetPrize,
+  formatLudoPrizeAmount,
+  readStoredLudoCommissionPct,
+} from "@/lib/ludo-payout";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/store/auth.store";
 import { LudoBoard, type LudoColor, type LudoToken as BoardToken } from "@/components/ludo/board";
@@ -346,37 +351,112 @@ function AutoMoveDots({ count = 0 }: { count?: number }) {
   );
 }
 
+function getPlayerLabel(player?: LudoRoomPlayer | null, fallback = "Player") {
+  return player?.username?.trim() || player?.name?.trim() || fallback;
+}
+
+function getPlayerSubLabel(player?: LudoRoomPlayer | null, fallback = "Player") {
+  return player?.name?.trim() || player?.username?.trim() || fallback;
+}
+
+function getPlayerInitials(player?: LudoRoomPlayer | null, fallback = "P") {
+  const source = player?.name?.trim() || player?.username?.trim() || fallback;
+  const parts = source.split(/\s+/).filter(Boolean);
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return `${parts[0][0] ?? ""}${parts[1][0] ?? ""}`.toUpperCase();
+}
+
+function PlayerAvatarBadge({
+  player,
+  color,
+  active = false,
+  countdownProgress = null,
+  danger = false,
+  className,
+}: {
+  player?: LudoRoomPlayer | null;
+  color: string;
+  active?: boolean;
+  countdownProgress?: number | null;
+  danger?: boolean;
+  className?: string;
+}) {
+  const initials = getPlayerInitials(player);
+  const ringColor = danger ? "#ff5b57" : "#f5b414";
+  const showTurnRing = active && countdownProgress !== null;
+
+  return (
+    <div
+      className={cn(
+        "relative flex h-14 w-14 shrink-0 items-center justify-center rounded-full border-[3px] bg-white p-1 shadow-[0_8px_18px_rgba(0,0,0,0.28)] transition-all duration-300 ease-out",
+        active && "shadow-[0_0_0_3px_rgba(255,219,92,0.35),0_10px_24px_rgba(0,0,0,0.32)]",
+        className,
+      )}
+      style={{
+        borderColor: active ? "#38ff6b" : color,
+        ...(showTurnRing
+          ? {
+              background: `conic-gradient(from -90deg, ${ringColor} 0deg, ${ringColor} ${countdownProgress * 360}deg, rgba(255,255,255,0.14) ${countdownProgress * 360}deg, rgba(255,255,255,0.14) 360deg)`,
+            }
+          : {}),
+      }}
+    >
+      {active && (
+        <span
+          className="pointer-events-none absolute -inset-[6px] rounded-full border-2 shadow-[0_0_18px_rgba(255,230,92,0.34)] animate-[ludo-turn-avatar-ring_1.8s_ease-in-out_infinite]"
+          style={{ borderColor: danger ? "rgba(255,91,87,0.85)" : "rgba(255,240,168,0.8)" }}
+        />
+      )}
+      <div
+        className="flex h-full w-full items-center justify-center rounded-full bg-white text-sm font-black uppercase text-white"
+        style={{
+          background: `linear-gradient(180deg, ${color} 0%, ${color}cc 100%)`,
+        }}
+      >
+        {initials}
+      </div>
+    </div>
+  );
+}
+
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Page
 // ─────────────────────────────────────────────────────────────────────────────
 function LudoResultOverlay({
   result,
-  playerName,
-  countdown,
-  showActions,
+  winnerName,
+  runnerUpName,
   stakeAmount,
-  onPlayAgain,
-  onHome,
+  commissionPct,
+  onConfirm,
 }: {
   result: "win" | "loss";
-  playerName: string;
-  countdown: number;
-  showActions: boolean;
+  winnerName: string;
+  runnerUpName: string;
   stakeAmount: number;
-  onPlayAgain: () => void;
-  onHome: () => void;
+  commissionPct: number;
+  onConfirm: () => void;
 }) {
   const isWin = result === "win";
   const isPaidMatch = Number(stakeAmount) > 0;
-  const winAmount = isPaidMatch ? Number(stakeAmount) * 2 : 0;
-  const particles = Array.from({ length: isWin ? 34 : 28 });
+  const winAmount = isPaidMatch
+    ? calculateLudoNetPrize(Number(stakeAmount), commissionPct)
+    : 0;
+  const particles = Array.from({ length: isWin ? 30 : 20 });
+  const winnerPrizeLabel = isPaidMatch
+    ? `BDT ${formatLudoPrizeAmount(winAmount)}`
+    : "FREE";
+  const panelGradient = isWin
+    ? "from-[#2e0717] via-[#17112f] to-[#08112a]"
+    : "from-[#1f2f55] via-[#131d39] to-[#09101f]";
+  const boardGradient = isWin
+    ? "from-[#452645]/95 via-[#23192f]/95 to-[#161a2a]/95"
+    : "from-[#22334f]/95 via-[#18243b]/95 to-[#101727]/95";
 
   return (
     <div className={cn(
-      "fixed inset-0 z-[100] flex items-center justify-center overflow-hidden px-5 text-white ludo-result-fade",
-      isWin
-        ? "bg-[radial-gradient(circle_at_center,#552b02_0%,#140824_42%,#05030d_100%)]"
-        : "bg-[radial-gradient(circle_at_center,#24324b_0%,#111827_46%,#050816_100%)]",
+      "fixed inset-0 z-[100] flex items-center justify-center overflow-hidden bg-black/58 px-4 text-white backdrop-blur-[3px] ludo-result-fade",
     )}>
       <div className="absolute inset-0 overflow-hidden">
         {particles.map((_, index) => (
@@ -413,69 +493,69 @@ function LudoResultOverlay({
         </div>
       )}
 
-      <div className="relative z-10 w-full max-w-[430px] text-center">
-        <div className={cn(
-          "mx-auto mb-5 flex h-24 w-24 items-center justify-center rounded-full border shadow-2xl ludo-result-pop",
-          isWin
-            ? "border-yellow-200/70 bg-yellow-300 text-yellow-950 shadow-yellow-400/40"
-            : "border-blue-200/25 bg-slate-700 text-blue-100 shadow-blue-950/60",
-        )}>
-          {isWin ? <Trophy className="h-12 w-12" /> : <span className="text-5xl">:(</span>}
+      <div className={cn(
+        "relative z-10 w-full max-w-[360px] rounded-[28px] border border-white/15 bg-gradient-to-b p-4 text-center shadow-[0_25px_70px_rgba(0,0,0,0.52)] ludo-result-pop",
+        panelGradient,
+      )}>
+        <div className="absolute inset-x-6 top-0 h-14 rounded-b-[24px] bg-white/8 blur-2xl" />
+
+        <div className="relative mx-auto mt-1 inline-flex min-h-12 items-center justify-center px-8">
+          <span className="absolute inset-0 bg-[linear-gradient(180deg,#f56f92_0%,#d94676_100%)] shadow-[0_12px_20px_rgba(216,70,118,0.35)] [clip-path:polygon(0_22%,8%_22%,12%_0,88%_0,92%_22%,100%_22%,94%_100%,6%_100%)]" />
+          <span className="relative text-[2rem] font-black uppercase tracking-[0.08em] text-[#ffd94f] drop-shadow-[0_2px_0_rgba(105,31,53,0.9)]">
+            Results
+          </span>
         </div>
 
-        <h1 className={cn(
-          "ludo-result-title text-4xl font-black leading-tight sm:text-5xl",
-          isWin ? "text-yellow-200" : "text-blue-100",
+        <div className={cn(
+          "mt-5 rounded-[24px] border border-white/12 bg-gradient-to-b px-4 pb-5 pt-4",
+          boardGradient,
         )}>
-          {isWin ? "CONGRATULATIONS!" : "BETTER LUCK NEXT TIME"}
-        </h1>
-        <p className="mt-4 text-lg font-black text-white drop-shadow-[0_2px_10px_rgba(0,0,0,0.55)]">
-          {isWin ? `${playerName}, you win!` : `Played by ${playerName}`}
-        </p>
-        {isWin ? (
-          isPaidMatch ? (
-            <div className="mx-auto mt-5 max-w-[320px] rounded-[24px] border border-yellow-200/35 bg-[linear-gradient(180deg,rgba(255,220,120,0.26),rgba(255,184,0,0.14))] px-5 py-4 shadow-[0_12px_30px_rgba(0,0,0,0.28)]">
-              <p className="text-[11px] font-black uppercase tracking-[0.28em] text-yellow-100/80">
-                Prize Won
-              </p>
-              <p className="mt-2 text-3xl font-black text-yellow-200">
-                BDT {winAmount.toLocaleString()}
+          <div className="rounded-[18px] border border-white/12 bg-black/20 px-3 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]">
+            <div className="flex items-center gap-3 rounded-[14px] border border-white/10 bg-white/8 px-3 py-3">
+              <div className="flex h-11 w-11 items-center justify-center rounded-[14px] bg-[#f9d248] text-[#714500] shadow-[inset_0_2px_0_rgba(255,255,255,0.65)]">
+                <Trophy className="h-6 w-6" />
+              </div>
+              <div className="min-w-0 flex-1 text-left">
+                <p className="truncate text-base font-black text-white">{winnerName}</p>
+                <p className="mt-0.5 text-[11px] font-bold uppercase tracking-[0.24em] text-white/55">
+                  Winner
+                </p>
+              </div>
+              <div className="rounded-xl bg-white px-3 py-2 text-sm font-black text-slate-900 shadow-[inset_0_-2px_0_rgba(15,23,42,0.12)]">
+                {winnerPrizeLabel}
+              </div>
+            </div>
+
+            <div className="mt-3 rounded-[14px] border border-white/8 bg-black/20 px-4 py-3">
+              <p className="text-sm font-black text-white/90">
+                2nd {runnerUpName}
               </p>
             </div>
-          ) : (
-            <p className="mt-5 text-base font-black uppercase tracking-[0.24em] text-yellow-100 drop-shadow-[0_2px_10px_rgba(0,0,0,0.45)]">
-              Free Match Winner
-            </p>
-          )
-        ) : null}
+          </div>
 
-        {!showActions ? (
-          <div className="mt-8 inline-flex h-14 min-w-28 items-center justify-center rounded-full border border-white/20 bg-white/10 px-6 text-2xl font-black shadow-xl backdrop-blur">
-            {countdown}
+          <div className="mt-4 rounded-[18px] border border-white/10 bg-black/18 px-4 py-3">
+            <p className="text-xs font-black uppercase tracking-[0.32em] text-white/62">
+              Match Result
+            </p>
+            <p className={cn(
+              "mt-2 text-lg font-black",
+              isWin ? "text-[#ffd95c]" : "text-[#d7e6ff]",
+            )}>
+              {isWin ? "You won this round" : "Opponent won this round"}
+            </p>
+            <p className="mt-1 text-xs font-semibold text-white/60">
+              Press OK to return to the Ludo lobby
+            </p>
           </div>
-        ) : (
-          <div className="mt-8 grid grid-cols-2 gap-3">
-            <button
-              type="button"
-              onClick={onPlayAgain}
-              className={cn(
-                "flex h-12 items-center justify-center gap-2 rounded-2xl text-sm font-black shadow-lg",
-                isWin ? "bg-yellow-300 text-yellow-950" : "bg-blue-300 text-slate-950",
-              )}
-            >
-              <RefreshCw className="h-4 w-4" />
-              {isWin ? "Play Again" : "Try Again"}
-            </button>
-            <button
-              type="button"
-              onClick={onHome}
-              className="flex h-12 items-center justify-center gap-2 rounded-2xl border border-white/25 bg-white/16 text-sm font-black text-white shadow-lg backdrop-blur"
-            >
-              <Home className="h-4 w-4" />
-              Back to Home
-            </button>
-          </div>
-        )}
+
+          <button
+            type="button"
+            onClick={onConfirm}
+            className="mt-5 inline-flex h-14 min-w-[122px] items-center justify-center rounded-[18px] bg-[linear-gradient(180deg,#ffd454_0%,#f1a92b_100%)] px-8 text-xl font-black text-[#6e3b00] shadow-[0_10px_0_#b26b11,0_16px_28px_rgba(0,0,0,0.28)] transition-transform duration-150 hover:translate-y-[1px] active:translate-y-[2px]"
+          >
+            OK
+          </button>
+        </div>
       </div>
 
       <style jsx global>{`
@@ -484,10 +564,6 @@ function LudoResultOverlay({
           0% { transform: scale(.55); opacity: 0; }
           72% { transform: scale(1.12); opacity: 1; }
           100% { transform: scale(1); opacity: 1; }
-        }
-        @keyframes ludo-title-glow {
-          0%, 100% { transform: scale(1); text-shadow: 0 0 12px rgba(250,204,21,.55), 0 0 34px rgba(250,204,21,.35); }
-          50% { transform: scale(1.035); text-shadow: 0 0 18px rgba(250,204,21,.9), 0 0 46px rgba(250,204,21,.55); }
         }
         @keyframes ludo-firework {
           0% { transform: scale(.2) translateY(0); opacity: 0; }
@@ -505,7 +581,6 @@ function LudoResultOverlay({
         }
         .ludo-result-fade { animation: ludo-result-fade .35s ease-out both; }
         .ludo-result-pop { animation: ludo-result-pop .65s cubic-bezier(.2,1.4,.4,1) both; }
-        .ludo-result-title { animation: ludo-title-glow 1.35s ease-in-out infinite; }
         .ludo-firework { width: 9px; height: 9px; animation: ludo-firework 1.35s ease-out infinite; box-shadow: 0 0 18px currentColor; }
         .ludo-rain { width: 3px; height: 26px; animation: ludo-rain 1.7s linear infinite; opacity: .7; }
         .ludo-star { animation: ludo-star-float 2.2s ease-in-out infinite; color: #fde68a; text-shadow: 0 0 12px rgba(250,204,21,.9); }
@@ -522,12 +597,17 @@ export default function LudoRoomPage() {
   const [exitConfirmOpen, setExitConfirmOpen] = useState(false);
   const [roomState, setRoomState] = useState<LudoRoom | null>(null);
   const [lastVisibleDiceValue, setLastVisibleDiceValue] = useState(1);
+  const [lastRolledByUserId, setLastRolledByUserId] = useState<string | null>(null);
+  const [activeDiceOwnerId, setActiveDiceOwnerId] = useState<string | null>(null);
+  const [tokenMoveLocked, setTokenMoveLocked] = useState(false);
+  const [thirdSixPenaltyPending, setThirdSixPenaltyPending] = useState(false);
+  const [idleDiceValue] = useState(() => Math.floor(Math.random() * 6) + 1);
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [soundVolume, setSoundVolume] = useState(0.7);
   const [soundPanelOpen, setSoundPanelOpen] = useState(false);
   const [soundPrefsReady, setSoundPrefsReady] = useState(false);
-  const [resultCountdown, setResultCountdown] = useState(10);
-  const [resultActionsVisible, setResultActionsVisible] = useState(false);
+  const [storedCommissionPct, setStoredCommissionPct] = useState(0);
+  const [sharedTurnCountdown, setSharedTurnCountdown] = useState<number | null>(null);
   const latestRoomRef = useRef<LudoRoom | null>(null);
   const pendingRoomUpdateRef = useRef<unknown | null>(null);
   const pendingCombinedRollRoomRef = useRef<LudoRoom | null>(null);
@@ -537,6 +617,7 @@ export default function LudoRoomPage() {
   const diceSoundIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const diceSoundStopRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const resultSoundKeyRef = useRef<string | null>(null);
+  const roomRefetchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // ── Step-by-step movement animation ─────────────────────────────────────
   // preMoveRoomRef: snapshot of room taken just before the move API call.
@@ -561,9 +642,9 @@ export default function LudoRoomPage() {
   // dice. A draining ring shows the remaining time. When it hits 0 the dice
   // is auto-rolled so the turn passes to the opponent.
   const ROLL_TIMEOUT_SEC = 20;
-  const LOCAL_DICE_ROLL_MS = 520;
-  const REMOTE_DICE_ROLL_MS = 320;
-  const DICE_SETTLE_MS = 280;
+  const LOCAL_DICE_ROLL_MS = 460;
+  const REMOTE_DICE_ROLL_MS = 280;
+  const DICE_SETTLE_MS = 0;
   const LOCAL_DICE_ANIMATION_MS = LOCAL_DICE_ROLL_MS + DICE_SETTLE_MS;
   const REMOTE_DICE_ANIMATION_MS = REMOTE_DICE_ROLL_MS + DICE_SETTLE_MS;
   const [rollCountdown, setRollCountdown] = useState<number | null>(null);
@@ -571,7 +652,7 @@ export default function LudoRoomPage() {
   const rollAutoRef     = useRef<ReturnType<typeof setTimeout>  | null>(null);
   const turnWarningPlayedRef = useRef<string | null>(null);
   const [diceFaceValue, setDiceFaceValue] = useState(1);
-  const [diceAnimationState, setDiceAnimationState] = useState<"idle" | "rolling" | "settling">("idle");
+  const [diceAnimationState, setDiceAnimationState] = useState<"idle" | "rolling">("idle");
   const diceShuffleIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const diceSettleTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const diceIdleTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -582,8 +663,26 @@ export default function LudoRoomPage() {
     queryKey: ["ludo-room", roomId],
     queryFn: () => LudoService.getRoom(roomId),
     enabled: Boolean(roomId),
-    refetchInterval: 2000,
+    refetchInterval: isConnected ? false : 2500,
   });
+
+  const scheduleRoomRefetch = useCallback(() => {
+    if (roomRefetchTimeoutRef.current) {
+      clearTimeout(roomRefetchTimeoutRef.current);
+    }
+
+    roomRefetchTimeoutRef.current = setTimeout(() => {
+      roomRefetchTimeoutRef.current = null;
+      void refetch();
+    }, 260);
+  }, [refetch]);
+
+  const schedulePenaltySync = useCallback(() => {
+    scheduleRoomRefetch();
+    setTimeout(() => {
+      void refetch();
+    }, 700);
+  }, [refetch, scheduleRoomRefetch]);
 
   useEffect(() => {
     const enabled = window.localStorage.getItem(LUDO_SOUND_ENABLED_KEY);
@@ -596,6 +695,13 @@ export default function LudoRoomPage() {
       }
     }
     setSoundPrefsReady(true);
+  }, []);
+
+  useEffect(() => {
+    const storedValue = readStoredLudoCommissionPct();
+    if (storedValue !== null) {
+      setStoredCommissionPct(storedValue);
+    }
   }, []);
 
   useEffect(() => {
@@ -700,12 +806,10 @@ export default function LudoRoomPage() {
 
   const startDiceRollVisual = useCallback(() => {
     clearDiceVisualTimers();
+    setTokenMoveLocked(true);
     diceRollStartRef.current = Date.now();
     setDiceAnimationState("rolling");
-    setDiceFaceValue((current) => (current >= 6 ? 1 : current + 1));
-    diceShuffleIntervalRef.current = setInterval(() => {
-      setDiceFaceValue(Math.floor(Math.random() * 6) + 1);
-    }, 78);
+    setDiceFaceValue(Math.floor(Math.random() * 6) + 1);
   }, [clearDiceVisualTimers]);
 
   const settleDiceRollVisual = useCallback((finalValue: number, minimumRollMs = 0) => {
@@ -728,9 +832,10 @@ export default function LudoRoomPage() {
         diceShuffleIntervalRef.current = null;
       }
       setDiceFaceValue(finalValue);
-      setDiceAnimationState("settling");
       diceIdleTimeoutRef.current = setTimeout(() => {
         setDiceAnimationState("idle");
+        setActiveDiceOwnerId(null);
+        setTokenMoveLocked(false);
         localRollPendingRef.current = false;
         diceRollStartRef.current = null;
       }, DICE_SETTLE_MS);
@@ -747,6 +852,10 @@ export default function LudoRoomPage() {
   useEffect(() => {
     return () => {
       clearDiceVisualTimers();
+      if (roomRefetchTimeoutRef.current) {
+        clearTimeout(roomRefetchTimeoutRef.current);
+        roomRefetchTimeoutRef.current = null;
+      }
     };
   }, [clearDiceVisualTimers]);
 
@@ -978,17 +1087,24 @@ export default function LudoRoomPage() {
     const previousRoom = latestRoomRef.current;
     const nextDiceValue =
       typeof nextRoom.lastDiceValue === "number" ? nextRoom.lastDiceValue : null;
+    const hasExplicitDiceEvent =
+      typeof nextRoom.rolledDiceValue === "number" &&
+      nextRoom.rolledDiceValue >= 1 &&
+      nextRoom.rolledDiceValue <= 6;
     const didDiceChange = Boolean(
       previousRoom &&
       nextDiceValue !== null &&
-      nextDiceValue !== previousRoom.lastDiceValue,
+      (hasExplicitDiceEvent || nextDiceValue !== previousRoom.lastDiceValue),
     );
 
     if (didDiceChange && previousRoom) {
-      startDiceSound(360);
-      if (!localRollPendingRef.current) {
-        startDiceRollVisual();
-        settleDiceRollVisual(nextDiceValue!, REMOTE_DICE_ROLL_MS);
+      const diceOwnerId = previousRoom.currentTurnUserId ?? null;
+      setLastRolledByUserId(diceOwnerId);
+      if (localRollPendingRef.current) {
+        setActiveDiceOwnerId(diceOwnerId);
+      } else {
+        setActiveDiceOwnerId(null);
+        setTokenMoveLocked(false);
       }
     }
 
@@ -1000,9 +1116,12 @@ export default function LudoRoomPage() {
       setAnimRoom(previousRoom);
       isAnimatingRef.current = true;
 
+      const delayMs = localRollPendingRef.current
+        ? getRemainingDiceAnimationMs(REMOTE_DICE_ROLL_MS)
+        : 0;
       const timer = setTimeout(() => {
         playTokenMoveAnimation(previousRoom, nextRoom);
-      }, getRemainingDiceAnimationMs(REMOTE_DICE_ROLL_MS));
+      }, delayMs);
 
       animTimersRef.current.push(timer);
       return;
@@ -1085,6 +1204,12 @@ export default function LudoRoomPage() {
 
     const steps = move.toProgress - move.fromProgress;
     if (steps <= 0) return false;
+    const stepDurationMs =
+      steps >= 6 ? 130 :
+      steps >= 5 ? 145 :
+      steps >= 4 ? 165 :
+      steps >= 3 ? 185 :
+      220;
 
     animTimersRef.current.forEach(clearTimeout);
     animTimersRef.current = [];
@@ -1113,7 +1238,7 @@ export default function LudoRoomPage() {
         }
 
         setAnimRoom(roomWithMoveProgress(fromRoom, move, progress));
-      }, step * 190);
+      }, step * stepDurationMs);
 
       animTimersRef.current.push(timer);
     }
@@ -1148,6 +1273,12 @@ export default function LudoRoomPage() {
         ((raw as LudoRoom).lastDiceValue ?? null),
     });
     const previousRoom = latestRoomRef.current;
+    if (payloadDiceValue != null) {
+      setLastRolledByUserId(
+        previousRoom?.currentTurnUserId ??
+        (typeof normalized.currentTurnUserId === "string" ? normalized.currentTurnUserId : null),
+      );
+    }
     const nextRoom = {
       ...normalized,
       yourColor: previousRoom?.yourColor ?? normalized.yourColor,
@@ -1188,11 +1319,16 @@ export default function LudoRoomPage() {
     onSuccess: ({ data }) => {
       const fromRoom = latestRoomRef.current;
       const autoMovedByRoll = Boolean(fromRoom && findTokenMoveAnimation(fromRoom, data));
+      const diceOwnerId = authUserId ?? fromRoom?.currentTurnUserId ?? null;
+      setLastRolledByUserId(diceOwnerId);
+      setActiveDiceOwnerId(diceOwnerId);
       stopDiceSound();
       if (typeof data.lastDiceValue === "number" && data.lastDiceValue >= 1 && data.lastDiceValue <= 6) {
         settleDiceRollVisual(data.lastDiceValue, LOCAL_DICE_ROLL_MS);
       } else {
         setDiceAnimationState("idle");
+        setActiveDiceOwnerId(null);
+        setTokenMoveLocked(false);
         localRollPendingRef.current = false;
         diceRollStartRef.current = null;
       }
@@ -1212,19 +1348,18 @@ export default function LudoRoomPage() {
       }
       // Notify room so the opponent's client gets the update instantly
       emitEvent("ludo:room:join", roomId);
+      scheduleRoomRefetch();
 
-      // Backend is the source of truth for triple-six penalties. We only
-      // track the streak locally so we can show a clear warning to the user.
+      // First and second consecutive 6s stay valid. On the third 6 we block
+      // local move UI and wait for the room sync that passes the turn.
       if (data.lastDiceValue === 6) {
         consecutiveSixRef.current += 1;
         if (consecutiveSixRef.current >= 3) {
           consecutiveSixRef.current = 0;
-          if (
-            data.currentTurnUserId !== authUserId &&
-            (data.availableTokenIds?.length ?? 0) === 0
-          ) {
-            toast.warning("3 consecutive 6s! 3rd 6 miss, turn passed.");
-          }
+          setThirdSixPenaltyPending(true);
+          setTokenMoveLocked(true);
+          toast.warning("Two 6s valid. 3rd 6 cancelled, turn passed.");
+          schedulePenaltySync();
         }
       } else {
         consecutiveSixRef.current = 0;
@@ -1234,6 +1369,8 @@ export default function LudoRoomPage() {
       stopDiceSound();
       clearDiceVisualTimers();
       setDiceAnimationState("idle");
+      setActiveDiceOwnerId(null);
+      setTokenMoveLocked(false);
       localRollPendingRef.current = false;
       diceRollStartRef.current = null;
       toast.error(getErrorMessage(err, "Failed to roll dice"));
@@ -1244,6 +1381,7 @@ export default function LudoRoomPage() {
     mutationFn: (tokenId: string) => LudoService.moveToken(roomId, tokenId),
     onSuccess: ({ data: toRoom }) => {
       emitEvent("ludo:room:join", roomId);
+      scheduleRoomRefetch();
 
       const fromRoom = preMoveRoomRef.current;
       preMoveRoomRef.current = null;
@@ -1304,14 +1442,18 @@ export default function LudoRoomPage() {
     if (!isConnected || !roomId) return;
     emitEvent("ludo:room:join", roomId);
 
+    const handleRealtimeRoomUpdate = (payload: unknown) => {
+      applyRoomUpdate(payload);
+    };
+
     // Listen to all common event names the server might use
     const offs = [
-      onEvent("ludo:room:update",  applyRoomUpdate),
-      onEvent("ludo:turn",         applyRoomUpdate),
-      onEvent("ludo:state",        applyRoomUpdate),
-      onEvent("ludo:dice:rolled",  applyRoomUpdate),
-      onEvent("ludo:token:moved",  applyRoomUpdate),
-      onEvent("ludo:game:update",  applyRoomUpdate),
+      onEvent("ludo:room:update",  handleRealtimeRoomUpdate),
+      onEvent("ludo:turn",         handleRealtimeRoomUpdate),
+      onEvent("ludo:state",        handleRealtimeRoomUpdate),
+      onEvent("ludo:dice:rolled",  handleRealtimeRoomUpdate),
+      onEvent("ludo:token:moved",  handleRealtimeRoomUpdate),
+      onEvent("ludo:game:update",  handleRealtimeRoomUpdate),
       onEvent("ludo:finished", (p: unknown) => {
         applyRoomUpdate(p);
         const winner = (p as Record<string, unknown>)?.winnerName as string | undefined;
@@ -1337,12 +1479,20 @@ export default function LudoRoomPage() {
   const opponent = room?.players.find((p) => p.userId !== me?.userId);
   const winner   = room?.players.find((p) => p.userId === room?.winnerUserId);
   const isFinished = room?.status === "FINISHED" || room?.status === "CANCELLED";
+  const ludoCommissionPct =
+    (typeof (room as Record<string, unknown> | null)?.commissionPct === "number"
+      ? Number((room as Record<string, unknown>).commissionPct)
+      : storedCommissionPct) || 0;
   const resultType =
     room?.status === "FINISHED" && winner && me
       ? winner.userId === me.userId
         ? "win"
         : "loss"
       : null;
+  const turnRequiresRoll =
+    room?.status === "LIVE" &&
+    !isFinished &&
+    (room?.availableTokenIds?.length ?? 0) === 0;
   const myTurn   = Boolean(me && room?.currentTurnUserId === me.userId);
   const availSet = useMemo(() => new Set(room?.availableTokenIds ?? []), [room?.availableTokenIds]);
   const displaySeatColors = useMemo(
@@ -1356,6 +1506,7 @@ export default function LudoRoomPage() {
   const canRoll  =
     room?.status === "LIVE" &&
     myTurn &&
+    !thirdSixPenaltyPending &&
     !rollMutation.isPending &&
     availSet.size === 0;
   const visibleDiceValue =
@@ -1366,6 +1517,48 @@ export default function LudoRoomPage() {
     diceAnimationState === "idle"
       ? visibleDiceValue
       : diceFaceValue;
+  const canMoveTokens = diceAnimationState === "idle" && !tokenMoveLocked && !thirdSixPenaltyPending;
+  const handleDiceRollPress = useCallback(() => {
+    if (!canRoll || localRollPendingRef.current) return;
+
+    localRollPendingRef.current = true;
+    setActiveDiceOwnerId(authUserId ?? room?.currentTurnUserId ?? null);
+    startDiceRollVisual();
+
+    requestAnimationFrame(() => {
+      startDiceSound(LOCAL_DICE_ROLL_MS);
+      rollMutation.mutate();
+    });
+  }, [LOCAL_DICE_ROLL_MS, authUserId, canRoll, rollMutation, room?.currentTurnUserId, startDiceRollVisual, startDiceSound]);
+
+  useEffect(() => {
+    if (!serverRoom) return;
+
+    const previousRoom = latestRoomRef.current;
+    const normalizedServerRoom = normalizeLudoRoom(serverRoom);
+    const nextRoom = {
+      ...normalizedServerRoom,
+      yourColor: previousRoom?.yourColor ?? normalizedServerRoom.yourColor,
+    };
+    const serverMoveVersion = nextRoom.moveVersion ?? 0;
+    const previousMoveVersion = previousRoom?.moveVersion ?? -1;
+    const didDiceChange =
+      typeof nextRoom.lastDiceValue === "number" &&
+      nextRoom.lastDiceValue !== (previousRoom?.lastDiceValue ?? null);
+    const shouldSyncServerRoom =
+      !previousRoom ||
+      serverMoveVersion > previousMoveVersion ||
+      didDiceChange ||
+      nextRoom.currentTurnUserId !== previousRoom.currentTurnUserId ||
+      nextRoom.status !== previousRoom.status;
+
+    if (!shouldSyncServerRoom) return;
+
+    applyNormalizedRoomUpdate(nextRoom);
+  // `applyNormalizedRoomUpdate` is recreated on render, so keeping it in the
+  // dependency list causes a render loop after `setRoomState`.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [serverRoom]);
 
   useEffect(() => {
     if (
@@ -1385,9 +1578,21 @@ export default function LudoRoomPage() {
   }, [room, rememberTokenPaths]);
 
   useEffect(() => {
+    if (!thirdSixPenaltyPending) return;
+    if (!myTurn) {
+      setThirdSixPenaltyPending(false);
+      setTokenMoveLocked(false);
+      return;
+    }
+
+    if ((room?.availableTokenIds?.length ?? 0) === 0 && room?.lastDiceValue !== 6) {
+      setThirdSixPenaltyPending(false);
+      setTokenMoveLocked(false);
+    }
+  }, [myTurn, room?.availableTokenIds, room?.lastDiceValue, thirdSixPenaltyPending]);
+
+  useEffect(() => {
     if (!resultType || !room?.id) {
-      setResultCountdown(10);
-      setResultActionsVisible(false);
       resultSoundKeyRef.current = null;
       return;
     }
@@ -1410,28 +1615,21 @@ export default function LudoRoomPage() {
         playLossSound();
       }
     }
-
-    setResultCountdown(10);
-    setResultActionsVisible(false);
-    const interval = setInterval(() => {
-      setResultCountdown((current) => Math.max(0, current - 1));
-    }, 1000);
-    const timer = setTimeout(() => {
-      setResultActionsVisible(true);
-      setResultCountdown(0);
-    }, 10000);
-
-    return () => {
-      clearInterval(interval);
-      clearTimeout(timer);
-    };
   }, [playLossSound, playWinSound, resultType, room?.id]);
 
   useEffect(() => {
     if (!isFinished) return;
     void router.prefetch("/games/ludo");
-    void router.prefetch("/dashboard");
   }, [isFinished, router]);
+
+  const handleResultConfirm = useCallback(() => {
+    if (typeof window !== "undefined") {
+      window.location.replace("/games/ludo");
+      return;
+    }
+
+    router.replace("/games/ludo");
+  }, [router]);
 
   // Reset consecutive-6 tracking whenever the turn passes away from us.
   useEffect(() => {
@@ -1476,6 +1674,28 @@ export default function LudoRoomPage() {
   }, [canRoll]);
 
   useEffect(() => {
+    if (!room?.turnEndsAt || !room?.currentTurnUserId || isFinished || !turnRequiresRoll) {
+      setSharedTurnCountdown(null);
+      return;
+    }
+
+    const updateCountdown = () => {
+      const endAtMs = new Date(room.turnEndsAt as string).getTime();
+      if (!Number.isFinite(endAtMs)) {
+        setSharedTurnCountdown(null);
+        return;
+      }
+
+      const remaining = Math.max(0, Math.ceil((endAtMs - Date.now()) / 1000));
+      setSharedTurnCountdown(remaining);
+    };
+
+    updateCountdown();
+    const interval = setInterval(updateCountdown, 1000);
+    return () => clearInterval(interval);
+  }, [isFinished, room?.currentTurnUserId, room?.turnEndsAt, turnRequiresRoll]);
+
+  useEffect(() => {
     if (!myTurn || rollCountdown === null || rollCountdown > 5) return;
 
     const turnKey = room?.turnEndsAt
@@ -1502,7 +1722,7 @@ export default function LudoRoomPage() {
         const entry = map.get(key) ?? [];
         const isMyToken = player.userId === me?.userId;
         const isTokenAvailable =
-          isMyToken && (availSet.has(token.id) || Boolean(token.canMove));
+          canMoveTokens && isMyToken && (availSet.has(token.id) || Boolean(token.canMove));
 
         entry.push({
           id: token.id,
@@ -1516,7 +1736,7 @@ export default function LudoRoomPage() {
       });
     });
     return map;
-  }, [displayedRoom?.players, availSet, displaySeatColors, me?.userId]);
+  }, [canMoveTokens, displayedRoom?.players, availSet, displaySeatColors, me?.userId]);
   // ── Loading ──────────────────────────────────────────────────────────────
   if (isLoading || !room) {
     return (
@@ -1538,46 +1758,53 @@ export default function LudoRoomPage() {
         : myTurn && availSet.size > 0
           ? "MOVE"
           : "WAIT";
-  const turnCountdownDanger = rollCountdown !== null && rollCountdown <= 5;
+  const displayTurnCountdown =
+    turnRequiresRoll
+      ? myTurn
+        ? (rollCountdown ?? sharedTurnCountdown)
+        : sharedTurnCountdown
+      : null;
+  const turnCountdownDanger = displayTurnCountdown !== null && displayTurnCountdown <= 5;
   const turnCountdownColor = turnCountdownDanger ? "#ff5b57" : "#f5b414";
   const turnCountdownProgress =
-    rollCountdown !== null
-      ? Math.max(0, Math.min(1, rollCountdown / ROLL_TIMEOUT_SEC))
+    displayTurnCountdown !== null
+      ? Math.max(0, Math.min(1, displayTurnCountdown / ROLL_TIMEOUT_SEC))
       : 0;
   const stakeLabel = Number(room.stakeAmount) <= 0 ? "FREE" : `BDT ${room.stakeAmount}`;
+  const activeTurnUserId = room.currentTurnUserId ?? null;
+  const isDiceAnimating = diceAnimationState !== "idle";
+  const shouldShowTopActiveDice = Boolean(opponent?.userId && activeDiceOwnerId === opponent.userId && isDiceAnimating);
+  const shouldShowBottomActiveDice = Boolean(me?.userId && activeDiceOwnerId === me.userId && isDiceAnimating);
+  const shouldHighlightTopDice = shouldShowTopActiveDice;
+  const shouldHighlightBottomDice = shouldShowBottomActiveDice;
+  const shouldGlowTopTurn = Boolean(opponent?.userId && activeTurnUserId === opponent.userId && turnRequiresRoll);
+  const shouldGlowBottomTurn = myTurn && turnRequiresRoll;
+  const shouldAnimateBottomDiceRing =
+    shouldShowBottomActiveDice &&
+    displayTurnCountdown !== null &&
+    displayTurnCountdown > 0;
 
   return (
     <div
-      className="flex h-[calc(100dvh-10.75rem)] min-h-0 flex-col overflow-hidden"
+      className="relative flex h-[calc(100dvh-10.75rem)] min-h-0 flex-col overflow-hidden"
       style={{
-        background: "linear-gradient(180deg,#173aa7 0%,#102b81 52%,#08133b 100%)",
+        background:
+          "radial-gradient(circle at top center, rgba(54,104,255,0.34), transparent 30%), linear-gradient(180deg,#173aa7 0%,#153596 42%,#08133b 100%)",
       }}
     >
-      {/* dot pattern */}
-      <div className="pointer-events-none fixed inset-0 opacity-[0.08] bg-[radial-gradient(circle_at_1px_1px,white_1px,transparent_0)] bg-size-[22px_22px]" />
+      <div className="pointer-events-none absolute inset-0 opacity-[0.1] bg-[radial-gradient(circle_at_1px_1px,white_1px,transparent_0)] bg-size-[22px_22px]" />
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-24 bg-[linear-gradient(180deg,rgba(255,255,255,0.1),transparent)]" />
 
-      {/* ── Top nav ── */}
       <div className="relative z-10 flex items-center justify-between px-4 pt-3">
         <button
           type="button"
           onClick={openExitConfirm}
-          className="flex h-10 items-center gap-1.5 rounded-full border border-white/20 bg-white/12 px-3 text-xs font-black text-white shadow-sm"
+          className="flex h-10 items-center gap-1.5 rounded-full border border-white/20 bg-white/12 px-4 text-xs font-black text-white shadow-sm backdrop-blur"
         >
           <ArrowLeft className="h-3.5 w-3.5" /> Back
         </button>
 
         <div className="flex items-center gap-2">
-          <span className={cn(
-            "hidden rounded-full border px-3 py-1.5 text-[10px] font-black",
-            isConnected
-              ? "border-green-400/30 bg-green-500/15 text-green-300"
-              : "border-yellow-400/30 bg-yellow-500/15 text-yellow-300",
-          )}>
-            {isConnected ? "● LIVE" : "◌ SYNC"}
-          </span>
-          <span className="hidden rounded-full border border-white/20 bg-white/12 px-3 py-1.5 text-[10px] font-black text-white">
-            ৳{room.stakeAmount}
-          </span>
           <span className={cn(
             "rounded-full border px-3 py-1.5 text-[10px] font-black",
             isConnected
@@ -1591,32 +1818,16 @@ export default function LudoRoomPage() {
           </span>
         </div>
 
-        <div className="relative flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => setSoundPanelOpen((open) => !open)}
-            className="flex h-10 w-10 items-center justify-center rounded-full border border-white/20 bg-white/12 text-white shadow-sm"
-            aria-label="Sound settings"
-          >
-            {soundEnabled && soundVolume > 0 ? (
-              <Volume2 className="h-4 w-4" />
-            ) : (
-              <VolumeX className="h-4 w-4" />
-            )}
-          </button>
-
-          <button
-            type="button"
-            onClick={openExitConfirm}
-            disabled={leaveMutation.isPending}
-            className="flex h-10 items-center gap-1.5 rounded-full border border-red-300/35 bg-red-500 px-3 text-xs font-black text-white shadow-sm disabled:opacity-60"
-          >
-            <DoorOpen className="h-3.5 w-3.5" /> Leave
-          </button>
-        </div>
+        <button
+          type="button"
+          onClick={openExitConfirm}
+          disabled={leaveMutation.isPending}
+          className="flex h-10 items-center gap-1.5 rounded-full border border-red-300/35 bg-red-500 px-4 text-xs font-black text-white shadow-sm disabled:opacity-60"
+        >
+          <DoorOpen className="h-3.5 w-3.5" /> Leave
+        </button>
       </div>
 
-      {/* ── Opponent label ── */}
       {soundPanelOpen && (
         <div className="relative z-20 mx-4 mt-2 rounded-2xl border border-white/20 bg-[#12245f]/95 px-3 py-2 text-white shadow-xl backdrop-blur">
           <div className="flex items-center gap-3">
@@ -1658,192 +1869,191 @@ export default function LudoRoomPage() {
         </div>
       )}
 
-      {/* ── Board ── */}
-      <div className="relative z-10 flex min-h-0 flex-1 items-center justify-center px-1 py-1 sm:px-4 sm:py-3">
-        <div
-          className="aspect-square overflow-hidden rounded-[8px] bg-white p-[2px]"
-          style={{
-            width: "min(calc(100vw - 12px), 464px, calc(100vh - 156px))",
-            boxShadow: "0 0 0 1px rgba(255,255,255,0.18), 0 16px 28px rgba(0,0,0,0.34)",
-          }}
-        >
-          <LudoBoard
-            tokenPositions={tokenPositions}
-            onMoveToken={(id) => {
-              preMoveRoomRef.current = room;
-              isAnimatingRef.current = true;  // block socket updates NOW, before onSuccess
-              moveMutation.mutate(id);
-            }}
-            viewerColor={me?.color as LudoColor | undefined}
-            opponentColor={opponent?.color as LudoColor | undefined}
-          />
-        </div>
-      </div>
+      <div className="relative z-10 flex min-h-0 flex-1 items-center justify-center px-5 pb-3 pt-2 sm:px-7 sm:pb-4">
+        <div className="relative flex h-full w-full max-w-[500px] flex-col items-center justify-center">
+          <div className="pointer-events-none absolute inset-x-8 top-2 z-0 h-10 rounded-full bg-[radial-gradient(circle,rgba(255,255,255,0.18)_0%,transparent_72%)] blur-xl" />
 
-      {/* ── You label ── */}
-      {/* ── Bottom bar ── */}
-      <div className="relative z-10 mx-4 mb-2 mt-auto pt-2">
-        <div
-          className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-1.5 rounded-[16px] px-2 py-2"
-          style={{
-            background: "#2150d8",
-            border: "3px solid #f5b414",
-            boxShadow: "0 10px 24px rgba(0,0,0,0.22), inset 0 1px 0 rgba(255,255,255,0.16)",
-          }}
-        >
-          <div className={cn(
-            "relative flex min-w-0 items-center gap-1 rounded-xl border px-2 py-1.5",
-            myTurn
-              ? "border-yellow-300 bg-white/16 shadow-[0_0_0_1px_rgba(255,211,77,0.18)]"
-              : "border-white/20 bg-white/14",
-          )}>
-            <PlayerPin color={myColor} />
-            <div className="min-w-0">
-              <p className="truncate text-[10px] font-black leading-tight text-white">
-                {me?.name ?? "You"}
+          <div className="absolute right-0 top-0 z-20 flex max-w-[52vw] items-start gap-2 sm:right-2">
+            <div className="pt-1 text-right text-white">
+              <p className="truncate text-lg font-black leading-none">
+                {getPlayerLabel(opponent, "Opponent")}
               </p>
-              <p className="text-[7px] font-black uppercase tracking-wider text-white/55">
-                {myTurn ? "Your turn" : "You"}
+              <p className="mt-1 truncate text-[10px] font-bold uppercase tracking-[0.18em] text-white/68">
+                {room.currentTurnUserId === opponent?.userId ? "Opponent turn" : getPlayerSubLabel(opponent, "Opponent")}
               </p>
-              <AutoMoveDots count={me?.autoMoveCount} />
-            </div>
-            {myTurn && rollCountdown !== null && rollCountdown > 0 && (
-              <div className="pointer-events-none absolute inset-x-2 bottom-0.5">
-                <div
-                  className="flex items-center justify-between text-[7px] font-black uppercase tracking-[0.14em]"
-                  style={{ color: turnCountdownColor }}
-                >
-                  <span>Turn</span>
-                  <span>{rollCountdown}s</span>
-                </div>
-                <div className="mt-0.5 h-[2px] rounded-full bg-white/12">
-                  <div
-                    className="h-full rounded-full transition-[width,background-color] duration-1000 ease-linear"
-                    style={{
-                      width: `${turnCountdownProgress * 100}%`,
-                      backgroundColor: turnCountdownColor,
-                    }}
-                  />
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Dice + countdown ring */}
-          <div className="relative flex shrink-0 flex-col items-center gap-1">
-            <button
-              type="button"
-              onClick={() => {
-                localRollPendingRef.current = true;
-                startDiceRollVisual();
-                startDiceSound();
-                rollMutation.mutate();
-              }}
-              disabled={!canRoll}
-              className={cn(
-                "relative h-[66px] w-[66px] rounded-[18px] transition-all duration-100 active:translate-y-1",
-                canRoll
-                  ? "shadow-[0_7px_0_#b9919b,0_16px_24px_rgba(0,0,0,0.28)]"
-                  : "shadow-[0_5px_0_#b29aa1,0_12px_20px_rgba(0,0,0,0.2)]",
-                diceAnimationState !== "idle" && "shadow-[0_7px_0_#b9919b,0_0_16px_rgba(255,255,255,0.34),0_18px_28px_rgba(0,0,0,0.28)]",
-              )}
-              style={{
-                background: canRoll
-                  ? "linear-gradient(180deg,#ffe9ef 0%,#f4cbd3 100%)"
-                  : "linear-gradient(180deg,#fff0f4 0%,#efd3da 100%)",
-                border: "2px solid rgba(255,255,255,0.55)",
-              }}
-            >
-              <div
-                className="pointer-events-none absolute inset-x-[14%] top-[10%] h-[22%] rounded-[12px]"
-                style={{
-                  background:
-                    diceAnimationState !== "idle"
-                      ? "linear-gradient(180deg,rgba(255,255,255,0.82),rgba(255,255,255,0.16))"
-                      : "linear-gradient(180deg,rgba(255,255,255,0.6),rgba(255,255,255,0.08))",
-                }}
-              />
-              <div className="pointer-events-none absolute inset-[5%] rounded-[18px] border border-[#f6e8ec] shadow-[inset_0_1px_0_rgba(255,255,255,0.78),inset_0_-2px_0_rgba(133,90,103,0.22)]" />
-              <div
-                className={cn(
-                  "relative flex h-full w-full items-center justify-center p-1.5",
-                  diceAnimationState === "rolling" && "animate-[ludo-hand-dice-roll_.52s_ease-in-out_infinite]",
-                  diceAnimationState === "settling" && "animate-[ludo-hand-dice-settle_.28s_ease-out]",
-                  diceAnimationState !== "idle" && "drop-shadow-[0_0_16px_rgba(255,255,255,0.65)]",
-                )}
-                style={{ transformOrigin: "50% 58%" }}
-              >
-                <DiceSVG value={renderedDiceValue} size={46} />
-              </div>
-            </button>
-
-            <p className="text-[9px] font-black uppercase tracking-[0.22em] text-white/70">
-              {statusText}
-            </p>
-          </div>
-
-          <div className={cn(
-            "relative flex min-w-0 items-center justify-end gap-1 rounded-xl border px-2 py-1.5 text-right",
-            room.currentTurnUserId === opponent?.userId
-              ? "border-yellow-300 bg-white/16 shadow-[0_0_0_1px_rgba(255,211,77,0.18)]"
-              : "border-white/20 bg-white/14",
-          )}>
-            <div className="min-w-0">
-              <p className="truncate text-[10px] font-black leading-tight text-white">
-                {opponent?.name ?? "Opponent"}
-              </p>
-              <p className="text-[7px] font-black uppercase tracking-wider text-white/55">
-                {room.currentTurnUserId === opponent?.userId ? "Turn" : "Opponent"}
-              </p>
-              <div className="flex justify-end">
+              <div className="mt-1 flex justify-end">
                 <AutoMoveDots count={opponent?.autoMoveCount} />
               </div>
             </div>
-            <PlayerPin color={oppColor} />
-            {room.currentTurnUserId === opponent?.userId && rollCountdown !== null && rollCountdown > 0 && (
-              <div className="pointer-events-none absolute inset-x-2 bottom-0.5">
+
+            <div className="flex items-start gap-2">
+              <div className="flex flex-col items-end">
                 <div
-                  className="flex items-center justify-between text-[7px] font-black uppercase tracking-[0.14em]"
-                  style={{ color: turnCountdownColor }}
+                  className={cn(
+                    "relative flex h-[54px] w-[54px] items-center justify-center rounded-[16px] border-[3px] shadow-[0_10px_18px_rgba(0,0,0,0.2)] transition-all duration-300 ease-out",
+                    shouldHighlightTopDice
+                      ? "border-[#ffe76f] bg-[linear-gradient(180deg,#ffe84b_0%,#ffbe0b_100%)]"
+                      : "border-white/20 bg-[linear-gradient(180deg,rgba(21,49,127,0.9),rgba(19,37,97,0.94))]",
+                    shouldGlowTopTurn && !shouldHighlightTopDice && "border-[#ffe76f]/80 bg-[linear-gradient(180deg,rgba(255,239,128,0.92)_0%,rgba(255,190,11,0.82)_100%)] shadow-[0_0_0_3px_rgba(255,238,140,0.18),0_0_22px_rgba(255,210,64,0.28),0_10px_18px_rgba(0,0,0,0.2)] animate-[ludo-turn-dice-glow_1.8s_ease-in-out_infinite]",
+                  )}
                 >
-                  <span>Turn</span>
-                  <span>{rollCountdown}s</span>
-                </div>
-                <div className="mt-0.5 h-[2px] rounded-full bg-white/12">
-                  <div
-                    className="h-full rounded-full transition-[width,background-color] duration-1000 ease-linear"
-                    style={{
-                      width: `${turnCountdownProgress * 100}%`,
-                      backgroundColor: turnCountdownColor,
-                    }}
-                  />
+                  <div className="pointer-events-none absolute inset-[7%] rounded-[12px] border border-white/35 bg-[linear-gradient(180deg,rgba(255,255,255,0.2),rgba(255,255,255,0.04))]" />
+                  <div className="relative flex h-full w-full items-center justify-center p-1">
+                    {shouldShowTopActiveDice ? (
+                      <DiceSVG value={renderedDiceValue} size={38} />
+                    ) : (
+                      <div className="opacity-70">
+                        <DiceSVG value={visibleDiceValue} size={38} />
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
-            )}
+
+              <PlayerAvatarBadge
+                player={opponent}
+                color={COLOR_HEX[oppColor] ?? "#2ba8ef"}
+                active={room.currentTurnUserId === opponent?.userId}
+                countdownProgress={shouldGlowTopTurn ? turnCountdownProgress : null}
+                danger={shouldGlowTopTurn && turnCountdownDanger}
+              />
+            </div>
+          </div>
+
+          <div
+            className="relative z-10 aspect-square overflow-hidden rounded-[26px] border-[3px] border-[#f5d14d] bg-[#1b4dcf] p-[7px] shadow-[0_18px_34px_rgba(0,0,0,0.26)]"
+            style={{
+              width: "min(calc(100vw - 52px), 472px, calc(100vh - 250px))",
+            }}
+          >
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.2),transparent_42%)]" />
+            <LudoBoard
+              tokenPositions={tokenPositions}
+              onMoveToken={(id) => {
+                preMoveRoomRef.current = room;
+                isAnimatingRef.current = true;
+                moveMutation.mutate(id);
+              }}
+              viewerColor={me?.color as LudoColor | undefined}
+              opponentColor={opponent?.color as LudoColor | undefined}
+            />
+          </div>
+
+          <div className="absolute bottom-[-8px] left-0 z-20 flex max-w-[78vw] items-center gap-2 sm:left-2">
+            <PlayerAvatarBadge
+              player={me}
+              color={COLOR_HEX[myColor] ?? "#ef1d26"}
+              active={myTurn}
+              countdownProgress={shouldGlowBottomTurn ? turnCountdownProgress : null}
+              danger={shouldGlowBottomTurn && turnCountdownDanger}
+            />
+
+            <div className="flex items-center gap-2">
+              <div
+                className="relative shrink-0 rounded-[22px] p-[4px]"
+                style={
+                  shouldAnimateBottomDiceRing
+                    ? {
+                        background: `conic-gradient(from -90deg, ${turnCountdownColor} 0deg, ${turnCountdownColor} ${turnCountdownProgress * 360}deg, rgba(255,255,255,0.16) ${turnCountdownProgress * 360}deg, rgba(255,255,255,0.16) 360deg)`,
+                      }
+                    : shouldGlowBottomTurn
+                      ? { background: "rgba(255,238,140,0.3)", boxShadow: "0 0 0 2px rgba(255,236,122,0.18), 0 0 24px rgba(255,221,31,0.26)" }
+                      : { background: "rgba(255,255,255,0.14)" }
+                }
+              >
+                <button
+                  type="button"
+                  onPointerDown={handleDiceRollPress}
+                  disabled={!canRoll}
+                  className={cn(
+                    "group relative flex h-[58px] w-[58px] shrink-0 items-center justify-center rounded-[18px] border-[3px] shadow-[0_10px_18px_rgba(0,0,0,0.26)] transition-all duration-200 ease-out active:scale-[0.985] disabled:cursor-not-allowed disabled:opacity-80",
+                    shouldHighlightBottomDice
+                      ? "border-[#ffe76f] bg-[linear-gradient(180deg,#ffe84b_0%,#ffbe0b_100%)]"
+                      : "border-white/20 bg-[linear-gradient(180deg,rgba(21,49,127,0.9),rgba(19,37,97,0.94))]",
+                    shouldGlowBottomTurn && !shouldHighlightBottomDice && "border-[#ffe76f]/80 bg-[linear-gradient(180deg,rgba(255,239,128,0.92)_0%,rgba(255,190,11,0.82)_100%)] shadow-[0_0_0_3px_rgba(255,238,140,0.18),0_0_22px_rgba(255,210,64,0.28),0_12px_20px_rgba(0,0,0,0.28)] animate-[ludo-turn-dice-glow_1.8s_ease-in-out_infinite]",
+                    canRoll && "hover:brightness-105",
+                    diceAnimationState !== "idle" && "shadow-[0_0_0_4px_rgba(255,247,173,0.24),0_12px_20px_rgba(0,0,0,0.28)]",
+                  )}
+                  aria-label={canRoll ? "Roll dice" : `Dice status ${statusText.toLowerCase()}`}
+                >
+                  <div className="pointer-events-none absolute inset-[7%] rounded-[12px] border border-white/65 bg-[linear-gradient(180deg,rgba(255,255,255,0.28),rgba(255,255,255,0.05))]" />
+                  <div
+                    className={cn(
+                      "relative flex h-full w-full items-center justify-center p-1",
+                      shouldShowBottomActiveDice && diceAnimationState === "rolling" && "animate-[ludo-hand-dice-roll_.46s_cubic-bezier(.22,.61,.36,1)_infinite]",
+                    )}
+                    style={{ transformOrigin: "50% 58%" }}
+                  >
+                    {shouldShowBottomActiveDice ? (
+                      <DiceSVG value={renderedDiceValue} size={40} />
+                    ) : (
+                      <div className="opacity-70">
+                        <DiceSVG value={visibleDiceValue} size={40} />
+                      </div>
+                    )}
+                  </div>
+                </button>
+              </div>
+
+              <div className="min-w-0 text-white">
+                <p className="truncate text-lg font-black leading-none">
+                  {getPlayerLabel(me, "You")}
+                </p>
+                <p className="mt-1 truncate text-[10px] font-bold uppercase tracking-[0.18em] text-white/68">
+                  {myTurn ? "Your turn" : getPlayerSubLabel(me, "You")}
+                </p>
+              </div>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Sync */}
-      <div className="relative z-10 flex justify-center pb-2">
-        <button
-          type="button"
-          onClick={() => refetch()}
-          className="px-4 py-1 text-[10px] font-bold text-white/35"
-        >
-          sync
-        </button>
+      <div className="relative z-10 flex justify-center px-4 pb-3">
+        <div className="flex items-center gap-3 rounded-full bg-[rgba(24,47,124,0.82)] px-4 py-2 shadow-[0_10px_22px_rgba(0,0,0,0.24)] backdrop-blur">
+          <button
+            type="button"
+            onClick={() => setSoundPanelOpen((open) => !open)}
+            className="flex h-11 w-11 items-center justify-center rounded-full bg-white/10 text-white"
+            aria-label="Sound settings"
+          >
+            {soundEnabled && soundVolume > 0 ? (
+              <Volume2 className="h-4.5 w-4.5" />
+            ) : (
+              <VolumeX className="h-4.5 w-4.5" />
+            )}
+          </button>
+          <button
+            type="button"
+            onClick={() => refetch()}
+            className="flex h-11 w-11 items-center justify-center rounded-full bg-white/10 text-white"
+            aria-label="Sync room"
+          >
+            <RefreshCw className="h-4.5 w-4.5" />
+          </button>
+          <button
+            type="button"
+            onClick={openExitConfirm}
+            disabled={leaveMutation.isPending}
+            className="flex h-11 w-11 items-center justify-center rounded-full bg-white/10 text-white disabled:opacity-60"
+            aria-label="Leave room"
+          >
+            <DoorOpen className="h-4.5 w-4.5" />
+          </button>
+        </div>
       </div>
 
       {resultType && (
         <LudoResultOverlay
           result={resultType}
-          playerName={me?.name ?? "Player"}
-          countdown={resultCountdown}
-          showActions={resultActionsVisible}
+          winnerName={winner ? getPlayerLabel(winner, "Winner") : "Winner"}
+          runnerUpName={
+            winner?.userId === me?.userId
+              ? getPlayerLabel(opponent, "Opponent")
+              : getPlayerLabel(me, "You")
+          }
           stakeAmount={Number(room?.stakeAmount ?? 0)}
-          onPlayAgain={() => router.replace("/games/ludo")}
-          onHome={() => router.replace("/dashboard")}
+          commissionPct={ludoCommissionPct}
+          onConfirm={handleResultConfirm}
         />
       )}
 
@@ -1877,19 +2087,29 @@ export default function LudoRoomPage() {
       )}
 
       <style jsx global>{`
+        @keyframes ludo-turn-avatar-ring {
+          0%, 100% { opacity: 0.78; }
+          50% { opacity: 1; }
+        }
+
+        @keyframes ludo-turn-dice-glow {
+          0%, 100% { filter: brightness(1) saturate(1); transform: translateZ(0) scale(1); }
+          50% { filter: brightness(1.08) saturate(1.08); transform: translateZ(0) scale(1.02); }
+        }
+
         @keyframes ludo-hand-dice-roll {
           0% { transform: translate(0, 0) rotate(0deg) scale(1); }
-          14% { transform: translate(-4px, -6px) rotate(-13deg) scale(1.04); }
-          28% { transform: translate(5px, -2px) rotate(11deg) scale(0.99); }
-          42% { transform: translate(-3px, 4px) rotate(-8deg) scale(1.03); }
-          58% { transform: translate(4px, -5px) rotate(10deg) scale(1.05); }
-          74% { transform: translate(-5px, 1px) rotate(-11deg) scale(0.98); }
+          18% { transform: translate(-2px, -3px) rotate(-7deg) scale(1.025); }
+          36% { transform: translate(3px, -1px) rotate(6deg) scale(0.995); }
+          54% { transform: translate(-2px, 2px) rotate(-5deg) scale(1.018); }
+          72% { transform: translate(2px, -2px) rotate(5deg) scale(1.02); }
+          88% { transform: translate(-1px, 1px) rotate(-3deg) scale(0.998); }
           100% { transform: translate(0, 0) rotate(0deg) scale(1); }
         }
 
         @keyframes ludo-hand-dice-settle {
-          0% { transform: translate(-2px, -4px) rotate(-8deg) scale(1.06); }
-          55% { transform: translate(2px, 2px) rotate(5deg) scale(0.97); }
+          0% { transform: translate(-1px, -2px) rotate(-4deg) scale(1.03); }
+          55% { transform: translate(1px, 1px) rotate(3deg) scale(0.988); }
           100% { transform: translate(0, 0) rotate(0deg) scale(1); }
         }
       `}</style>
