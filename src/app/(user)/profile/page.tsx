@@ -9,6 +9,7 @@ import {
   Phone,
   Copy,
   LogOut,
+  X,
   ChevronRight,
   Shield,
   Bell,
@@ -19,6 +20,15 @@ import {
   Languages,
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { useAuthStore } from "@/store/auth.store";
 import { AuthService } from "@/services/auth.service";
 import { UserService } from "@/services/user.service";
@@ -104,6 +114,7 @@ export default function ProfilePage() {
   const router = useRouter();
   const isBanned = userStatus === "BANNED";
   const [currency, setCurrency] = useState<"BDT" | "USD">("BDT");
+  const [isLogoutDialogOpen, setIsLogoutDialogOpen] = useState(false);
 
   const { usdToBdt } = useCurrency();
   const { data, isLoading } = useProfileQuery();
@@ -129,6 +140,7 @@ export default function ProfilePage() {
   const { mutate: logout } = useMutation({
     mutationFn: AuthService.logout,
     onSettled: () => {
+      setIsLogoutDialogOpen(false);
       clearAuth();
       router.push("/login");
     },
@@ -163,6 +175,12 @@ export default function ProfilePage() {
     totalReferralBonus + totalDepositBonus + totalJoinBonus;
   const bonusBalance =
     profileBonusBalance > 0 ? profileBonusBalance : fallbackBonusBalance;
+  const logoutConfirmName =
+    profile?.name?.trim() || t.profile.logoutConfirmFallbackName;
+  const logoutConfirmMessage = t.profile.logoutConfirmDescription.replace(
+    "{name}",
+    logoutConfirmName,
+  );
 
   const displayBalance =
     currency === "USD"
@@ -406,11 +424,68 @@ export default function ProfilePage() {
       </div>
 
       <button
-        onClick={handleLogout}
+        onClick={() => setIsLogoutDialogOpen(true)}
         className="flex w-full items-center justify-center gap-2 rounded-[16px] border border-red-500/30 bg-red-500/10 py-3 text-sm font-semibold text-red-400 transition-all hover:bg-red-500/20 active:scale-[0.98]"
       >
         <LogOut className="h-4 w-4" /> {t.profile.logout}
       </button>
+
+      <Dialog
+        open={isLogoutDialogOpen}
+        onOpenChange={setIsLogoutDialogOpen}
+      >
+        <DialogContent
+          showCloseButton={false}
+          className="max-w-[350px] overflow-hidden border-0 bg-transparent p-0 text-slate-950 shadow-none ring-0 dark:text-white"
+        >
+          <div className="rounded-[28px] border border-white/10 bg-[#171b22] px-6 py-7 text-center shadow-[0_30px_80px_rgba(0,0,0,0.45)]">
+            <button
+              type="button"
+              onClick={() => setIsLogoutDialogOpen(false)}
+              className="absolute right-4 top-4 flex h-9 w-9 items-center justify-center rounded-full bg-white/5 text-slate-400 transition hover:bg-white/10 hover:text-white"
+              aria-label="Close logout dialog"
+            >
+              <X className="h-4 w-4" />
+            </button>
+
+            <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-[radial-gradient(circle_at_30%_30%,rgba(56,189,248,0.55),transparent_58%),linear-gradient(135deg,rgba(14,165,233,0.28),rgba(59,130,246,0.08))] shadow-[0_10px_35px_rgba(14,165,233,0.22)] ring-1 ring-cyan-300/20">
+              <div className="flex h-14 w-14 items-center justify-center rounded-full bg-[#0f141b] text-cyan-300 ring-1 ring-white/10">
+                <LogOut className="h-7 w-7" />
+              </div>
+            </div>
+
+            <DialogHeader className="mt-6 space-y-3">
+              <DialogTitle className="text-[2rem] font-semibold tracking-tight text-white">
+                {t.profile.logoutConfirmTitle}
+              </DialogTitle>
+              <DialogDescription className="mx-auto max-w-[260px] text-base leading-7 text-slate-300">
+                {logoutConfirmMessage}
+              </DialogDescription>
+              <p className="mx-auto max-w-[260px] text-sm leading-6 text-slate-400">
+                {t.profile.logoutConfirmHint}
+              </p>
+            </DialogHeader>
+
+            <div className="mt-7 space-y-3">
+              <Button
+                type="button"
+                onClick={handleLogout}
+                className="h-12 w-full rounded-2xl bg-gradient-to-r from-violet-600 via-fuchsia-600 to-blue-600 text-base font-semibold text-white shadow-[0_12px_30px_rgba(124,58,237,0.35)] hover:from-violet-500 hover:via-fuchsia-500 hover:to-blue-500"
+              >
+                {t.profile.logout}
+              </Button>
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => setIsLogoutDialogOpen(false)}
+                className="h-12 w-full rounded-2xl border border-white/10 bg-white/10 text-base font-medium text-slate-200 hover:bg-white/15 hover:text-white"
+              >
+                {t.profile.no}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

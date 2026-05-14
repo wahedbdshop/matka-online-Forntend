@@ -3,7 +3,7 @@
 import { useParams, useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { ArrowLeft, DoorOpen, Loader2, RefreshCw, Trophy, Volume2, VolumeX } from "lucide-react";
+import { ArrowLeft, DoorOpen, Loader2, RefreshCw, Settings2, Trophy, Volume2, VolumeX } from "lucide-react";
 import { toast } from "sonner";
 import { useSocket } from "@/hooks/use-socket";
 import {
@@ -604,7 +604,7 @@ export default function LudoRoomPage() {
   const [idleDiceValue] = useState(() => Math.floor(Math.random() * 6) + 1);
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [soundVolume, setSoundVolume] = useState(0.7);
-  const [soundPanelOpen, setSoundPanelOpen] = useState(false);
+  const [settingsMenuOpen, setSettingsMenuOpen] = useState(false);
   const [soundPrefsReady, setSoundPrefsReady] = useState(false);
   const [storedCommissionPct, setStoredCommissionPct] = useState(0);
   const [sharedTurnCountdown, setSharedTurnCountdown] = useState<number | null>(null);
@@ -614,6 +614,7 @@ export default function LudoRoomPage() {
   const applyRoomUpdateRef = useRef<(incoming: unknown) => void>(() => {});
   const tokenPathHistoryRef = useRef<Map<string, number[]>>(new Map());
   const audioContextRef = useRef<AudioContext | null>(null);
+  const settingsMenuRef = useRef<HTMLDivElement | null>(null);
   const diceSoundIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const diceSoundStopRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const resultSoundKeyRef = useRef<string | null>(null);
@@ -709,6 +710,31 @@ export default function LudoRoomPage() {
     window.localStorage.setItem(LUDO_SOUND_ENABLED_KEY, String(soundEnabled));
     window.localStorage.setItem(LUDO_SOUND_VOLUME_KEY, String(soundVolume));
   }, [soundEnabled, soundPrefsReady, soundVolume]);
+
+  useEffect(() => {
+    if (!settingsMenuOpen) return;
+
+    const handlePointerDown = (event: PointerEvent) => {
+      const target = event.target;
+      if (!(target instanceof Node)) return;
+      if (settingsMenuRef.current?.contains(target)) return;
+      setSettingsMenuOpen(false);
+    };
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setSettingsMenuOpen(false);
+      }
+    };
+
+    window.addEventListener("pointerdown", handlePointerDown);
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      window.removeEventListener("pointerdown", handlePointerDown);
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [settingsMenuOpen]);
 
   const getAudioContext = useCallback(() => {
     if (typeof window === "undefined") return null;
@@ -1426,6 +1452,7 @@ export default function LudoRoomPage() {
 
   const openExitConfirm = useCallback(() => {
     if (leaveMutation.isPending) return;
+    setSettingsMenuOpen(false);
     setExitConfirmOpen(true);
   }, [leaveMutation.isPending]);
 
@@ -1799,65 +1826,103 @@ export default function LudoRoomPage() {
         <button
           type="button"
           onClick={openExitConfirm}
-          className="flex h-10 items-center gap-1.5 rounded-full border border-white/20 bg-white/12 px-4 text-xs font-black text-white shadow-sm backdrop-blur"
+          className="flex h-8 items-center gap-1 rounded-full border border-white/20 bg-white/12 px-2.5 text-[10px] font-black text-white shadow-sm backdrop-blur"
         >
-          <ArrowLeft className="h-3.5 w-3.5" /> Back
+          <ArrowLeft className="h-3 w-3" /> Back
         </button>
 
-        <div className="flex items-center gap-2">
-          <span className={cn(
-            "rounded-full border px-3 py-1.5 text-[10px] font-black",
-            isConnected
-              ? "border-green-400/30 bg-green-500/15 text-green-300"
-              : "border-yellow-400/30 bg-yellow-500/15 text-yellow-300",
-          )}>
-            {isConnected ? "LIVE" : "SYNC"}
-          </span>
-          <span className="rounded-full border border-white/20 bg-white/12 px-3 py-1.5 text-[10px] font-black text-white">
-            {stakeLabel}
-          </span>
+        <div />
+
+        <div ref={settingsMenuRef} className="relative">
+          <button
+            type="button"
+            onClick={() => setSettingsMenuOpen((open) => !open)}
+            className="flex h-8 w-8 items-center justify-center rounded-full border border-white/20 bg-white/12 text-white shadow-sm backdrop-blur transition hover:bg-white/18"
+            aria-label="Open room settings"
+            aria-expanded={settingsMenuOpen}
+          >
+            <Settings2 className="h-3.5 w-3.5" />
+          </button>
+
+          {settingsMenuOpen && (
+            <div className="absolute right-0 top-[calc(100%+10px)] z-30 w-[248px] rounded-[22px] border border-white/18 bg-[#10245f]/96 p-3 text-white shadow-[0_18px_36px_rgba(0,0,0,0.34)] backdrop-blur">
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-full bg-white/10">
+                    {soundEnabled && soundVolume > 0 ? (
+                      <Volume2 className="h-4 w-4" />
+                    ) : (
+                      <VolumeX className="h-4 w-4 text-white/68" />
+                    )}
+                  </div>
+                  <div>
+                    <p className="text-[11px] font-black uppercase tracking-[0.18em] text-white/70">Sound</p>
+                    <p className="text-sm font-black">{soundEnabled ? "Enabled" : "Muted"}</p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setSoundEnabled((enabled) => !enabled)}
+                  className={cn(
+                    "rounded-full px-3 py-1 text-[10px] font-black",
+                    soundEnabled
+                      ? "bg-emerald-400 text-emerald-950"
+                      : "bg-white/15 text-white/70",
+                  )}
+                >
+                  {soundEnabled ? "ON" : "OFF"}
+                </button>
+              </div>
+
+              <div className="mt-3 rounded-2xl bg-white/6 px-3 py-2.5">
+                <div className="mb-2 flex items-center justify-between text-[10px] font-black uppercase tracking-[0.16em] text-white/65">
+                  <span>Volume</span>
+                  <span>{Math.round(soundVolume * 100)}%</span>
+                </div>
+                <input
+                  type="range"
+                  min={0}
+                  max={100}
+                  value={Math.round(soundVolume * 100)}
+                  onChange={(event) => setSoundVolume(Number(event.target.value) / 100)}
+                  className="w-full accent-yellow-300"
+                  aria-label="Sound volume"
+                />
+              </div>
+
+              <button
+                type="button"
+                onClick={() => {
+                  void refetch();
+                  setSettingsMenuOpen(false);
+                }}
+                className="mt-3 flex w-full items-center justify-between rounded-2xl bg-white/8 px-3 py-3 text-left transition hover:bg-white/12"
+              >
+                <span>
+                  <span className="block text-[10px] font-black uppercase tracking-[0.16em] text-white/65">Room</span>
+                  <span className="block text-sm font-black">Sync room</span>
+                </span>
+                <RefreshCw className="h-4 w-4" />
+              </button>
+
+              <button
+                type="button"
+                onClick={openExitConfirm}
+                disabled={leaveMutation.isPending}
+                className="mt-2 flex w-full items-center justify-between rounded-2xl bg-red-500 px-3 py-3 text-left text-white transition hover:bg-red-400 disabled:opacity-60"
+              >
+                <span>
+                  <span className="block text-[10px] font-black uppercase tracking-[0.16em] text-white/70">Match</span>
+                  <span className="block text-sm font-black">
+                    {leaveMutation.isPending ? "Leaving..." : "Leave room"}
+                  </span>
+                </span>
+                <DoorOpen className="h-4 w-4" />
+              </button>
+            </div>
+          )}
         </div>
-
-        <button
-          type="button"
-          onClick={openExitConfirm}
-          disabled={leaveMutation.isPending}
-          className="flex h-10 items-center gap-1.5 rounded-full border border-red-300/35 bg-red-500 px-4 text-xs font-black text-white shadow-sm disabled:opacity-60"
-        >
-          <DoorOpen className="h-3.5 w-3.5" /> Leave
-        </button>
       </div>
-
-      {soundPanelOpen && (
-        <div className="relative z-20 mx-4 mt-2 rounded-2xl border border-white/20 bg-[#12245f]/95 px-3 py-2 text-white shadow-xl backdrop-blur">
-          <div className="flex items-center gap-3">
-            <span className="shrink-0 text-[11px] font-black uppercase tracking-wide">Sound</span>
-            <button
-              type="button"
-              onClick={() => setSoundEnabled((enabled) => !enabled)}
-              className={cn(
-                "shrink-0 rounded-full px-3 py-1 text-[10px] font-black",
-                soundEnabled
-                  ? "bg-emerald-400 text-emerald-950"
-                  : "bg-white/15 text-white/70",
-              )}
-            >
-              {soundEnabled ? "ON" : "OFF"}
-            </button>
-            <label className="shrink-0 text-[10px] font-black uppercase tracking-wide text-white/65">
-              {Math.round(soundVolume * 100)}%
-            </label>
-            <input
-              type="range"
-              min={0}
-              max={100}
-              value={Math.round(soundVolume * 100)}
-              onChange={(event) => setSoundVolume(Number(event.target.value) / 100)}
-              className="min-w-0 flex-1 accent-yellow-300"
-            />
-          </div>
-        </div>
-      )}
 
       {isFinished && (
         <div className="relative z-10 mx-4 mt-3 rounded-xl border border-yellow-300/50 bg-yellow-300/15 px-4 py-2 text-center text-sm font-black text-yellow-100">
@@ -2005,40 +2070,6 @@ export default function LudoRoomPage() {
               </div>
             </div>
           </div>
-        </div>
-      </div>
-
-      <div className="relative z-10 flex justify-center px-4 pb-3">
-        <div className="flex items-center gap-3 rounded-full bg-[rgba(24,47,124,0.82)] px-4 py-2 shadow-[0_10px_22px_rgba(0,0,0,0.24)] backdrop-blur">
-          <button
-            type="button"
-            onClick={() => setSoundPanelOpen((open) => !open)}
-            className="flex h-11 w-11 items-center justify-center rounded-full bg-white/10 text-white"
-            aria-label="Sound settings"
-          >
-            {soundEnabled && soundVolume > 0 ? (
-              <Volume2 className="h-4.5 w-4.5" />
-            ) : (
-              <VolumeX className="h-4.5 w-4.5" />
-            )}
-          </button>
-          <button
-            type="button"
-            onClick={() => refetch()}
-            className="flex h-11 w-11 items-center justify-center rounded-full bg-white/10 text-white"
-            aria-label="Sync room"
-          >
-            <RefreshCw className="h-4.5 w-4.5" />
-          </button>
-          <button
-            type="button"
-            onClick={openExitConfirm}
-            disabled={leaveMutation.isPending}
-            className="flex h-11 w-11 items-center justify-center rounded-full bg-white/10 text-white disabled:opacity-60"
-            aria-label="Leave room"
-          >
-            <DoorOpen className="h-4.5 w-4.5" />
-          </button>
         </div>
       </div>
 

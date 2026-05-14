@@ -39,6 +39,12 @@ type TranslationDictionary = {
     kycVerification: string;
     support: string;
     logout: string;
+    logoutConfirmTitle: string;
+    logoutConfirmDescription: string;
+    logoutConfirmFallbackName: string;
+    logoutConfirmHint: string;
+    yes: string;
+    no: string;
     logoutFailed: string;
     refreshBalance: string;
     notSet: string;
@@ -86,6 +92,12 @@ export const translations: Record<AppLanguage, TranslationDictionary> = {
       kycVerification: "KYC Verification",
       support: "Support",
       logout: "Logout",
+      logoutConfirmTitle: "Confirm logout",
+      logoutConfirmDescription: "Do you want to log out, {name}?",
+      logoutConfirmFallbackName: "this account",
+      logoutConfirmHint: "You can stay signed in if you still want to continue using the app.",
+      yes: "Yes",
+      no: "No",
       logoutFailed: "Failed to log out",
       refreshBalance: "Refresh balance",
       notSet: "Not set",
@@ -131,6 +143,12 @@ export const translations: Record<AppLanguage, TranslationDictionary> = {
       kycVerification: "কেওয়াইসি ভেরিফিকেশন",
       support: "সাপোর্ট",
       logout: "লগ আউট",
+      logoutConfirmTitle: "লগ আউট নিশ্চিত করুন",
+      logoutConfirmDescription: "আপনি কি {name} থেকে লগ আউট করতে চান?",
+      logoutConfirmFallbackName: "এই অ্যাকাউন্ট",
+      logoutConfirmHint: "অ্যাপ ব্যবহার চালিয়ে যেতে চাইলে আপনি লগ ইন অবস্থাতেই থাকতে পারেন।",
+      yes: "হ্যাঁ",
+      no: "না",
       logoutFailed: "লগ আউট করা যায়নি",
       refreshBalance: "ব্যালেন্স রিফ্রেশ করুন",
       notSet: "সেট করা হয়নি",
@@ -176,6 +194,12 @@ export const translations: Record<AppLanguage, TranslationDictionary> = {
       kycVerification: "KYC वेरिफिकेशन",
       support: "सपोर्ट",
       logout: "लॉग आउट",
+      logoutConfirmTitle: "लॉग आउट की पुष्टि करें",
+      logoutConfirmDescription: "क्या आप {name} से लॉग आउट करना चाहते हैं?",
+      logoutConfirmFallbackName: "इस अकाउंट",
+      logoutConfirmHint: "अगर आप चाहें, तो ऐप इस्तेमाल जारी रखने के लिए लॉग इन रह सकते हैं।",
+      yes: "हाँ",
+      no: "नहीं",
       logoutFailed: "लॉग आउट नहीं हो सका",
       refreshBalance: "बैलेंस रीफ्रेश करें",
       notSet: "सेट नहीं है",
