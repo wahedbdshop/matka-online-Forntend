@@ -17,19 +17,26 @@ export function UserLayoutShell({
 
   return (
     <>
-      {!isLudoRoomRoute ? (
-        <TopHeader initialIsAuthenticated={initialIsAuthenticated} />
-      ) : null}
+      <TopHeader initialIsAuthenticated={initialIsAuthenticated} />
       <main
         className={
           isLudoRoomRoute
-            ? "flex-1 w-full"
+            ? "flex-1 w-full overflow-hidden pb-16"
             : "flex-1 max-w-lg w-full mx-auto px-4 pt-4 pb-24"
+        }
+        style={
+          isLudoRoomRoute
+            ? {
+                background:
+                  "radial-gradient(circle at 1px 1px, rgba(255,255,255,0.1) 1px, transparent 0), radial-gradient(circle at top center, rgba(54,104,255,0.34), transparent 30%), linear-gradient(180deg,#173aa7 0%,#153596 42%,#08133b 100%)",
+                backgroundSize: "22px 22px, auto, auto",
+              }
+            : undefined
         }
       >
         {children}
       </main>
-      {!isLudoRoomRoute ? <BottomNav /> : null}
+      <BottomNav />
     </>
   );
 }
