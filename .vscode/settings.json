@@ -1,5 +1,6 @@
 {
-    "terminal.integrated.localEchoEnabled": "on",
-    "terminal.integrated.accessibleViewFocusOnCommandExecution": false,
-    "terminal.integrated.accessibleViewPreserveCursorPosition": true
+  "terminal.integrated.localEchoEnabled": "on",
+  "terminal.integrated.accessibleViewFocusOnCommandExecution": false,
+  "terminal.integrated.accessibleViewPreserveCursorPosition": true,
+  "cSpell.words": ["Prefs"]
 }

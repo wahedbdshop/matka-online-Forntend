@@ -50,10 +50,10 @@ const BoardRotationContext = createContext<0 | 90 | 180 | 270>(0);
 // Color palette
 // ─────────────────────────────────────────────────────────────────────────────
 const PALETTE = {
-  RED:    { main: "#ff1825", dark: "#b20d14", tint: "#ff1825" },
-  GREEN:  { main: "#07b541", dark: "#04712b", tint: "#07b541" },
-  BLUE:   { main: "#32a7ef", dark: "#186d9f", tint: "#32a7ef" },
-  YELLOW: { main: "#ffdd1f", dark: "#c18a00", tint: "#ffdd1f" },
+  RED:    { main: "#ff2332", dark: "#b50f18", tint: "#ff2332" },
+  GREEN:  { main: "#08bf45", dark: "#04722a", tint: "#08bf45" },
+  BLUE:   { main: "#2fa9f5", dark: "#166f9f", tint: "#2fa9f5" },
+  YELLOW: { main: "#ffd51b", dark: "#c08a00", tint: "#ffd51b" },
 } satisfies Record<LudoColor, { main: string; dark: string; tint: string }>;
 
 function darkenHex(hex: string, amount: number) {
@@ -569,7 +569,7 @@ function MultiTokens({
         return (
           <div
             key={t.id}
-            className="absolute flex items-center justify-center overflow-visible"
+            className="absolute flex items-center justify-center overflow-visible animate-[ludo-token-hop_.24s_cubic-bezier(.22,.8,.28,1)]"
             style={{
               left: pos.left,
               top: pos.top,
@@ -603,7 +603,7 @@ function ClassicTokenPin({
   const hex = PALETTE[token.color].main;
   const dark = PALETTE[token.color].dark;
   const gid = `${token.color.toLowerCase()}-${token.id.replace(/[^a-z0-9_-]/gi, "")}`;
-  const shellDark = "rgba(71,85,105,0.9)";
+  const shellDark = "rgba(17,24,39,0.9)";
   const rotationStyle =
     boardRotation !== 0
       ? {
@@ -616,34 +616,42 @@ function ClassicTokenPin({
     "M20 37 C16.1 32 10 26.1 10 17.5 C10 10.1 14.5 5 20 5 C25.5 5 30 10.1 30 17.5 C30 26.1 23.9 32 20 37 Z";
   const innerPinPath =
     "M20 34.4 C17.1 30.5 13 25.6 13 18.1 C13 12.2 16.2 8.6 20 8.6 C23.8 8.6 27 12.2 27 18.1 C27 25.6 22.9 30.5 20 34.4 Z";
+  const tokenBasePath =
+    "M14.4 29.4 C16.1 31.8 17.8 34.1 20 36.7 C22.2 34.1 23.9 31.8 25.6 29.4";
 
   const finishedEl = (
     <svg
       viewBox="0 0 40 40"
       style={{ width: fill, height: fill, flexShrink: 0, ...rotationStyle }}
-      className="drop-shadow-[0_0_8px_rgba(255,255,255,0.45)]"
+      className="drop-shadow-[0_0_10px_rgba(255,255,255,0.42)]"
     >
       <defs>
-        <radialGradient id={`shell-finished-${gid}`} cx="35%" cy="24%" r="72%">
+        <radialGradient id={`shell-finished-${gid}`} cx="35%" cy="24%" r="75%">
           <stop offset="0%" stopColor="#ffffff" />
-          <stop offset="50%" stopColor="#f8fafc" />
-          <stop offset="100%" stopColor="#cfd8e3" />
+          <stop offset="34%" stopColor="#f8fafc" />
+          <stop offset="100%" stopColor="#bcc8d8" />
         </radialGradient>
-        <radialGradient id={`core-finished-${gid}`} cx="35%" cy="26%" r="70%">
+        <radialGradient id={`core-finished-${gid}`} cx="34%" cy="26%" r="72%">
           <stop offset="0%" stopColor="#ffffff" stopOpacity="0.95" />
-          <stop offset="22%" stopColor={hex} />
+          <stop offset="16%" stopColor="#ffffff" stopOpacity="0.84" />
+          <stop offset="28%" stopColor={hex} />
           <stop offset="100%" stopColor={dark} />
         </radialGradient>
+        <linearGradient id={`base-finished-${gid}`} x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stopColor="rgba(255,255,255,0.94)" />
+          <stop offset="100%" stopColor="rgba(255,255,255,0.6)" />
+        </linearGradient>
       </defs>
 
-      <ellipse cx="20.3" cy="36.6" rx="7.8" ry="2.4" fill="rgba(15,23,42,0.18)" />
-      <path d={pinPath} fill={`url(#shell-finished-${gid})`} stroke={shellDark} strokeWidth="1.45" />
-      <path d={innerPinPath} fill="rgba(255,255,255,0.86)" />
-      <circle cx="20" cy="17.4" r="8.2" fill="white" stroke="rgba(148,163,184,0.78)" strokeWidth="0.95" />
-      <circle cx="20" cy="17.4" r="6.75" fill={`url(#core-finished-${gid})`} stroke={dark} strokeWidth="1.1" />
-      <ellipse cx="17.1" cy="13.1" rx="3.2" ry="1.95" fill="rgba(255,255,255,0.62)" transform="rotate(-22 17.1 13.1)" />
-      <path d="M16 29.6 C17.5 31.6 18.7 33 20 34.7 C21.3 33 22.5 31.6 24 29.6" fill="none" stroke="rgba(255,255,255,0.84)" strokeWidth="1.15" strokeLinecap="round" />
-      <ellipse cx="20" cy="31.4" rx="3.5" ry="1.1" fill="rgba(51,65,85,0.26)" />
+      <ellipse cx="20.4" cy="37" rx="8.7" ry="2.7" fill="rgba(15,23,42,0.16)" />
+      <path d={pinPath} fill={`url(#shell-finished-${gid})`} stroke={shellDark} strokeWidth="1.35" />
+      <path d={innerPinPath} fill="rgba(255,255,255,0.88)" />
+      <path d={tokenBasePath} fill={`url(#base-finished-${gid})`} stroke="rgba(148,163,184,0.5)" strokeWidth="0.8" strokeLinecap="round" />
+      <ellipse cx="20" cy="30.9" rx="5.6" ry="1.5" fill="rgba(15,23,42,0.14)" />
+      <circle cx="20" cy="17.2" r="8.55" fill="white" stroke="rgba(148,163,184,0.7)" strokeWidth="0.85" />
+      <circle cx="20" cy="17.2" r="7.1" fill={`url(#core-finished-${gid})`} stroke={dark} strokeWidth="1" />
+      <circle cx="20" cy="17.2" r="3.35" fill="rgba(255,255,255,0.16)" />
+      <ellipse cx="16.9" cy="12.8" rx="3.35" ry="1.95" fill="rgba(255,255,255,0.68)" transform="rotate(-22 16.9 12.8)" />
     </svg>
   );
 
@@ -656,28 +664,34 @@ function ClassicTokenPin({
       className={cn(token.available && "drop-shadow-[0_0_10px_rgba(253,224,71,1)]")}
     >
       <defs>
-        <radialGradient id={`shell-${gid}`} cx="35%" cy="24%" r="72%">
+        <radialGradient id={`shell-${gid}`} cx="35%" cy="24%" r="76%">
           <stop offset="0%" stopColor="#ffffff" />
-          <stop offset="50%" stopColor="#f8fafc" />
-          <stop offset="100%" stopColor="#cfd8e3" />
+          <stop offset="34%" stopColor="#f8fafc" />
+          <stop offset="100%" stopColor="#c7d2df" />
         </radialGradient>
-        <radialGradient id={`core-${gid}`} cx="35%" cy="26%" r="70%">
+        <radialGradient id={`core-${gid}`} cx="34%" cy="26%" r="72%">
           <stop offset="0%" stopColor="#ffffff" stopOpacity="0.95" />
-          <stop offset="22%" stopColor={hex} />
+          <stop offset="16%" stopColor="#ffffff" stopOpacity="0.86" />
+          <stop offset="28%" stopColor={hex} />
           <stop offset="100%" stopColor={dark} />
         </radialGradient>
+        <linearGradient id={`base-${gid}`} x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stopColor="rgba(255,255,255,0.96)" />
+          <stop offset="100%" stopColor="rgba(255,255,255,0.62)" />
+        </linearGradient>
       </defs>
 
-      <ellipse cx="20.3" cy="36.6" rx="7.8" ry="2.4" fill="rgba(15,23,42,0.18)" />
+      <ellipse cx="20.4" cy="37.1" rx="8.9" ry="2.8" fill="rgba(15,23,42,0.2)" />
       <path d={pinPath} fill={`url(#shell-${gid})`} stroke={shellDark} strokeWidth="1.45" />
       <path d={innerPinPath} fill="rgba(255,255,255,0.86)" />
-      <circle cx="20" cy="17.4" r="8.2" fill="white" stroke="rgba(148,163,184,0.78)" strokeWidth="0.95" />
-      <circle cx="20" cy="17.4" r="6.75" fill={`url(#core-${gid})`} stroke={dark} strokeWidth="1.1" />
-      <ellipse cx="17.1" cy="13.1" rx="3.2" ry="1.95" fill="rgba(255,255,255,0.62)" transform="rotate(-22 17.1 13.1)" />
-      <path d="M16 29.6 C17.5 31.6 18.7 33 20 34.7 C21.3 33 22.5 31.6 24 29.6" fill="none" stroke="rgba(255,255,255,0.84)" strokeWidth="1.15" strokeLinecap="round" />
-      <ellipse cx="20" cy="31.4" rx="3.5" ry="1.1" fill="rgba(51,65,85,0.26)" />
+      <path d={tokenBasePath} fill={`url(#base-${gid})`} stroke="rgba(148,163,184,0.52)" strokeWidth="0.86" strokeLinecap="round" />
+      <ellipse cx="20" cy="31" rx="5.7" ry="1.55" fill="rgba(15,23,42,0.16)" />
+      <circle cx="20" cy="17.2" r="8.95" fill="white" stroke="rgba(15,23,42,0.76)" strokeWidth="0.95" />
+      <circle cx="20" cy="17.2" r="7.5" fill={`url(#core-${gid})`} stroke={dark} strokeWidth="1.06" />
+      <circle cx="20" cy="17.2" r="3.55" fill="rgba(255,255,255,0.14)" />
+      <ellipse cx="16.9" cy="12.8" rx="3.35" ry="2" fill="rgba(255,255,255,0.66)" transform="rotate(-22 16.9 12.8)" />
       {token.available && (
-        <path d={pinPath} fill="none" stroke="#fbbf24" strokeWidth="2.6" opacity="0.98" />
+        <path d={pinPath} fill="none" stroke="#fbbf24" strokeWidth="2.2" opacity="0.98" />
       )}
     </svg>
   );
@@ -768,7 +782,7 @@ function ClassicTokenPin({
                   width: "62%",
                   height: "20%",
                   transform: "translateX(-50%)",
-                  background: `radial-gradient(ellipse at center, ${hex}66 0%, ${hex}22 72%, transparent 100%)`,
+                  background: `radial-gradient(ellipse at center, ${hex}66 0%, ${hex}20 72%, transparent 100%)`,
                   filter: `drop-shadow(0 0 6px ${hex}88)`,
                 }}
               />
@@ -788,7 +802,10 @@ function ClassicTokenPin({
         </>
       )}
       <span
-        className="relative z-10 flex h-full w-full items-center justify-center overflow-visible"
+        className={cn(
+          "relative z-10 flex h-full w-full items-center justify-center overflow-visible transition-transform duration-200",
+          token.available && "group-hover:-translate-y-1 group-hover:scale-[1.05] group-active:translate-y-0 group-active:scale-100",
+        )}
         style={
           token.available
             ? {
@@ -806,6 +823,8 @@ function ClassicTokenPin({
   if (!onMove) {
     return (
       <div
+        data-testid="each-token"
+        data-token-id={token.id}
         className="relative z-20 flex items-center justify-center overflow-visible"
         style={{ width: fill, height: fill }}
       >
@@ -819,7 +838,9 @@ function ClassicTokenPin({
       type="button"
       onPointerDown={() => onMove(token.id)}
       onKeyDown={(event) => event.key === "Enter" && onMove(token.id)}
-      className="absolute inset-0 z-20 flex items-center justify-center overflow-visible focus:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400"
+      data-testid="each-token"
+      data-token-id={token.id}
+      className="group absolute inset-0 z-20 flex items-center justify-center overflow-visible focus:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400"
       style={{
         background: "transparent",
         border: "none",
@@ -852,11 +873,11 @@ function DirectionArrowIcon({
   return (
     <svg
       viewBox="0 0 20 20"
-      className="pointer-events-none h-[68%] w-[68%]"
+      className="pointer-events-none h-[62%] w-[62%]"
       fill="none"
       stroke={color}
-      strokeWidth="2"
-      opacity="0.68"
+      strokeWidth="2.2"
+      opacity="0.9"
       strokeLinecap="round"
       strokeLinejoin="round"
     >
@@ -873,8 +894,8 @@ function TrackTokenSlot({
   onMove?: (id: string) => void;
 }) {
   return (
-    <div className="relative flex h-[98%] w-[98%] items-center justify-center overflow-visible">
-      <div className="flex h-full w-full -translate-y-[8%] scale-[1.28] items-center justify-center sm:scale-[1.22]">
+    <div className="relative flex h-full w-full items-center justify-center overflow-visible">
+      <div className="flex h-full w-full -translate-y-[10%] scale-[1.42] items-center justify-center animate-[ludo-token-hop_.22s_cubic-bezier(.2,.8,.28,1)] sm:scale-[1.28]">
         <ClassicTokenPin
           token={token}
           fill="100%"
@@ -898,7 +919,7 @@ function BoardCell({
   const multi = tokens.length > 1;
   const boardLine = "#b7b7b7";
   const trackCellClassName =
-    "relative z-20 flex aspect-square items-center justify-center overflow-visible border bg-white";
+    "relative z-20 flex h-full w-full items-center justify-center overflow-visible border bg-white";
   const classicWhiteCellStyle = {
     borderColor: boardLine,
     backgroundColor: "#ffffff",
@@ -913,7 +934,7 @@ function BoardCell({
   if (kind.t === "home-outer") {
     return (
       <div
-        className="aspect-square"
+        className="h-full w-full"
         style={{
           backgroundColor: PALETTE[kind.color].main,
           boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.04)",
@@ -925,7 +946,7 @@ function BoardCell({
   if (kind.t === "home-inner") {
     return (
       <div
-        className="aspect-square bg-white"
+        className="h-full w-full bg-white"
         style={{ boxShadow: "inset 0 0 0 1px rgba(0,0,0,0.08)" }}
       />
     );
@@ -936,7 +957,7 @@ function BoardCell({
     const ring = darkenHex(hex, 0.14);
 
     return (
-      <div className="relative z-20 flex aspect-square items-center justify-center overflow-visible bg-white p-[10%] sm:p-[12%]">
+      <div className="relative z-20 flex h-full w-full items-center justify-center overflow-visible bg-white p-[8%] sm:p-[10%]">
         <div
           className="relative z-10 flex h-full w-full items-center justify-center overflow-visible rounded-full"
           style={{
@@ -956,7 +977,7 @@ function BoardCell({
             />
           )}
           {first && (
-            <div className="absolute -inset-x-[34%] -inset-y-[27%] -translate-y-[10%] z-20 overflow-visible sm:-inset-x-[38%] sm:-inset-y-[31%] sm:-translate-y-[12%]">
+            <div className="absolute -inset-x-[40%] -inset-y-[32%] -translate-y-[12%] z-20 overflow-visible sm:-inset-x-[38%] sm:-inset-y-[31%] sm:-translate-y-[12%]">
               <ClassicTokenPin
                 token={first}
                 fill="100%"
@@ -970,7 +991,7 @@ function BoardCell({
   }
 
   if (kind.t === "center") {
-    return <div className="aspect-square bg-transparent" />;
+    return <div className="h-full w-full bg-transparent" />;
   }
 
   if (kind.t === "run-up" || kind.t === "start") {
@@ -1060,10 +1081,10 @@ function ClassicCenterOverlay({
         <polygon points="3,0 3,3 1.5,1.5" fill={rightColor} />
         <polygon points="3,3 0,3 1.5,1.5" fill={bottomColor} />
         <polygon points="0,3 0,0 1.5,1.5" fill={leftColor} />
-        <line x1="0" y1="0" x2="1.5" y2="1.5" stroke="rgba(255,255,255,.3)" strokeWidth="0.03" />
-        <line x1="3" y1="0" x2="1.5" y2="1.5" stroke="rgba(255,255,255,.3)" strokeWidth="0.03" />
-        <line x1="3" y1="3" x2="1.5" y2="1.5" stroke="rgba(255,255,255,.3)" strokeWidth="0.03" />
-        <line x1="0" y1="3" x2="1.5" y2="1.5" stroke="rgba(255,255,255,.3)" strokeWidth="0.03" />
+        <line x1="0" y1="0" x2="1.5" y2="1.5" stroke="rgba(255,255,255,.34)" strokeWidth="0.03" />
+        <line x1="3" y1="0" x2="1.5" y2="1.5" stroke="rgba(255,255,255,.34)" strokeWidth="0.03" />
+        <line x1="3" y1="3" x2="1.5" y2="1.5" stroke="rgba(255,255,255,.34)" strokeWidth="0.03" />
+        <line x1="0" y1="3" x2="1.5" y2="1.5" stroke="rgba(255,255,255,.34)" strokeWidth="0.03" />
       </svg>
     </div>
   );
@@ -1272,7 +1293,8 @@ export function LudoBoard({
   return (
     <BoardRotationContext.Provider value={0}>
       <div
-        className="relative aspect-square w-full select-none overflow-hidden rounded-[6px]"
+        data-testid="board"
+        className="relative aspect-square w-full select-none overflow-hidden rounded-[18px]"
         style={{
           backgroundColor: "#ffffff",
           boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.78)",
@@ -1280,8 +1302,11 @@ export function LudoBoard({
       >
         {/* ── 15×15 CSS Grid ──────────────────────────────────────────────── */}
         <div
-          className="absolute inset-0 z-10 grid"
-          style={{ gridTemplateColumns: `repeat(${GRID}, 1fr)` }}
+          className="absolute inset-0 z-10 grid h-full w-full"
+          style={{
+            gridTemplateColumns: `repeat(${GRID}, minmax(0, 1fr))`,
+            gridTemplateRows: `repeat(${GRID}, minmax(0, 1fr))`,
+          }}
         >
           {cells.map(({ row, col, displayKey, kind }) => (
             <BoardCell
@@ -1298,9 +1323,16 @@ export function LudoBoard({
         <ClassicCenterWinTokens tokens={centerWinTokens} seatColors={seatColors} />
 
         {/* ── Board outer border ───────────────────────────────────────────── */}
-        <div className="pointer-events-none absolute inset-0 z-30 rounded-[6px] border border-[#9d9d9d]" />
+        <div className="pointer-events-none absolute inset-0 z-30 rounded-[18px] border border-[#9d9d9d]" />
 
         <style jsx global>{`
+          @keyframes ludo-token-hop {
+            0% { transform: translateY(10%) scale(0.92); filter: brightness(0.96); }
+            45% { transform: translateY(-16%) scale(1.06); filter: brightness(1.05); }
+            72% { transform: translateY(-6%) scale(0.985); filter: brightness(1.02); }
+            100% { transform: translateY(0) scale(1); filter: brightness(1); }
+          }
+
           @keyframes ludo-available-spin {
             from { transform: translate(-50%, -50%) rotate(0deg); }
             to { transform: translate(-50%, -50%) rotate(360deg); }

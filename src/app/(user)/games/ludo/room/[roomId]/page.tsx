@@ -7,6 +7,14 @@ import { ArrowLeft, DoorOpen, Loader2, RefreshCw, Settings2, Trophy, Volume2, Vo
 import { toast } from "sonner";
 import { useSocket } from "@/hooks/use-socket";
 import {
+  AutoMoveDots,
+  COLOR_HEX,
+  DiceSVG,
+  getPlayerLabel,
+  getPlayerSubLabel,
+  PlayerAvatarBadge,
+} from "@/components/ludo/room-ui";
+import {
   calculateLudoNetPrize,
   formatLudoPrizeAmount,
   readStoredLudoCommissionPct,
@@ -279,146 +287,6 @@ function roomWithCaptureReturnFrame(
   };
 }
 
-function DiceSVG({ value, size = 56 }: { value?: number | null; size?: number }) {
-  const dots: Record<number, Array<[number, number]>> = {
-    1: [[50,50]],
-    2: [[28,28],[72,72]],
-    3: [[28,28],[50,50],[72,72]],
-    4: [[28,28],[72,28],[28,72],[72,72]],
-    5: [[28,28],[72,28],[50,50],[28,72],[72,72]],
-    6: [[28,22],[72,22],[28,50],[72,50],[28,78],[72,78]],
-  };
-  const safeValue = typeof value === "number" && value in dots ? value : 1;
-  const pts = dots[safeValue];
-  return (
-    <svg width={size} height={size} viewBox="0 0 100 100">
-      <defs>
-        <linearGradient id={`dice-body-${safeValue}`} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#63d9ff" />
-          <stop offset="100%" stopColor="#1dbbf4" />
-        </linearGradient>
-      </defs>
-      <rect x={7} y={10} width={86} height={86} rx={24} fill="rgba(16,72,108,0.28)" />
-      <rect x={4} y={4} width={86} height={86} rx={24} fill={`url(#dice-body-${safeValue})`} stroke="#178fcb" strokeWidth="2" />
-      <rect x={12} y={10} width={62} height={20} rx={10} fill="rgba(255,255,255,0.28)" />
-      {pts.map(([cx, cy], i) => (
-        <circle key={i} cx={cx} cy={cy} r={8.2} fill="#f8fafc" />
-      ))}
-    </svg>
-  );
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Small inline token icon (for bottom bar)
-// ─────────────────────────────────────────────────────────────────────────────
-const COLOR_HEX: Record<string, string> = {
-  RED: "#ef1d26", GREEN: "#08ae4d", BLUE: "#2ba8ef", YELLOW: "#ffd61f",
-};
-
-function PlayerPin({ color }: { color: string }) {
-  const hex = COLOR_HEX[color] ?? "#888";
-  return (
-    <svg width="28" height="40" viewBox="0 0 40 56">
-      <ellipse cx="20" cy="53" rx="7.2" ry="2.6" fill="rgba(0,0,0,0.2)" />
-      <path
-        d="M20 51 C15.6 45.4 8.8 38.8 8.8 27.8 C8.8 18.3 14.7 11.8 20 11.8 C25.3 11.8 31.2 18.3 31.2 27.8 C31.2 38.8 24.4 45.4 20 51 Z"
-        fill="white"
-        stroke="#475569"
-        strokeWidth="1.4"
-      />
-      <circle cx="20" cy="28" r="9.6" fill="white" stroke="rgba(148,163,184,0.8)" strokeWidth="1" />
-      <circle cx="20" cy="28" r="7.5" fill={hex} stroke="rgba(51,65,85,0.5)" strokeWidth="1" />
-      <ellipse cx="17.1" cy="23.2" rx="3" ry="1.8" fill="rgba(255,255,255,0.58)" transform="rotate(-22 17.1 23.2)" />
-    </svg>
-  );
-}
-
-function AutoMoveDots({ count = 0 }: { count?: number }) {
-  const safeCount = Math.max(0, Math.min(5, count));
-
-  return (
-    <div className="mt-1 flex gap-1">
-      {Array.from({ length: 5 }).map((_, index) => (
-        <span
-          key={index}
-          className={cn(
-            "h-1.5 w-1.5 rounded-full",
-            index < safeCount ? "bg-red-400" : "bg-white/25",
-          )}
-        />
-      ))}
-    </div>
-  );
-}
-
-function getPlayerLabel(player?: LudoRoomPlayer | null, fallback = "Player") {
-  return player?.username?.trim() || player?.name?.trim() || fallback;
-}
-
-function getPlayerSubLabel(player?: LudoRoomPlayer | null, fallback = "Player") {
-  return player?.name?.trim() || player?.username?.trim() || fallback;
-}
-
-function getPlayerInitials(player?: LudoRoomPlayer | null, fallback = "P") {
-  const source = player?.name?.trim() || player?.username?.trim() || fallback;
-  const parts = source.split(/\s+/).filter(Boolean);
-  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
-  return `${parts[0][0] ?? ""}${parts[1][0] ?? ""}`.toUpperCase();
-}
-
-function PlayerAvatarBadge({
-  player,
-  color,
-  active = false,
-  countdownProgress = null,
-  danger = false,
-  className,
-}: {
-  player?: LudoRoomPlayer | null;
-  color: string;
-  active?: boolean;
-  countdownProgress?: number | null;
-  danger?: boolean;
-  className?: string;
-}) {
-  const initials = getPlayerInitials(player);
-  const ringColor = danger ? "#ff5b57" : "#f5b414";
-  const showTurnRing = active && countdownProgress !== null;
-
-  return (
-    <div
-      className={cn(
-        "relative flex h-14 w-14 shrink-0 items-center justify-center rounded-full border-[3px] bg-white p-1 shadow-[0_8px_18px_rgba(0,0,0,0.28)] transition-all duration-300 ease-out",
-        active && "shadow-[0_0_0_3px_rgba(255,219,92,0.35),0_10px_24px_rgba(0,0,0,0.32)]",
-        className,
-      )}
-      style={{
-        borderColor: active ? "#38ff6b" : color,
-        ...(showTurnRing
-          ? {
-              background: `conic-gradient(from -90deg, ${ringColor} 0deg, ${ringColor} ${countdownProgress * 360}deg, rgba(255,255,255,0.14) ${countdownProgress * 360}deg, rgba(255,255,255,0.14) 360deg)`,
-            }
-          : {}),
-      }}
-    >
-      {active && (
-        <span
-          className="pointer-events-none absolute -inset-[6px] rounded-full border-2 shadow-[0_0_18px_rgba(255,230,92,0.34)] animate-[ludo-turn-avatar-ring_1.8s_ease-in-out_infinite]"
-          style={{ borderColor: danger ? "rgba(255,91,87,0.85)" : "rgba(255,240,168,0.8)" }}
-        />
-      )}
-      <div
-        className="flex h-full w-full items-center justify-center rounded-full bg-white text-sm font-black uppercase text-white"
-        style={{
-          background: `linear-gradient(180deg, ${color} 0%, ${color}cc 100%)`,
-        }}
-      >
-        {initials}
-      </div>
-    </div>
-  );
-}
-
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Page
@@ -643,9 +511,9 @@ export default function LudoRoomPage() {
   // dice. A draining ring shows the remaining time. When it hits 0 the dice
   // is auto-rolled so the turn passes to the opponent.
   const ROLL_TIMEOUT_SEC = 20;
-  const LOCAL_DICE_ROLL_MS = 460;
-  const REMOTE_DICE_ROLL_MS = 280;
-  const DICE_SETTLE_MS = 0;
+  const LOCAL_DICE_ROLL_MS = 620;
+  const REMOTE_DICE_ROLL_MS = 360;
+  const DICE_SETTLE_MS = 160;
   const LOCAL_DICE_ANIMATION_MS = LOCAL_DICE_ROLL_MS + DICE_SETTLE_MS;
   const REMOTE_DICE_ANIMATION_MS = REMOTE_DICE_ROLL_MS + DICE_SETTLE_MS;
   const [rollCountdown, setRollCountdown] = useState<number | null>(null);
@@ -1231,11 +1099,11 @@ export default function LudoRoomPage() {
     const steps = move.toProgress - move.fromProgress;
     if (steps <= 0) return false;
     const stepDurationMs =
-      steps >= 6 ? 130 :
-      steps >= 5 ? 145 :
-      steps >= 4 ? 165 :
-      steps >= 3 ? 185 :
-      220;
+      steps >= 6 ? 154 :
+      steps >= 5 ? 168 :
+      steps >= 4 ? 184 :
+      steps >= 3 ? 206 :
+      238;
 
     animTimersRef.current.forEach(clearTimeout);
     animTimersRef.current = [];
@@ -1246,7 +1114,11 @@ export default function LudoRoomPage() {
 
     if (steps === 1) {
       playStepSound();
-      finishMoveAnimation(fromRoom, toRoom);
+      const singleStepTimer = setTimeout(() => {
+        animTimersRef.current = [];
+        finishMoveAnimation(fromRoom, toRoom);
+      }, 126);
+      animTimersRef.current.push(singleStepTimer);
       return true;
     }
 
@@ -1258,8 +1130,11 @@ export default function LudoRoomPage() {
         playStepSound();
 
         if (isLast) {
-          animTimersRef.current = [];
-          finishMoveAnimation(fromRoom, toRoom);
+          const finishTimer = setTimeout(() => {
+            animTimersRef.current = [];
+            finishMoveAnimation(fromRoom, toRoom);
+          }, 96);
+          animTimersRef.current.push(finishTimer);
           return;
         }
 
@@ -1337,7 +1212,16 @@ export default function LudoRoomPage() {
     }
 
     applyNormalizedRoomUpdate(nextRoom);
-  }, [applyNormalizedRoomUpdate, findTokenMoveAnimation]);
+  }, [
+    applyNormalizedRoomUpdate,
+    findTokenMoveAnimation,
+    getRemainingDiceAnimationMs,
+    playCaptureReturnAnimation,
+    playKillSound,
+    playTokenMoveAnimation,
+    playWinSound,
+    rememberTokenPaths,
+  ]);
   applyRoomUpdateRef.current = applyRoomUpdate;
 
   const rollMutation = useMutation({
@@ -1384,7 +1268,6 @@ export default function LudoRoomPage() {
           consecutiveSixRef.current = 0;
           setThirdSixPenaltyPending(true);
           setTokenMoveLocked(true);
-          toast.warning("Two 6s valid. 3rd 6 cancelled, turn passed.");
           schedulePenaltySync();
         }
       } else {
@@ -1963,12 +1846,18 @@ export default function LudoRoomPage() {
                   )}
                 >
                   <div className="pointer-events-none absolute inset-[7%] rounded-[12px] border border-white/35 bg-[linear-gradient(180deg,rgba(255,255,255,0.2),rgba(255,255,255,0.04))]" />
-                  <div className="relative flex h-full w-full items-center justify-center p-1">
+                  <div
+                    className={cn(
+                      "relative flex h-full w-full items-center justify-center p-1",
+                      shouldShowTopActiveDice && diceAnimationState === "rolling" && "animate-[ludo-hand-dice-roll_.58s_cubic-bezier(.22,.61,.36,1)_infinite]",
+                    )}
+                    style={{ transformOrigin: "50% 58%", transformStyle: "preserve-3d" }}
+                  >
                     {shouldShowTopActiveDice ? (
-                      <DiceSVG value={renderedDiceValue} size={38} />
+                      <DiceSVG value={renderedDiceValue} size={38} tint="#4fd1ff" />
                     ) : (
                       <div className="opacity-70">
-                        <DiceSVG value={visibleDiceValue} size={38} />
+                        <DiceSVG value={visibleDiceValue} size={38} tint="#4fd1ff" />
                       </div>
                     )}
                   </div>
@@ -1986,12 +1875,11 @@ export default function LudoRoomPage() {
           </div>
 
           <div
-            className="relative z-10 aspect-square overflow-hidden rounded-[26px] border-[3px] border-[#f5d14d] bg-[#1b4dcf] p-[7px] shadow-[0_18px_34px_rgba(0,0,0,0.26)]"
+            className="relative z-10 aspect-square overflow-hidden rounded-[18px] shadow-[0_18px_34px_rgba(0,0,0,0.26)]"
             style={{
               width: "min(calc(100vw - 52px), 472px, calc(100vh - 250px))",
             }}
           >
-            <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.2),transparent_42%)]" />
             <LudoBoard
               tokenPositions={tokenPositions}
               onMoveToken={(id) => {
@@ -2045,15 +1933,15 @@ export default function LudoRoomPage() {
                   <div
                     className={cn(
                       "relative flex h-full w-full items-center justify-center p-1",
-                      shouldShowBottomActiveDice && diceAnimationState === "rolling" && "animate-[ludo-hand-dice-roll_.46s_cubic-bezier(.22,.61,.36,1)_infinite]",
+                      shouldShowBottomActiveDice && diceAnimationState === "rolling" && "animate-[ludo-hand-dice-roll_.58s_cubic-bezier(.22,.61,.36,1)_infinite]",
                     )}
-                    style={{ transformOrigin: "50% 58%" }}
+                    style={{ transformOrigin: "50% 58%", transformStyle: "preserve-3d" }}
                   >
                     {shouldShowBottomActiveDice ? (
-                      <DiceSVG value={renderedDiceValue} size={40} />
+                      <DiceSVG value={renderedDiceValue} size={40} tint="#5ed6ff" />
                     ) : (
                       <div className="opacity-70">
-                        <DiceSVG value={visibleDiceValue} size={40} />
+                        <DiceSVG value={visibleDiceValue} size={40} tint="#5ed6ff" />
                       </div>
                     )}
                   </div>
@@ -2129,18 +2017,17 @@ export default function LudoRoomPage() {
         }
 
         @keyframes ludo-hand-dice-roll {
-          0% { transform: translate(0, 0) rotate(0deg) scale(1); }
-          18% { transform: translate(-2px, -3px) rotate(-7deg) scale(1.025); }
-          36% { transform: translate(3px, -1px) rotate(6deg) scale(0.995); }
-          54% { transform: translate(-2px, 2px) rotate(-5deg) scale(1.018); }
-          72% { transform: translate(2px, -2px) rotate(5deg) scale(1.02); }
-          88% { transform: translate(-1px, 1px) rotate(-3deg) scale(0.998); }
-          100% { transform: translate(0, 0) rotate(0deg) scale(1); }
+          0% { transform: translate3d(0, 0, 0) rotateX(0deg) rotateY(0deg) rotate(0deg) scale(1); }
+          20% { transform: translate3d(-1px, -2px, 0) rotateX(16deg) rotateY(-14deg) rotate(-7deg) scale(1.03); }
+          40% { transform: translate3d(2px, -1px, 0) rotateX(-12deg) rotateY(16deg) rotate(6deg) scale(0.995); }
+          60% { transform: translate3d(-1px, 1px, 0) rotateX(10deg) rotateY(-10deg) rotate(-4deg) scale(1.018); }
+          80% { transform: translate3d(1px, -1px, 0) rotateX(-6deg) rotateY(8deg) rotate(3deg) scale(1.01); }
+          100% { transform: translate3d(0, 0, 0) rotateX(0deg) rotateY(0deg) rotate(0deg) scale(1); }
         }
 
         @keyframes ludo-hand-dice-settle {
-          0% { transform: translate(-1px, -2px) rotate(-4deg) scale(1.03); }
-          55% { transform: translate(1px, 1px) rotate(3deg) scale(0.988); }
+          0% { transform: translate3d(-1px, -1px, 0) rotate(-3deg) scale(1.02); }
+          55% { transform: translate3d(1px, 0, 0) rotate(2deg) scale(0.992); }
           100% { transform: translate(0, 0) rotate(0deg) scale(1); }
         }
       `}</style>
