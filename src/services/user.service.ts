@@ -39,4 +39,11 @@ export const UserService = {
     const res = await api.get<ApiResponse<any>>("/user/bonus-history");
     return res.data;
   },
+
+  getTurnover: async (completedPage = 1, completedLimit = 10) => {
+    const res = await api.get<ApiResponse<any>>(
+      `/turnover/my?completedPage=${completedPage}&completedLimit=${completedLimit}`,
+    );
+    return res.data;
+  },
 };

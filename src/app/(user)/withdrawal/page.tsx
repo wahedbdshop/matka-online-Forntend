@@ -6,6 +6,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { useRouter } from "next/navigation";
 import {
   ChevronLeft,
   Clock,
@@ -106,6 +107,16 @@ const STATUS_ICON: Record<string, any> = {
 };
 
 const fmt = (n: number | string) => Number(n).toLocaleString("en-BD");
+
+function isTurnoverBlockedMessage(message?: string) {
+  const normalized = message?.toLowerCase().trim() ?? "";
+  return (
+    normalized.includes("complete your turnover") ||
+    normalized.includes("turnover first") ||
+    normalized.includes("টার্নওভার") ||
+    normalized.includes("टर्नओवर")
+  );
+}
 
 function getWithdrawalStatusLabel(status?: string) {
   switch (status) {
@@ -325,6 +336,7 @@ function AccountCard({
 
 // ─── Main Component ───────────────────────────────────────────
 export default function WithdrawPage() {
+  const router = useRouter();
   const { language } = useLanguage();
   const queryClient = useQueryClient();
   const updateUser = useAuthStore((state) => state.updateUser);
@@ -583,6 +595,13 @@ export default function WithdrawPage() {
     ? (METHOD_EMOJI[selectedMethod.name.toLowerCase()] ?? "💳")
     : "💳";
 
+  const redirectToTurnover = (message: string) => {
+    toast.error(message);
+    window.setTimeout(() => {
+      router.push("/profile/turnover");
+    }, 900);
+  };
+
   // ── Mutations ─────────────────────────────────────────────
   const { mutate: createWithdrawal, isPending } = useMutation({
     mutationFn: WithdrawalService.create,
@@ -663,8 +682,14 @@ export default function WithdrawPage() {
       resetFlow();
       setTab("history");
     },
-    onError: (e: any) =>
-      toast.error(e?.response?.data?.message || "Failed to submit"),
+    onError: (e: any) => {
+      const message = e?.response?.data?.message || "Failed to submit";
+      if (isTurnoverBlockedMessage(message)) {
+        redirectToTurnover(message);
+        return;
+      }
+      toast.error(message);
+    },
   });
 
   // ── Helpers ───────────────────────────────────────────────

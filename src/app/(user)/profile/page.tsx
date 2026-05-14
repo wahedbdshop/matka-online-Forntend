@@ -18,6 +18,7 @@ import {
   BadgeDollarSign,
   Gift,
   Languages,
+  Gauge,
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -87,6 +88,13 @@ const menuItems = [
     labelKey: "bonusHistory" as const,
     color: "text-emerald-600 dark:text-emerald-400",
     bg: "bg-emerald-100 dark:bg-emerald-500/10",
+  },
+  {
+    href: "/profile/turnover",
+    icon: Gauge,
+    labelKey: "turnoverTitle" as const,
+    color: "text-fuchsia-600 dark:text-fuchsia-400",
+    bg: "bg-fuchsia-100 dark:bg-fuchsia-500/10",
   },
   {
     href: "/kyc",

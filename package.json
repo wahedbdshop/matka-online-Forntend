@@ -4,7 +4,8 @@
   "private": true,
   "packageManager": "pnpm@9.15.9",
   "scripts": {
-    "dev": "next dev --webpack",
+    "dev": "next dev",
+    "dev:webpack": "next dev --webpack",
     "dev:turbo": "next dev",
     "build": "next build",
     "postbuild": "node scripts/prepare-standalone.mjs",

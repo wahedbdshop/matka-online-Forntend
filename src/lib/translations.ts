@@ -48,6 +48,20 @@ type TranslationDictionary = {
     logoutFailed: string;
     refreshBalance: string;
     notSet: string;
+    turnoverTitle: string;
+    turnoverDescription: string;
+    turnoverActive: string;
+    turnoverCompleted: string;
+    turnoverReady: string;
+    turnoverLocked: string;
+    turnoverMain: string;
+    turnoverBonus: string;
+    turnoverTarget: string;
+    turnoverDone: string;
+    turnoverRemaining: string;
+    turnoverStatus: string;
+    turnoverEmpty: string;
+    turnoverCompletedEmpty: string;
   };
 };
 
@@ -101,6 +115,20 @@ export const translations: Record<AppLanguage, TranslationDictionary> = {
       logoutFailed: "Failed to log out",
       refreshBalance: "Refresh balance",
       notSet: "Not set",
+      turnoverTitle: "Turnover",
+      turnoverDescription: "Complete turnover to unlock withdrawal.",
+      turnoverActive: "Active",
+      turnoverCompleted: "Completed",
+      turnoverReady: "Withdrawal is ready",
+      turnoverLocked: "Please complete your turnover first.",
+      turnoverMain: "Main Turnover",
+      turnoverBonus: "Bonus Turnover",
+      turnoverTarget: "Target",
+      turnoverDone: "Completed",
+      turnoverRemaining: "Remaining",
+      turnoverStatus: "Status",
+      turnoverEmpty: "No active turnover right now.",
+      turnoverCompletedEmpty: "No completed turnover history yet.",
     },
   },
   bn: {
@@ -152,6 +180,20 @@ export const translations: Record<AppLanguage, TranslationDictionary> = {
       logoutFailed: "লগ আউট করা যায়নি",
       refreshBalance: "ব্যালেন্স রিফ্রেশ করুন",
       notSet: "সেট করা হয়নি",
+      turnoverTitle: "টার্নওভার",
+      turnoverDescription: "উইথড্র আনলক করতে টার্নওভার সম্পূর্ণ করুন।",
+      turnoverActive: "চলমান",
+      turnoverCompleted: "সম্পন্ন",
+      turnoverReady: "উইথড্র প্রস্তুত",
+      turnoverLocked: "দয়া করে আগে আপনার টার্নওভার সম্পূর্ণ করুন।",
+      turnoverMain: "মেইন টার্নওভার",
+      turnoverBonus: "বোনাস টার্নওভার",
+      turnoverTarget: "টার্গেট",
+      turnoverDone: "সম্পন্ন",
+      turnoverRemaining: "বাকি",
+      turnoverStatus: "স্ট্যাটাস",
+      turnoverEmpty: "এই মুহূর্তে কোনো চলমান টার্নওভার নেই।",
+      turnoverCompletedEmpty: "এখনও কোনো completed turnover history নেই।",
     },
   },
   hi: {
@@ -203,6 +245,20 @@ export const translations: Record<AppLanguage, TranslationDictionary> = {
       logoutFailed: "लॉग आउट नहीं हो सका",
       refreshBalance: "बैलेंस रीफ्रेश करें",
       notSet: "सेट नहीं है",
+      turnoverTitle: "टर्नओवर",
+      turnoverDescription: "निकासी अनलॉक करने के लिए टर्नओवर पूरा करें।",
+      turnoverActive: "सक्रिय",
+      turnoverCompleted: "पूर्ण",
+      turnoverReady: "निकासी तैयार है",
+      turnoverLocked: "कृपया पहले अपना टर्नओवर पूरा करें।",
+      turnoverMain: "मुख्य टर्नओवर",
+      turnoverBonus: "बोनस टर्नओवर",
+      turnoverTarget: "टार्गेट",
+      turnoverDone: "पूर्ण",
+      turnoverRemaining: "बाकी",
+      turnoverStatus: "स्टेटस",
+      turnoverEmpty: "अभी कोई सक्रिय टर्नओवर नहीं है।",
+      turnoverCompletedEmpty: "अभी तक कोई पूर्ण टर्नओवर हिस्ट्री नहीं है।",
     },
   },
 };
