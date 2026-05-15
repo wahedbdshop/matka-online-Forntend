@@ -63,15 +63,15 @@ const EMPTY_BD: AgentForm = {
   whatsappIcon: "",
   country: "",
   extraMethods: [],
-  bkashMin: 500,
+  bkashMin: 200,
   bkashMax: 30000,
-  nagadMin: 500,
+  nagadMin: 200,
   nagadMax: 30000,
-  rocketMin: 500,
+  rocketMin: 200,
   rocketMax: 30000,
-  upayMin: 500,
+  upayMin: 200,
   upayMax: 30000,
-  whatsappMin: 500,
+  whatsappMin: 200,
   whatsappMax: 30000,
 };
 
@@ -139,7 +139,7 @@ export default function CreateAgentPage() {
       type: agentType,
       extraMethods: form.extraMethods.map((method) => ({
         ...method,
-        min: Number(method.min ?? 500),
+          min: Number(method.min ?? 200),
         max: Number(method.max ?? 30000),
       })),
     });
@@ -302,7 +302,7 @@ export default function CreateAgentPage() {
                     setForm((prev) => ({
                       ...prev,
                       extraMethods: [
-                        { name: "", number: "", logo: "", min: 500, max: 30000 },
+                        { name: "", number: "", logo: "", min: 200, max: 30000 },
                         ...prev.extraMethods,
                       ],
                     }))
@@ -372,7 +372,7 @@ export default function CreateAgentPage() {
                           <label className="mb-1 block text-[10px] text-slate-500">Min (৳)</label>
                           <input
                             type="number"
-                            value={method.min ?? 500}
+                            value={method.min ?? 200}
                             onChange={(e) => updateExtra(i, "min", e.target.value)}
                             className={`w-full rounded-lg border border-slate-600 bg-slate-700 px-2 py-1.5 text-xs text-white outline-none ${getCustomMethodTheme().focus}`}
                           />
@@ -410,7 +410,7 @@ export default function CreateAgentPage() {
                     whatsappNumber: "",
                     whatsappIcon: "",
                     country: "",
-                    whatsappMin: 500,
+                    whatsappMin: 200,
                     whatsappMax: 30000,
                   }))
                 }

@@ -61,15 +61,15 @@ const EMPTY_BD: AgentForm = {
   whatsappIcon: "",
   country: "",
   extraMethods: [],
-  bkashMin: 500,
+  bkashMin: 200,
   bkashMax: 30000,
-  nagadMin: 500,
+  nagadMin: 200,
   nagadMax: 30000,
-  rocketMin: 500,
+  rocketMin: 200,
   rocketMax: 30000,
-  upayMin: 500,
+  upayMin: 200,
   upayMax: 30000,
-  whatsappMin: 500,
+  whatsappMin: 200,
   whatsappMax: 30000,
 };
 
@@ -237,7 +237,7 @@ export default function EditAgentPage() {
                           ...prev,
                           bkashNumber: "",
                           bkashLogo: "",
-                          bkashMin: 500,
+                          bkashMin: 200,
                           bkashMax: 30000,
                         }))
                       }
@@ -296,7 +296,7 @@ export default function EditAgentPage() {
                           ...prev,
                           nagadNumber: "",
                           nagadLogo: "",
-                          nagadMin: 500,
+                          nagadMin: 200,
                           nagadMax: 30000,
                         }))
                       }
@@ -355,7 +355,7 @@ export default function EditAgentPage() {
                           ...prev,
                           rocketNumber: "",
                           rocketLogo: "",
-                          rocketMin: 500,
+                          rocketMin: 200,
                           rocketMax: 30000,
                         }))
                       }
@@ -414,7 +414,7 @@ export default function EditAgentPage() {
                           ...prev,
                           upayNumber: "",
                           upayLogo: "",
-                          upayMin: 500,
+                          upayMin: 200,
                           upayMax: 30000,
                         }))
                       }
@@ -475,7 +475,7 @@ export default function EditAgentPage() {
                             name: "",
                             number: "",
                             logo: "",
-                            min: 500,
+                            min: 200,
                             max: 30000,
                           },
                           ...prev.extraMethods,
@@ -568,7 +568,7 @@ export default function EditAgentPage() {
                               </label>
                               <input
                                 type="number"
-                                value={method.min ?? 500}
+                                value={method.min ?? 200}
                                 onChange={(e) =>
                                   updateExtra(i, "min", e.target.value)
                                 }
@@ -615,7 +615,7 @@ export default function EditAgentPage() {
                         whatsappNumber: "",
                         whatsappIcon: "",
                         country: "",
-                        whatsappMin: 500,
+                        whatsappMin: 200,
                         whatsappMax: 30000,
                       }))
                     }

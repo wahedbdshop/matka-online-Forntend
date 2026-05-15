@@ -940,6 +940,11 @@ export default function AdminDashboardPage() {
               href: "/admin/tickets",
               color: "text-blue-400   bg-blue-500/10   border-blue-500/20",
             },
+            {
+              label: "Turnover Settings",
+              href: "/admin/turnover",
+              color: "text-violet-400 bg-violet-500/10 border-violet-500/20",
+            },
           ].map((item) => (
             <Link
               key={item.href}

@@ -24,6 +24,7 @@ const settingGroups = [
   "game_control",
   "referral",
   "social",
+  "turnover",
 ];
 
 export default function AdminSettingsPage() {

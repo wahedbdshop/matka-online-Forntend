@@ -210,6 +210,11 @@ const navItems: NavItem[] = [
         label: "Commission Settings",
       },
       {
+        href: "/admin/turnover",
+        icon: Percent,
+        label: "Turnover Settings",
+      },
+      {
         href: "/admin/deposits/controls",
         icon: Settings,
         label: "Deposit Controls",

@@ -52,13 +52,13 @@ const EMPTY_BD = {
     max?: number;
   }[],
   // âœ… Deposit limits
-  bkashMin: 500,
+  bkashMin: 200,
   bkashMax: 30000,
-  nagadMin: 500,
+  nagadMin: 200,
   nagadMax: 30000,
-  rocketMin: 500,
+  rocketMin: 200,
   rocketMax: 30000,
-  upayMin: 500,
+  upayMin: 200,
   upayMax: 30000,
 };
 
@@ -607,7 +607,7 @@ export default function AgentsPage() {
                             ...p,
                             bkashNumber: "",
                             bkashLogo: "",
-                            bkashMin: 500,
+                            bkashMin: 200,
                             bkashMax: 30000,
                           }))
                         }
@@ -632,7 +632,7 @@ export default function AgentsPage() {
                             ...p,
                             nagadNumber: "",
                             nagadLogo: "",
-                            nagadMin: 500,
+                            nagadMin: 200,
                             nagadMax: 30000,
                           }))
                         }
@@ -657,7 +657,7 @@ export default function AgentsPage() {
                             ...p,
                             rocketNumber: "",
                             rocketLogo: "",
-                            rocketMin: 500,
+                            rocketMin: 200,
                             rocketMax: 30000,
                           }))
                         }
@@ -680,7 +680,7 @@ export default function AgentsPage() {
                               name: "",
                               number: "",
                               logo: "",
-                              min: 500,
+                              min: 200,
                               max: 30000,
                             },
                             ...(p.extraMethods ?? []),
@@ -897,7 +897,7 @@ export default function AgentsPage() {
                             whatsappNumber: "",
                             whatsappIcon: "",
                             country: "",
-                            whatsappMin: 500,
+                            whatsappMin: 200,
                             whatsappMax: 30000,
                           }))
                         }
@@ -913,7 +913,7 @@ export default function AgentsPage() {
                         </label>
                         <input
                           type="number"
-                          value={form.whatsappMin ?? 500}
+                          value={form.whatsappMin ?? 200}
                           onChange={(e) =>
                             setForm((p: any) => ({
                               ...p,
