@@ -215,45 +215,47 @@ export default function ProfilePage() {
         <div className="pointer-events-none absolute -top-12 -right-10 h-40 w-40 rounded-full bg-violet-300/25 blur-3xl dark:bg-purple-600/20" />
         <div className="pointer-events-none absolute -bottom-10 -left-10 h-32 w-32 rounded-full bg-cyan-300/20 blur-3xl dark:bg-blue-600/15" />
 
-        <div className="relative flex items-center gap-3">
+        <div className="relative grid grid-cols-[auto_minmax(0,1fr)] items-start gap-3 sm:flex sm:items-center">
           <div className="relative shrink-0">
             <div className="absolute inset-0 animate-pulse rounded-full bg-gradient-to-r from-purple-500 to-blue-500 blur-md opacity-50" />
-            <Avatar className="relative h-[72px] w-[72px] border-2 border-purple-400/60 shadow-[0_0_20px_rgba(139,92,246,0.28)]">
+            <Avatar className="relative h-16 w-16 border-2 border-purple-400/60 shadow-[0_0_20px_rgba(139,92,246,0.28)] sm:h-[72px] sm:w-[72px]">
               <AvatarImage src={profile?.image} />
-              <AvatarFallback className="bg-gradient-to-br from-purple-600 to-blue-600 text-2xl font-bold text-white">
+              <AvatarFallback className="bg-gradient-to-br from-purple-600 to-blue-600 text-xl font-bold text-white sm:text-2xl">
                 {profile?.name?.charAt(0)?.toUpperCase()}
               </AvatarFallback>
             </Avatar>
           </div>
 
           <div className="min-w-0 flex-1">
-            <div className="grid gap-2.5 sm:grid-cols-[minmax(0,1.2fr)_minmax(0,0.9fr)] sm:items-start">
+            <div className="grid grid-cols-[minmax(0,1fr)_128px] gap-2 border-slate-200/80 sm:gap-2.5 sm:grid-cols-[minmax(0,1.2fr)_minmax(0,0.9fr)] sm:items-start dark:border-white/10">
               <div className="min-w-0">
-                <div className="flex flex-wrap items-baseline gap-1.5">
+                <div className="space-y-1">
                   <p className="text-sm font-medium text-slate-500 dark:text-slate-400">
                     Full name :
                   </p>
-                  <h2 className="truncate text-[1.7rem] font-bold leading-tight text-slate-950 dark:text-white">
+                  <h2 className="break-words text-[clamp(1.02rem,4.8vw,1.7rem)] font-bold leading-tight text-slate-950 sm:text-[1.7rem] dark:text-white">
                     {profile?.name}
                   </h2>
                 </div>
               </div>
-              <div className="min-w-0 border-l-0 border-slate-200/80 pl-0 dark:border-white/10 sm:border-l sm:pl-4">
-                <div className="flex flex-wrap items-center gap-1.5">
+              <div className="min-w-0 border-l border-slate-200/80 pl-3 dark:border-white/10 sm:pl-4">
+                <div className="space-y-1">
                   <p className="text-sm font-medium text-slate-500 dark:text-slate-400">
                     Username :
                   </p>
-                  <p className="truncate text-lg font-semibold text-slate-800 dark:text-slate-200">
-                    @{profile?.username}
-                  </p>
-                  <button
-                    type="button"
-                    onClick={handleCopyUsername}
-                    className="shrink-0 rounded-md border border-slate-200 bg-white/80 p-2 text-slate-500 transition hover:border-violet-300 hover:text-violet-600 dark:border-white/10 dark:bg-white/5 dark:text-slate-400 dark:hover:border-purple-500/30 dark:hover:text-purple-300"
-                    aria-label="Copy username"
-                  >
-                    <Copy className="h-3.5 w-3.5" />
-                  </button>
+                  <div className="flex items-start gap-2">
+                    <p className="min-w-0 flex-1 truncate pt-0.5 text-sm font-semibold text-slate-800 sm:text-lg dark:text-slate-200">
+                      @{profile?.username}
+                    </p>
+                    <button
+                      type="button"
+                      onClick={handleCopyUsername}
+                      className="shrink-0 rounded-md border border-slate-200 bg-white/80 p-2 text-slate-500 transition hover:border-violet-300 hover:text-violet-600 dark:border-white/10 dark:bg-white/5 dark:text-slate-400 dark:hover:border-purple-500/30 dark:hover:text-purple-300"
+                      aria-label="Copy username"
+                    >
+                      <Copy className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -284,7 +286,7 @@ export default function ProfilePage() {
         <div className="relative mt-4 space-y-2 border-t border-slate-200/80 pt-3 dark:border-white/10">
           <div className="flex items-center gap-2.5 text-sm text-slate-700 dark:text-slate-300">
             <Mail className="h-4 w-4 shrink-0 text-slate-500 dark:text-slate-500" />
-            <span className="truncate">{profile?.email}</span>
+            <span className="min-w-0 break-all">{profile?.email}</span>
           </div>
           <div className="flex items-center gap-2.5 text-sm text-slate-700 dark:text-slate-300">
             <Phone className="h-4 w-4 shrink-0 text-slate-500 dark:text-slate-500" />

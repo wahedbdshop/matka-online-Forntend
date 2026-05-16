@@ -63,7 +63,7 @@ function AndroidAppLogo() {
     <svg
       viewBox="0 0 48 48"
       aria-hidden="true"
-      className="h-7 w-7"
+      className="h-8 w-8"
       fill="none"
     >
       <path
@@ -214,18 +214,18 @@ export default function LandingPage() {
             ) : null}
 
             {isHotTab ? (
-              <div className="relative overflow-hidden rounded-[26px] border border-[#5f2db0] bg-[linear-gradient(180deg,#3c1f72_0%,#272b69_48%,#1c2554_100%)] p-5 text-center shadow-[0_22px_45px_rgba(9,14,31,0.45)]">
-                <div className="absolute inset-x-0 top-0 h-px bg-[linear-gradient(90deg,transparent,#d4a2ff,transparent)]" />
-                <div className="absolute -left-10 top-10 h-28 w-28 rounded-full bg-[#ffcc33]/12 blur-3xl" />
-                <div className="absolute -right-8 bottom-0 h-24 w-24 rounded-full bg-[#9f69ff]/18 blur-3xl" />
+              <div className="relative overflow-hidden rounded-[26px] border border-violet-300 bg-[linear-gradient(180deg,#faf5ff_0%,#e9ecff_48%,#dceaff_100%)] p-5 text-center shadow-[0_22px_45px_rgba(148,163,184,0.24)] dark:border-[#5f2db0] dark:bg-[linear-gradient(180deg,#3c1f72_0%,#272b69_48%,#1c2554_100%)] dark:shadow-[0_22px_45px_rgba(9,14,31,0.45)]">
+                <div className="absolute inset-x-0 top-0 h-px bg-[linear-gradient(90deg,transparent,#8b5cf6,transparent)] dark:bg-[linear-gradient(90deg,transparent,#d4a2ff,transparent)]" />
+                <div className="absolute -left-10 top-10 h-28 w-28 rounded-full bg-amber-300/20 blur-3xl dark:bg-[#ffcc33]/12" />
+                <div className="absolute -right-8 bottom-0 h-24 w-24 rounded-full bg-violet-300/30 blur-3xl dark:bg-[#9f69ff]/18" />
                 <div className="relative">
-                  <p className="mb-1.5 text-[10px] font-bold uppercase tracking-[0.24em] text-[#ffd232]">
+                  <p className="mb-1.5 text-[10px] font-bold uppercase tracking-[0.24em] text-amber-500 dark:text-[#ffd232]">
                     Welcome Bonus
                   </p>
-                  <p className="mb-1 text-2xl font-black text-white">
+                  <p className="mb-1 text-2xl font-black text-slate-950 dark:text-white">
                     5% Referral Bonus
                   </p>
-                  <p className="mb-4 text-xs text-[#b6bee0]">
+                  <p className="mb-4 text-xs text-slate-600 dark:text-[#b6bee0]">
                     For every deposit - Lifetime - Level 1-5
                   </p>
                   <div className="flex justify-center gap-2">
@@ -235,8 +235,10 @@ export default function LandingPage() {
                       </button>
                     </Link>
                     <Link href="/login">
-                      <button className="rounded-xl border border-[#4f5d91] bg-[#1a2540]/80 px-5 py-2.5 text-sm font-semibold text-slate-200 transition-all hover:text-white">
-                        Login
+                      <button className="rounded-xl border border-slate-300 bg-white px-5 py-2.5 text-sm font-bold text-slate-900 shadow-[0_8px_20px_rgba(148,163,184,0.2)] transition-all hover:border-slate-400 hover:bg-slate-50 dark:border-[#4f5d91] dark:bg-[#1a2540]/80 dark:text-slate-200 dark:hover:text-white">
+                        <span className="text-slate-900 dark:text-slate-200">
+                          Login
+                        </span>
                       </button>
                     </Link>
                   </div>
@@ -299,9 +301,9 @@ export default function LandingPage() {
             {isHotTab || isLiveTab ? (
               <section id="winners" className="space-y-4">
                 {isLiveTab ? (
-                  <div className="rounded-[26px] border border-[#3a4a74] bg-[#17213a] p-4 shadow-[0_18px_40px_rgba(3,8,20,0.28)]">
-                    <p className="text-lg font-black text-white">Live Winners</p>
-                    <p className="mt-1 text-xs text-slate-400">
+                  <div className="rounded-[26px] border border-slate-200 bg-white p-4 shadow-[0_18px_40px_rgba(148,163,184,0.18)] dark:border-[#3a4a74] dark:bg-[#17213a] dark:shadow-[0_18px_40px_rgba(3,8,20,0.28)]">
+                    <p className="text-lg font-black text-slate-950 dark:text-white">Live Winners</p>
+                    <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
                       Latest public winner boards
                     </p>
                   </div>
@@ -319,12 +321,12 @@ export default function LandingPage() {
             {isPageTab ? (
               <section
                 id="page-links"
-                className="rounded-[26px] border border-[#3a4a74] bg-[#17213a] p-4 shadow-[0_18px_40px_rgba(3,8,20,0.28)]"
+                className="rounded-[26px] border border-slate-200 bg-white p-4 shadow-[0_18px_40px_rgba(148,163,184,0.18)] dark:border-[#3a4a74] dark:bg-[#17213a] dark:shadow-[0_18px_40px_rgba(3,8,20,0.28)]"
               >
                 <div className="mb-4 flex items-center justify-between">
                   <div>
-                    <p className="text-lg font-black text-white">Page Links</p>
-                    <p className="text-xs text-slate-400">
+                    <p className="text-lg font-black text-slate-950 dark:text-white">Page Links</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">
                       Public information pages
                     </p>
                   </div>
@@ -339,9 +341,9 @@ export default function LandingPage() {
                       <Link
                         key={item.href}
                         href={item.href}
-                        className="flex items-center gap-3 rounded-2xl border border-[#31436d] bg-[#202b46] px-4 py-3 text-sm font-semibold text-slate-100 transition-colors hover:bg-[#273554]"
+                        className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-900 transition-colors hover:bg-white dark:border-[#31436d] dark:bg-[#202b46] dark:text-slate-100 dark:hover:bg-[#273554]"
                       >
-                        <span className="flex h-10 w-10 items-center justify-center rounded-xl border border-[#3d4f7b] bg-[#1b2540]">
+                        <span className="flex h-10 w-10 items-center justify-center rounded-xl border border-amber-200 bg-amber-50 dark:border-[#3d4f7b] dark:bg-[#1b2540]">
                           <Icon className="h-4.5 w-4.5 text-[#f0bf38]" />
                         </span>
                         <span>{item.label}</span>
@@ -355,12 +357,12 @@ export default function LandingPage() {
             {isGamesTab ? (
               <section
                 id="game-links"
-                className="rounded-[26px] border border-[#3a4a74] bg-[#17213a] p-4 shadow-[0_18px_40px_rgba(3,8,20,0.28)]"
+                className="rounded-[26px] border border-slate-200 bg-white p-4 shadow-[0_18px_40px_rgba(148,163,184,0.18)] dark:border-[#3a4a74] dark:bg-[#17213a] dark:shadow-[0_18px_40px_rgba(3,8,20,0.28)]"
               >
                 <div className="mb-4 flex items-center justify-between">
                   <div>
-                    <p className="text-lg font-black text-white">Game Links</p>
-                    <p className="text-xs text-slate-400">Public result pages</p>
+                    <p className="text-lg font-black text-slate-950 dark:text-white">Game Links</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">Public result pages</p>
                   </div>
                   <Gamepad2 className="h-8 w-8 text-[#73cfff]" />
                 </div>
@@ -373,9 +375,9 @@ export default function LandingPage() {
                       <Link
                         key={item.href}
                         href={item.href}
-                        className="flex items-center gap-3 rounded-2xl border border-[#31436d] bg-[#202b46] px-4 py-3 text-sm font-semibold text-slate-100 transition-colors hover:bg-[#273554]"
+                        className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-900 transition-colors hover:bg-white dark:border-[#31436d] dark:bg-[#202b46] dark:text-slate-100 dark:hover:bg-[#273554]"
                       >
-                        <span className="flex h-10 w-10 items-center justify-center rounded-xl border border-[#3d4f7b] bg-[#1b2540]">
+                        <span className="flex h-10 w-10 items-center justify-center rounded-xl border border-sky-200 bg-sky-50 dark:border-[#3d4f7b] dark:bg-[#1b2540]">
                           <Icon className="h-4.5 w-4.5 text-[#73cfff]" />
                         </span>
                         <span>{item.label}</span>
@@ -397,29 +399,29 @@ export default function LandingPage() {
                       icon: Shield,
                       label: "100% Secure",
                       sub: "SSL encrypted",
-                      color: "text-green-400",
-                      bg: "border-green-500/20 bg-green-500/10",
+                      color: "text-green-600 dark:text-green-400",
+                      bg: "border-green-200 bg-emerald-50 dark:border-green-500/20 dark:bg-green-500/10",
                     },
                     {
                       icon: Zap,
                       label: "Fast Withdrawal",
                       sub: "Within 10 minutes",
-                      color: "text-[#f0bf38]",
-                      bg: "border-[#6b5a1f]/50 bg-[#f0bf38]/10",
+                      color: "text-amber-500 dark:text-[#f0bf38]",
+                      bg: "border-amber-200 bg-amber-50 dark:border-[#6b5a1f]/50 dark:bg-[#f0bf38]/10",
                     },
                     {
                       icon: Users,
                       label: "24/7 Support",
                       sub: "Always available",
-                      color: "text-sky-400",
-                      bg: "border-sky-500/20 bg-sky-500/10",
+                      color: "text-sky-500 dark:text-sky-400",
+                      bg: "border-sky-200 bg-sky-50 dark:border-sky-500/20 dark:bg-sky-500/10",
                     },
                     {
                       icon: Gift,
                       label: "Bonus Program",
                       sub: "5% lifetime",
-                      color: "text-[#f0bf38]",
-                      bg: "border-[#6b5a1f]/50 bg-[#f0bf38]/10",
+                      color: "text-amber-500 dark:text-[#f0bf38]",
+                      bg: "border-amber-200 bg-amber-50 dark:border-[#6b5a1f]/50 dark:bg-[#f0bf38]/10",
                     },
                   ].map((feature) => (
                     <div
@@ -433,26 +435,26 @@ export default function LandingPage() {
                         "mb-2 h-5 w-5",
                         feature.color,
                       )} />
-                      <p className="text-sm font-bold text-white">
+                      <p className="text-sm font-bold text-slate-950 dark:text-white">
                         {feature.label}
                       </p>
-                      <p className="mt-0.5 text-[10px] text-slate-500">
+                      <p className="mt-0.5 text-[10px] text-slate-500 dark:text-slate-400">
                         {feature.sub}
                       </p>
                     </div>
                   ))}
                 </div>
 
-                <div className="rounded-2xl border border-[#6b5a1f]/50 bg-linear-to-br from-[#1e1a08] via-[#1a2540] to-[#0f1828] p-4">
+                <div className="rounded-2xl border border-amber-200 bg-linear-to-br from-amber-50 via-white to-sky-50 p-4 dark:border-[#6b5a1f]/50 dark:from-[#1e1a08] dark:via-[#1a2540] dark:to-[#0f1828]">
                   <div className="flex items-center gap-3">
-                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-[#6b5a1f]/50 bg-[#f0bf38]/10 text-2xl">
+                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-amber-200 bg-amber-100 text-2xl dark:border-[#6b5a1f]/50 dark:bg-[#f0bf38]/10">
                       🎁
                     </div>
                     <div className="min-w-0">
                       <p className="text-sm font-bold text-[#f0bf38]">
                         Get 5% Referral Bonus
                       </p>
-                      <p className="mt-0.5 text-xs text-slate-400">
+                      <p className="mt-0.5 text-xs text-slate-600 dark:text-slate-400">
                         For every deposit - lifetime · Level 1-5
                       </p>
                     </div>
@@ -466,11 +468,11 @@ export default function LandingPage() {
 
                 <PaymentMethodsRow methods={paymentMethods} />
 
-                <div className="space-y-3 rounded-2xl border border-[#2e3a5c] bg-[#1a2540]/60 p-5 text-center">
+                <div className="space-y-3 rounded-2xl border border-slate-200 bg-white/90 p-5 text-center shadow-[0_16px_36px_rgba(148,163,184,0.16)] dark:border-[#2e3a5c] dark:bg-[#1a2540]/60 dark:shadow-none">
                   <MessageCircle className="mx-auto h-7 w-7 text-[#f0bf38]" />
                   <div>
-                    <p className="text-sm font-bold text-white">Need Help?</p>
-                    <p className="mt-0.5 text-xs text-slate-400">
+                    <p className="text-sm font-bold text-slate-950 dark:text-white">Need Help?</p>
+                    <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
                       Our support team is always ready to help
                     </p>
                   </div>
@@ -484,17 +486,17 @@ export default function LandingPage() {
 
                 <div
                   id="seo"
-                  className="space-y-3 rounded-[24px] border border-[#3e4873] bg-[#1a2540] p-4"
+                  className="space-y-3 rounded-[24px] border border-slate-200 bg-white p-4 shadow-[0_18px_40px_rgba(148,163,184,0.18)] dark:border-[#3e4873] dark:bg-[#1a2540]"
                 >
-                  <p className="text-sm font-bold text-white">
+                  <p className="text-sm font-bold text-slate-950 dark:text-white">
                     Top Betting Exchange - South East Asia
                   </p>
-                  <p className="text-[11px] leading-relaxed text-slate-500">
+                  <p className="text-[11px] leading-relaxed text-slate-600 dark:text-slate-500">
                     India, Pakistan, Sri Lanka, Nepal, Bangladesh & South East
                     Asia&apos;s most trusted online lottery platform. Enjoy fast
                     withdrawals, secure payments, and 24/7 customer support.
                   </p>
-                  <div className="space-y-1 text-[11px] text-slate-400">
+                  <div className="space-y-1 text-[11px] text-slate-700 dark:text-slate-400">
                     {[
                       "5% referral bonus for every deposit - lifetime · Level 1-5",
                       "1% register bonus with quick customer support",
@@ -508,34 +510,35 @@ export default function LandingPage() {
                         "www.matkaonline24.online",
                       ]}
                       className="pt-1"
-                      theme="dark"
+                      theme="adaptive"
                     />
                   </div>
                 </div>
 
-                <div className="rounded-[22px] border border-[#35507f] bg-[linear-gradient(180deg,#182849_0%,#121d35_100%)] p-4 shadow-[0_18px_42px_rgba(3,7,18,0.32)]">
+                <div className="rounded-[22px] border border-slate-200 bg-[linear-gradient(180deg,#ffffff_0%,#eef4ff_100%)] p-4 shadow-[0_18px_42px_rgba(148,163,184,0.2)] dark:border-[#35507f] dark:bg-[linear-gradient(180deg,#182849_0%,#121d35_100%)] dark:shadow-[0_18px_42px_rgba(3,7,18,0.32)]">
                   <div className="flex items-start gap-3">
-                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-[#3ddc84]/45 bg-[#3ddc84]/12 text-[#3ddc84] shadow-sm shadow-[#3ddc84]/15">
+                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-emerald-400 bg-emerald-200 text-emerald-800 shadow-[0_12px_28px_rgba(16,185,129,0.2)] dark:border-[#3ddc84]/45 dark:bg-[#3ddc84]/12 dark:text-[#3ddc84] dark:shadow-[#3ddc84]/15">
                       <AndroidAppLogo />
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p className="text-sm font-black text-white">
+                      <p className="text-sm font-black text-slate-950 dark:text-white">
                         Official Matka Online 24 App
                       </p>
-                      <p className="mt-1 text-[11px] leading-relaxed text-slate-400">
+                      <p className="mt-1 text-[11px] leading-relaxed text-slate-600 dark:text-slate-400">
                         Secure APK from our official website. Download and play
                         faster from your Android phone.
                       </p>
-                      <DomainActionList
-                        domains={[
-                          "matka24.org",
-                          "matkaonline24.com",
-                          "matkaonline24.online",
-                        ]}
-                        className="mt-3"
-                        layout="wrap"
-                        theme="dark"
-                      />
+                      <div className="mt-3 rounded-2xl border border-slate-200/80 bg-white/80 px-3 py-2 shadow-sm dark:border-white/10 dark:bg-white/5 dark:shadow-none">
+                        <DomainActionList
+                          domains={[
+                            "matka24.org",
+                            "matkaonline24.com",
+                            "matkaonline24.online",
+                          ]}
+                          layout="wrap"
+                          theme="adaptive"
+                        />
+                      </div>
                     </div>
                   </div>
                   <a
