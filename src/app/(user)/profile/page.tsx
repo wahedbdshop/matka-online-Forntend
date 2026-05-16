@@ -38,19 +38,8 @@ import { toast } from "sonner";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useProfileQuery } from "@/hooks/use-profile-query";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  AppLanguage,
-  LANGUAGE_OPTIONS,
-  resolvePreferredLanguage,
-} from "@/lib/language";
 import { useLanguage } from "@/providers/language-provider";
+import { useUIStore } from "@/store/ui.store";
 import ProfileLoading from "./loading";
 
 const menuItems = [
@@ -60,6 +49,13 @@ const menuItems = [
     labelKey: "editProfile" as const,
     color: "text-blue-600 dark:text-blue-400",
     bg: "bg-blue-100 dark:bg-blue-500/10",
+  },
+  {
+    href: "/profile/language",
+    icon: Languages,
+    labelKey: "languageTitle" as const,
+    color: "text-sky-600 dark:text-sky-400",
+    bg: "bg-sky-100 dark:bg-sky-500/10",
   },
   {
     href: "/profile/change-password",
@@ -113,12 +109,13 @@ const menuItems = [
 ];
 
 export default function ProfilePage() {
-  const { language, setLanguage, t } = useLanguage();
+  const { t } = useLanguage();
+  const theme = useUIStore((state) => state.theme);
+  const isDarkTheme = theme === "dark";
   const clearAuth = useAuthStore((state) => state.clearAuth);
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const isAuthReady = useAuthStore((state) => state.isAuthReady);
   const userStatus = useAuthStore((state) => state.user?.status);
-  const updateUser = useAuthStore((state) => state.updateUser);
   const router = useRouter();
   const isBanned = userStatus === "BANNED";
   const [currency, setCurrency] = useState<"BDT" | "USD">("BDT");
@@ -126,18 +123,6 @@ export default function ProfilePage() {
 
   const { usdToBdt } = useCurrency();
   const { data, isLoading } = useProfileQuery();
-
-  const { mutate: saveLanguage, isPending: isLanguageSaving } = useMutation({
-    mutationFn: (nextLanguage: AppLanguage) =>
-      UserService.updateProfile({ preferredLanguage: nextLanguage }),
-    onSuccess: (_, nextLanguage) => {
-      updateUser({ preferredLanguage: nextLanguage, language: nextLanguage });
-      toast.success(t.profile.languageSaved);
-    },
-    onError: () => {
-      toast.message(t.profile.languageSaveFailed);
-    },
-  });
 
   const { data: bonusHistoryData } = useQuery({
     queryKey: ["bonus-history-summary"],
@@ -164,9 +149,6 @@ export default function ProfilePage() {
   const profile = data?.data;
   const shouldShowLoading =
     !isAuthReady || (isAuthenticated && isLoading && !profile);
-  const profileLanguage = resolvePreferredLanguage(
-    profile?.preferredLanguage ?? profile?.language ?? language,
-  );
   const balance = Number(profile?.balance ?? 0);
   const profileBonusBalance = Number(profile?.bonusBalance ?? 0);
   const bonusSummary = bonusHistoryData?.data?.summary;
@@ -199,15 +181,17 @@ export default function ProfilePage() {
     currency === "USD"
       ? `$${(bonusBalance / usdToBdt).toFixed(2)}`
       : `Rs ${bonusBalance.toLocaleString("en-BD")}`;
+  const signupDate = profile?.createdAt
+    ? new Intl.DateTimeFormat("en-BD", {
+        year: "numeric",
+        month: "short",
+        day: "2-digit",
+        timeZone: "Asia/Dhaka",
+      }).format(new Date(profile.createdAt))
+    : null;
 
-  const handleLanguageChange = (nextLanguage: AppLanguage) => {
-    setLanguage(nextLanguage);
-    updateUser({ preferredLanguage: nextLanguage, language: nextLanguage });
-    saveLanguage(nextLanguage);
-  };
-
-  const handleCopyReferral = () => {
-    navigator.clipboard.writeText(profile?.referralCode || "");
+  const handleCopyUsername = () => {
+    navigator.clipboard.writeText(profile?.username || "");
     toast.success(t.profile.copied);
   };
 
@@ -227,14 +211,14 @@ export default function ProfilePage() {
         </div>
       )}
 
-      <div className="relative overflow-hidden rounded-[24px] border border-violet-200 bg-gradient-to-br from-white via-violet-50 to-sky-50 p-5 shadow-[0_18px_50px_rgba(79,70,229,0.12)] dark:border-transparent dark:from-[#1a0a3e] dark:via-[#2d1060] dark:to-[#1a0a3e] dark:shadow-[0_0_40px_rgba(139,92,246,0.2)]">
-        <div className="pointer-events-none absolute -top-10 -right-10 h-40 w-40 rounded-full bg-violet-300/30 blur-3xl dark:bg-purple-600/20" />
-        <div className="pointer-events-none absolute -bottom-10 -left-10 h-32 w-32 rounded-full bg-cyan-300/25 blur-3xl dark:bg-blue-600/15" />
+      <div className="relative overflow-hidden rounded-[14px] border border-violet-200/70 bg-[linear-gradient(135deg,rgba(255,255,255,0.98),rgba(245,247,255,0.95)_52%,rgba(239,246,255,0.95))] p-4 shadow-[0_18px_50px_rgba(79,70,229,0.12)] dark:border-white/10 dark:bg-[linear-gradient(160deg,rgba(24,27,34,0.98),rgba(34,24,60,0.95)_55%,rgba(20,28,46,0.98))] dark:shadow-[0_0_40px_rgba(139,92,246,0.18)]">
+        <div className="pointer-events-none absolute -top-12 -right-10 h-40 w-40 rounded-full bg-violet-300/25 blur-3xl dark:bg-purple-600/20" />
+        <div className="pointer-events-none absolute -bottom-10 -left-10 h-32 w-32 rounded-full bg-cyan-300/20 blur-3xl dark:bg-blue-600/15" />
 
-        <div className="relative flex items-center gap-4">
+        <div className="relative flex items-center gap-3">
           <div className="relative shrink-0">
-            <div className="absolute inset-0 animate-pulse rounded-full bg-gradient-to-r from-purple-500 to-blue-500 blur-md opacity-60" />
-            <Avatar className="relative h-[72px] w-[72px] border-2 border-purple-500/60 shadow-[0_0_20px_rgba(139,92,246,0.4)]">
+            <div className="absolute inset-0 animate-pulse rounded-full bg-gradient-to-r from-purple-500 to-blue-500 blur-md opacity-50" />
+            <Avatar className="relative h-[72px] w-[72px] border-2 border-purple-400/60 shadow-[0_0_20px_rgba(139,92,246,0.28)]">
               <AvatarImage src={profile?.image} />
               <AvatarFallback className="bg-gradient-to-br from-purple-600 to-blue-600 text-2xl font-bold text-white">
                 {profile?.name?.charAt(0)?.toUpperCase()}
@@ -243,23 +227,37 @@ export default function ProfilePage() {
           </div>
 
           <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-1.5">
-              <span className="text-sm font-semibold text-violet-600 dark:text-purple-400">
-                {t.profile.nameLabel} :
-              </span>
-              <h2 className="text-xl font-bold leading-tight text-slate-950 dark:text-white">
-                {profile?.name}
-              </h2>
+            <div className="grid gap-2.5 sm:grid-cols-[minmax(0,1.2fr)_minmax(0,0.9fr)] sm:items-start">
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-baseline gap-1.5">
+                  <p className="text-sm font-medium text-slate-500 dark:text-slate-400">
+                    Full name :
+                  </p>
+                  <h2 className="truncate text-[1.7rem] font-bold leading-tight text-slate-950 dark:text-white">
+                    {profile?.name}
+                  </h2>
+                </div>
+              </div>
+              <div className="min-w-0 border-l-0 border-slate-200/80 pl-0 dark:border-white/10 sm:border-l sm:pl-4">
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <p className="text-sm font-medium text-slate-500 dark:text-slate-400">
+                    Username :
+                  </p>
+                  <p className="truncate text-lg font-semibold text-slate-800 dark:text-slate-200">
+                    @{profile?.username}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={handleCopyUsername}
+                    className="shrink-0 rounded-md border border-slate-200 bg-white/80 p-2 text-slate-500 transition hover:border-violet-300 hover:text-violet-600 dark:border-white/10 dark:bg-white/5 dark:text-slate-400 dark:hover:border-purple-500/30 dark:hover:text-purple-300"
+                    aria-label="Copy username"
+                  >
+                    <Copy className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              </div>
             </div>
-            <div className="mt-0.5 flex items-center gap-1.5">
-              <span className="text-sm font-semibold text-blue-600 dark:text-blue-400">
-                {t.profile.usernameLabel} :
-              </span>
-              <p className="text-sm font-medium text-slate-700 dark:text-slate-300">
-                @{profile?.username}
-              </p>
-            </div>
-            <div className="mt-2 flex items-center gap-2 flex-wrap">
+            <div className="mt-3 flex flex-wrap items-center gap-2">
               <span
                 className={`rounded-full px-2.5 py-0.5 text-[10px] font-semibold ${
                   profile?.emailVerified
@@ -275,10 +273,15 @@ export default function ProfilePage() {
                 {profile?.role}
               </span>
             </div>
+            {signupDate ? (
+              <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
+                Sign up date : {signupDate}
+              </p>
+            ) : null}
           </div>
         </div>
 
-        <div className="relative mt-4 space-y-2 border-t border-slate-200 pt-4 dark:border-white/10">
+        <div className="relative mt-4 space-y-2 border-t border-slate-200/80 pt-3 dark:border-white/10">
           <div className="flex items-center gap-2.5 text-sm text-slate-700 dark:text-slate-300">
             <Mail className="h-4 w-4 shrink-0 text-slate-500 dark:text-slate-500" />
             <span className="truncate">{profile?.email}</span>
@@ -290,7 +293,7 @@ export default function ProfilePage() {
         </div>
       </div>
 
-      <div className="space-y-3 rounded-[22px] border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-800/50 dark:shadow-none">
+      <div className="space-y-3 rounded-[14px] border border-slate-200 bg-white p-3.5 shadow-sm dark:border-slate-700 dark:bg-slate-800/50 dark:shadow-none">
         <div className="flex items-center justify-between">
           <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
             {t.profile.balance}
@@ -319,8 +322,8 @@ export default function ProfilePage() {
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-3">
-          <div className="rounded-[16px] border border-violet-200 bg-gradient-to-br from-violet-50 to-white p-3 text-center dark:border-purple-500/20 dark:from-purple-600/10 dark:to-purple-900/10">
+        <div className="grid grid-cols-2 gap-2.5">
+          <div className="rounded-[10px] border border-violet-200 bg-gradient-to-br from-violet-50 to-white p-2.5 text-center dark:border-purple-500/20 dark:from-purple-600/10 dark:to-purple-900/10">
             <p className="text-[10px] uppercase tracking-wide text-slate-500">
               {t.profile.mainBalance}
             </p>
@@ -331,7 +334,7 @@ export default function ProfilePage() {
               {displayBalance}
             </p>
           </div>
-          <div className="rounded-[16px] border border-emerald-200 bg-gradient-to-br from-emerald-50 to-white p-3 text-center dark:border-green-500/20 dark:from-green-600/10 dark:to-green-900/10">
+          <div className="rounded-[10px] border border-emerald-200 bg-gradient-to-br from-emerald-50 to-white p-2.5 text-center dark:border-green-500/20 dark:from-green-600/10 dark:to-green-900/10">
             <p className="text-[10px] uppercase tracking-wide text-slate-500">
               {t.profile.bonusBalance}
             </p>
@@ -351,73 +354,19 @@ export default function ProfilePage() {
         )}
       </div>
 
-      <div className="rounded-[22px] border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-800/50 dark:shadow-none">
-        <div className="flex items-start gap-3">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-sky-100 text-sky-700 dark:bg-sky-500/10 dark:text-sky-400">
-            <Languages className="h-5 w-5" />
-          </div>
-          <div className="min-w-0 flex-1 space-y-3">
-            <div>
-              <p className="text-sm font-semibold text-slate-950 dark:text-white">
-                {t.profile.languageTitle}
-              </p>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
-                {t.profile.languageDescription}
-              </p>
-            </div>
-
-            <Select
-              value={profileLanguage}
-              onValueChange={(value) =>
-                handleLanguageChange(value as AppLanguage)
-              }
-              disabled={isLanguageSaving}
-            >
-              <SelectTrigger className="h-11 w-full rounded-xl border-slate-200 bg-slate-50 px-3 text-left text-slate-950 dark:border-slate-600 dark:bg-slate-900 dark:text-white">
-                <SelectValue placeholder={t.common.selectLanguage} />
-              </SelectTrigger>
-              <SelectContent className="bg-white text-slate-950 dark:bg-slate-900 dark:text-white">
-                {LANGUAGE_OPTIONS.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
-                    {option.nativeLabel} ({option.englishLabel})
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-      </div>
-
-      <div className="rounded-[22px] border border-violet-200 bg-gradient-to-r from-violet-50 to-blue-50 p-4 shadow-sm dark:border-purple-500/30 dark:from-purple-600/10 dark:to-blue-600/10 dark:shadow-none">
-        <p className="mb-2 text-[10px] uppercase tracking-wide text-slate-500">
-          {t.profile.referralCode}
-        </p>
-        <div className="flex items-center justify-between gap-3">
-          <p className="font-mono text-lg font-bold tracking-widest text-slate-950 dark:text-white">
-            {String(profile?.referralCode || "").toLowerCase()}
-          </p>
-          <button
-            onClick={handleCopyReferral}
-            className="flex items-center gap-1.5 rounded-lg border border-violet-300 bg-violet-100 px-3 py-1.5 text-xs font-medium text-violet-700 transition-all hover:bg-violet-200 active:scale-95 dark:border-purple-500/30 dark:bg-purple-600/20 dark:text-purple-400 dark:hover:bg-purple-600/30"
-          >
-            <Copy className="h-3.5 w-3.5" /> {t.profile.copy}
-          </button>
-        </div>
-      </div>
-
-      <div className="overflow-hidden rounded-[22px] border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-800/50 dark:shadow-none">
+      <div className="overflow-hidden rounded-[12px] border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-800/50 dark:shadow-none">
         {menuItems.map((item, index) => (
           <Link key={item.href} href={item.href}>
             <div
-              className={`flex items-center justify-between px-4 py-3.5 transition-colors hover:bg-slate-50 active:bg-slate-100 dark:hover:bg-slate-700/40 dark:active:bg-slate-700/60 ${
+              className={`flex items-center justify-between px-3.5 py-3 transition-colors hover:bg-slate-50 active:bg-slate-100 dark:hover:bg-slate-700/40 dark:active:bg-slate-700/60 ${
                 index !== menuItems.length - 1
                   ? "border-b border-slate-200 dark:border-slate-700/50"
                   : ""
               }`}
             >
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2.5">
                 <div
-                  className={`flex h-8 w-8 items-center justify-center rounded-[10px] ${item.bg}`}
+                  className={`flex h-8 w-8 items-center justify-center rounded-[5px] ${item.bg}`}
                 >
                   <item.icon className={`h-4 w-4 ${item.color}`} />
                 </div>
@@ -433,9 +382,13 @@ export default function ProfilePage() {
 
       <button
         onClick={() => setIsLogoutDialogOpen(true)}
-        className="flex w-full items-center justify-center gap-2 rounded-[16px] border border-red-500/30 bg-red-500/10 py-3 text-sm font-semibold text-red-400 transition-all hover:bg-red-500/20 active:scale-[0.98]"
+        className="group relative flex w-full items-center justify-center gap-2 overflow-hidden rounded-[10px] border border-red-500/30 bg-red-500/10 py-2.5 text-sm font-semibold text-red-400 transition-[transform,box-shadow,background-color,border-color] duration-200 ease-out hover:-translate-y-0.5 hover:border-red-400/40 hover:bg-red-500/14 hover:shadow-[0_10px_24px_rgba(239,68,68,0.12)] active:translate-y-0 active:scale-[0.985]"
       >
-        <LogOut className="h-4 w-4" /> {t.profile.logout}
+        <span className="pointer-events-none absolute inset-y-0 -left-1/3 w-1/3 skew-x-[-20deg] bg-white/10 opacity-0 blur-md transition-all duration-500 group-hover:left-full group-hover:opacity-100" />
+        <LogOut className="h-4 w-4 transition-transform duration-200 group-hover:-translate-x-0.5" />
+        <span className="transition-transform duration-200 group-hover:translate-x-0.5">
+          {t.profile.logout}
+        </span>
       </button>
 
       <Dialog
@@ -444,32 +397,68 @@ export default function ProfilePage() {
       >
         <DialogContent
           showCloseButton={false}
-          className="max-w-[350px] overflow-hidden border-0 bg-transparent p-0 text-slate-950 shadow-none ring-0 dark:text-white"
+          className={`max-w-[350px] overflow-hidden border-0 bg-transparent p-0 shadow-none ring-0 ${
+            isDarkTheme ? "text-white" : "text-slate-950"
+          }`}
         >
-          <div className="rounded-[28px] border border-white/10 bg-[#171b22] px-6 py-7 text-center shadow-[0_30px_80px_rgba(0,0,0,0.45)]">
+          <div
+            className={`rounded-[28px] px-6 py-7 text-center backdrop-blur-sm ${
+              isDarkTheme
+                ? "border border-white/10 bg-[#171b22] shadow-[0_30px_80px_rgba(0,0,0,0.45)]"
+                : "border border-slate-200/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(248,250,252,0.96))] shadow-[0_26px_70px_rgba(15,23,42,0.16)]"
+            }`}
+          >
             <button
               type="button"
               onClick={() => setIsLogoutDialogOpen(false)}
-              className="absolute right-4 top-4 flex h-9 w-9 items-center justify-center rounded-full bg-white/5 text-slate-400 transition hover:bg-white/10 hover:text-white"
+              className={`absolute right-4 top-4 flex h-9 w-9 items-center justify-center rounded-full transition ${
+                isDarkTheme
+                  ? "bg-white/5 text-slate-400 hover:bg-white/10 hover:text-white"
+                  : "border border-slate-200 bg-white/80 text-slate-500 hover:bg-slate-100 hover:text-slate-700"
+              }`}
               aria-label="Close logout dialog"
             >
               <X className="h-4 w-4" />
             </button>
 
-            <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-[radial-gradient(circle_at_30%_30%,rgba(56,189,248,0.55),transparent_58%),linear-gradient(135deg,rgba(14,165,233,0.28),rgba(59,130,246,0.08))] shadow-[0_10px_35px_rgba(14,165,233,0.22)] ring-1 ring-cyan-300/20">
-              <div className="flex h-14 w-14 items-center justify-center rounded-full bg-[#0f141b] text-cyan-300 ring-1 ring-white/10">
+            <div
+              className={`mx-auto flex h-20 w-20 items-center justify-center rounded-full ${
+                isDarkTheme
+                  ? "bg-[radial-gradient(circle_at_30%_30%,rgba(56,189,248,0.55),transparent_58%),linear-gradient(135deg,rgba(14,165,233,0.28),rgba(59,130,246,0.08))] shadow-[0_10px_35px_rgba(14,165,233,0.22)] ring-1 ring-cyan-300/20"
+                  : "bg-[radial-gradient(circle_at_30%_30%,rgba(125,211,252,0.55),transparent_58%),linear-gradient(135deg,rgba(186,230,253,0.95),rgba(224,242,254,0.88))] shadow-[0_12px_30px_rgba(14,165,233,0.18)] ring-1 ring-cyan-200/80"
+              }`}
+            >
+              <div
+                className={`flex h-14 w-14 items-center justify-center rounded-full ${
+                  isDarkTheme
+                    ? "bg-[#0f141b] text-cyan-300 ring-1 ring-white/10"
+                    : "bg-white text-cyan-600 ring-1 ring-cyan-100"
+                }`}
+              >
                 <LogOut className="h-7 w-7" />
               </div>
             </div>
 
             <DialogHeader className="mt-6 space-y-3">
-              <DialogTitle className="text-[2rem] font-semibold tracking-tight text-white">
+              <DialogTitle
+                className={`text-[2rem] font-semibold tracking-tight ${
+                  isDarkTheme ? "text-white" : "text-slate-900"
+                }`}
+              >
                 {t.profile.logoutConfirmTitle}
               </DialogTitle>
-              <DialogDescription className="mx-auto max-w-[260px] text-base leading-7 text-slate-300">
+              <DialogDescription
+                className={`mx-auto max-w-[260px] text-base leading-7 ${
+                  isDarkTheme ? "text-slate-300" : "text-slate-600"
+                }`}
+              >
                 {logoutConfirmMessage}
               </DialogDescription>
-              <p className="mx-auto max-w-[260px] text-sm leading-6 text-slate-400">
+              <p
+                className={`mx-auto max-w-[260px] text-sm leading-6 ${
+                  isDarkTheme ? "text-slate-400" : "text-slate-500"
+                }`}
+              >
                 {t.profile.logoutConfirmHint}
               </p>
             </DialogHeader>
@@ -478,7 +467,11 @@ export default function ProfilePage() {
               <Button
                 type="button"
                 onClick={handleLogout}
-                className="h-12 w-full rounded-2xl bg-gradient-to-r from-violet-600 via-fuchsia-600 to-blue-600 text-base font-semibold text-white shadow-[0_12px_30px_rgba(124,58,237,0.35)] hover:from-violet-500 hover:via-fuchsia-500 hover:to-blue-500"
+                className={`h-12 w-full rounded-2xl text-base font-semibold text-white ${
+                  isDarkTheme
+                    ? "bg-gradient-to-r from-violet-600 via-fuchsia-600 to-blue-600 shadow-[0_12px_30px_rgba(124,58,237,0.35)] hover:from-violet-500 hover:via-fuchsia-500 hover:to-blue-500"
+                    : "bg-gradient-to-r from-cyan-500 via-sky-500 to-blue-500 shadow-[0_12px_30px_rgba(14,165,233,0.28)] hover:from-cyan-400 hover:via-sky-400 hover:to-blue-400"
+                }`}
               >
                 {t.profile.logout}
               </Button>
@@ -486,7 +479,11 @@ export default function ProfilePage() {
                 type="button"
                 variant="secondary"
                 onClick={() => setIsLogoutDialogOpen(false)}
-                className="h-12 w-full rounded-2xl border border-white/10 bg-white/10 text-base font-medium text-slate-200 hover:bg-white/15 hover:text-white"
+                className={`h-12 w-full rounded-2xl text-base font-medium ${
+                  isDarkTheme
+                    ? "border border-white/10 bg-white/10 text-slate-200 hover:bg-white/15 hover:text-white"
+                    : "border border-slate-200 bg-white text-slate-700 shadow-[inset_0_1px_0_rgba(255,255,255,0.8)] hover:bg-slate-50 hover:text-slate-900"
+                }`}
               >
                 {t.profile.no}
               </Button>
