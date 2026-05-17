@@ -9,7 +9,11 @@ import {
   getClientAccessTokenCookie,
   getClientSessionTokenCookie,
 } from "@/lib/auth-cookie";
-import { resolveLoginPathByPathname } from "@/lib/auth-role";
+import {
+  isAdminPortalRole,
+  isSupportAgentRole,
+  resolveLoginPathByPathname,
+} from "@/lib/auth-role";
 import { useAuthStore } from "@/store/auth.store";
 
 type RequestConfigWithAuth = InternalAxiosRequestConfig & {
@@ -41,7 +45,12 @@ export const publicApi = axios.create({
   },
 });
 
-const SESSION_EXPIRED_FALLBACK = "Your session has expired (12h for users / 4d for admins). Please log in again.";
+const USER_SESSION_EXPIRED_FALLBACK =
+  "Your session has expired. User sessions last up to 12 hours. Please log in again.";
+const ADMIN_SESSION_EXPIRED_FALLBACK =
+  "Your session has expired. Admin sessions last up to 4 days. Please log in again.";
+const SUPPORT_AGENT_SESSION_EXPIRED_FALLBACK =
+  "Your session has expired. Support agent sessions last up to 4 days. Please log in again.";
 let sessionExpiredToastShown = false;
 
 function getErrorMessage(error: unknown) {
@@ -53,10 +62,43 @@ function isSessionExpiredMessage(message: string | null) {
   return Boolean(message?.toLowerCase().includes("session") && message.toLowerCase().includes("expired"));
 }
 
+function getSessionExpiredFallback() {
+  const role = useAuthStore.getState().user?.role;
+
+  if (isSupportAgentRole(role)) {
+    return SUPPORT_AGENT_SESSION_EXPIRED_FALLBACK;
+  }
+
+  if (isAdminPortalRole(role)) {
+    return ADMIN_SESSION_EXPIRED_FALLBACK;
+  }
+
+  if (typeof window !== "undefined") {
+    const pathname = window.location.pathname;
+
+    if (pathname.startsWith("/agent")) {
+      return SUPPORT_AGENT_SESSION_EXPIRED_FALLBACK;
+    }
+
+    if (pathname.startsWith("/admin")) {
+      return ADMIN_SESSION_EXPIRED_FALLBACK;
+    }
+  }
+
+  return USER_SESSION_EXPIRED_FALLBACK;
+}
+
 function showSessionExpiredToast(message: string | null) {
   if (sessionExpiredToastShown) return;
   sessionExpiredToastShown = true;
-  toast.error(isSessionExpiredMessage(message) ? message! : SESSION_EXPIRED_FALLBACK);
+  const normalizedMessage = message?.trim() ?? "";
+  const shouldUseServerMessage =
+    isSessionExpiredMessage(normalizedMessage) &&
+    !normalizedMessage.includes("12h for users / 4d for admins");
+
+  toast.error(
+    shouldUseServerMessage ? normalizedMessage : getSessionExpiredFallback(),
+  );
 }
 
 function getLoginPath() {

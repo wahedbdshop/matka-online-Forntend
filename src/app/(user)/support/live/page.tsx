@@ -10,9 +10,11 @@ import {
   HelpCircle,
   Home,
   Loader2,
+  MoreVertical,
   MessageSquareText,
   MoveRight,
   PhoneCall,
+  Search,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
@@ -99,11 +101,11 @@ function MessageRow({ item }: { item: FeedItem }) {
     <button
       type="button"
       onClick={item.action}
-      className="flex w-full items-center gap-3 px-4 py-4 text-left transition-colors hover:bg-slate-50 dark:hover:bg-slate-800/60"
+      className="flex w-full items-center gap-3 rounded-[22px] px-4 py-3 text-left transition-colors hover:bg-slate-100/70 dark:hover:bg-slate-800/60"
     >
       <FeedAvatar title={item.title} kind={item.kind} imageUrl={item.imageUrl} />
 
-      <div className="min-w-0 flex-1 border-b border-slate-200/90 pb-4 last:border-b-0 dark:border-slate-700/80">
+      <div className="min-w-0 flex-1">
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">
             <p className="truncate text-[15px] font-semibold text-slate-900 dark:text-white">
@@ -256,7 +258,7 @@ export default function LiveSupportSelectionPage() {
   }, [banners, favouriteSlides]);
 
   return (
-    <div className="mx-auto max-w-lg pb-24">
+    <div className="mx-auto max-w-lg overflow-hidden rounded-[32px] border border-slate-200/70 bg-[#f7f9fc] pb-20 shadow-[0_24px_70px_rgba(15,23,42,0.12)] dark:border-white/10 dark:bg-[#071120] dark:shadow-[0_24px_70px_rgba(2,6,23,0.4)]">
       <style>{`
         @keyframes whatsappGlow {
           0%, 100% {
@@ -274,53 +276,92 @@ export default function LiveSupportSelectionPage() {
         }
       `}</style>
 
-      <div className="sticky top-0 z-20 px-1 py-0.5">
-        <div className="flex items-center">
-          <Button
-            type="button"
-            variant="ghost"
-            onClick={goBack}
-            className="h-6 gap-1 rounded-full px-1.5 text-[11px] font-medium text-slate-500 hover:bg-transparent hover:text-slate-900 dark:text-slate-400 dark:hover:bg-transparent dark:hover:text-white"
-          >
-            <ChevronLeft className="h-3.5 w-3.5" />
-            <span>Back</span>
-          </Button>
+      <div className="sticky top-0 z-20 border-b border-slate-200/80 bg-white/95 px-4 py-3 backdrop-blur dark:border-white/10 dark:bg-[#0b1728]/95">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex min-w-0 items-center gap-3">
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={goBack}
+              className="h-10 w-10 rounded-full p-0 text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-white/10 dark:hover:text-white"
+            >
+              <ChevronLeft className="h-5 w-5" />
+            </Button>
+            <div className="min-w-0">
+              <p className="text-lg font-semibold text-slate-900 dark:text-white">
+                Support
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              className="flex h-10 w-10 items-center justify-center rounded-full text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-white/10 dark:hover:text-white"
+              aria-label="Search support"
+            >
+              <Search className="h-4.5 w-4.5" />
+            </button>
+            <button
+              type="button"
+              className="flex h-10 w-10 items-center justify-center rounded-full text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-white/10 dark:hover:text-white"
+              aria-label="More options"
+            >
+              <MoreVertical className="h-4.5 w-4.5" />
+            </button>
+          </div>
         </div>
       </div>
 
       {activeTab === "home" && (
-        <div className="space-y-5 bg-slate-50 px-4 py-5 dark:bg-slate-950">
-          <section className="overflow-hidden rounded-[28px] bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.42),transparent_42%),linear-gradient(180deg,#f8fafc_0%,#eef2ff_100%)] px-4 py-5 text-slate-900 shadow-[0_24px_60px_rgba(15,23,42,0.08)] dark:bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.1),transparent_42%),linear-gradient(180deg,#070707_0%,#0c0c0c_100%)] dark:text-white dark:shadow-[0_24px_60px_rgba(15,23,42,0.2)]">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-amber-600 dark:text-[#f0bf38]">
-                  Support
+        <div className="space-y-4 bg-[#efeae2] px-3 py-3 dark:bg-[#08101d]">
+          <section className="rounded-[26px] bg-[linear-gradient(180deg,rgba(10,18,38,0.98)_0%,rgba(18,31,58,0.98)_100%)] p-4 text-white shadow-[0_18px_44px_rgba(15,23,42,0.18)] dark:shadow-[0_18px_44px_rgba(2,6,23,0.3)]">
+            <div className="flex items-center gap-3 rounded-[20px] bg-white/8 px-4 py-3 backdrop-blur">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[linear-gradient(145deg,#f0bf38,#d89a10)] text-[#1a1f39]">
+                <MessageSquareText className="h-5 w-5" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-semibold">Matka24 Support</p>
+                <p className="truncate text-xs text-white/65">
+                  Hi {welcomeName}, open a conversation any time
                 </p>
-                <h2 className="mt-3 text-[2.1rem] font-light leading-[1.05] text-slate-900 dark:text-white/90">
-                  Hi {welcomeName},
-                  <br />
-                  How can we help?
-                </h2>
               </div>
             </div>
 
             <button
               type="button"
               onClick={openLiveAgent}
-              className="mt-6 flex w-full items-center justify-between rounded-[20px] bg-slate-900 px-5 py-4 text-left text-white shadow-[0_20px_50px_rgba(15,23,42,0.12)] transition-transform hover:scale-[1.01] dark:bg-white dark:text-slate-900 dark:shadow-[0_20px_50px_rgba(255,255,255,0.08)]"
+              className="mt-4 flex w-full items-center justify-between rounded-[22px] bg-white px-4 py-3 text-left text-slate-900 transition-transform hover:scale-[1.01] dark:bg-white/95 dark:text-slate-900"
             >
-              <span className="text-[15px] font-medium">Send us a message</span>
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[linear-gradient(145deg,#f0bf38,#d89a10)] text-[#1a1f39] dark:bg-[#1a1f39] dark:text-[#f0bf38]">
-                <MessageSquareText className="h-5 w-5" />
+              <div>
+                <p className="text-sm font-semibold">Send us a message</p>
+                <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-600">
+                  Open live agent chat in WhatsApp-style view
+                </p>
+              </div>
+              <div className="flex h-11 w-11 items-center justify-center rounded-full bg-[linear-gradient(145deg,#7c3aed_0%,#c026d3_100%)] text-white shadow-[0_10px_24px_rgba(168,85,247,0.28)]">
+                <MoveRight className="h-5 w-5" />
               </div>
             </button>
+          </section>
+
+          <section className="overflow-hidden rounded-[28px] border border-slate-200/80 bg-white shadow-[0_16px_40px_rgba(15,23,42,0.08)] dark:border-white/10 dark:bg-[#0b1728] dark:shadow-[0_16px_40px_rgba(2,6,23,0.28)]">
+            <div className="border-b border-slate-200/80 px-4 py-3 dark:border-white/10">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500 dark:text-slate-400">
+                Recent chats
+              </p>
+            </div>
+            <div className="space-y-1 bg-white px-2 py-2 dark:bg-[#0b1728]">
+              {feedItems.map((item) => (
+                <MessageRow key={item.id} item={item} />
+              ))}
+            </div>
           </section>
 
           <section className="space-y-4">
             {featuredCards.map((item: any, index: number) => (
               <div
                 key={item.id ?? index}
-                className="overflow-hidden rounded-[24px] border border-slate-200 bg-white shadow-[0_12px_30px_rgba(15,23,42,0.08)] dark:border-slate-800 dark:bg-slate-900 dark:shadow-none"
+                className="overflow-hidden rounded-[24px] border border-slate-200 bg-white shadow-[0_12px_30px_rgba(15,23,42,0.08)] dark:border-white/10 dark:bg-[#0b1728] dark:shadow-[0_12px_30px_rgba(2,6,23,0.2)]"
               >
                 <div className="relative aspect-[16/9] overflow-hidden">
                   <Image
@@ -344,7 +385,7 @@ export default function LiveSupportSelectionPage() {
             ))}
           </section>
 
-          <div className="rounded-[22px] bg-white p-4 shadow-[0_12px_30px_rgba(15,23,42,0.08)] dark:bg-slate-900 dark:shadow-none">
+          <div className="rounded-[24px] bg-white p-4 shadow-[0_12px_30px_rgba(15,23,42,0.08)] dark:bg-[#0b1728] dark:shadow-[0_12px_30px_rgba(2,6,23,0.2)]">
             <p className="text-sm font-bold text-slate-900 dark:text-white">
               Best support topics
             </p>
@@ -366,7 +407,7 @@ export default function LiveSupportSelectionPage() {
       )}
 
       {activeTab === "agent" && (
-        <div className="bg-slate-50 px-4 py-5 dark:bg-slate-950">
+        <div className="bg-[#efeae2] px-0 py-0 dark:bg-[#08101d]">
           <SupportChatPanel
             initialMode="AGENT"
             embedded
@@ -377,7 +418,7 @@ export default function LiveSupportSelectionPage() {
       )}
 
       {activeTab === "ai" && (
-        <div className="bg-slate-50 px-4 py-5 dark:bg-slate-950">
+        <div className="bg-[#efeae2] px-0 py-0 dark:bg-[#08101d]">
           <SupportChatPanel
             initialMode="AI"
             embedded
@@ -388,7 +429,7 @@ export default function LiveSupportSelectionPage() {
       )}
 
       {activeTab === "whatsapp" && (
-        <div className="space-y-4 bg-slate-50 px-4 py-5 dark:bg-slate-950">
+        <div className="space-y-4 bg-[#efeae2] px-3 py-3 dark:bg-[#08101d]">
           <div className="rounded-[28px] border border-emerald-200 bg-[radial-gradient(circle_at_top,rgba(187,247,208,0.95),rgba(240,253,244,0.96)_48%,rgba(255,255,255,1))] p-5 text-slate-900 shadow-[0_18px_40px_rgba(34,197,94,0.12)] dark:border-emerald-500/20 dark:bg-[radial-gradient(circle_at_top,rgba(34,197,94,0.18),rgba(10,22,16,0.98)_42%,rgba(2,6,23,1))] dark:text-white dark:shadow-[0_18px_40px_rgba(34,197,94,0.16)]">
             <div className="text-center">
               <div className="relative mx-auto mb-4 flex h-24 w-24 items-center justify-center">
@@ -458,7 +499,7 @@ export default function LiveSupportSelectionPage() {
         </div>
       )}
 
-      <div className="fixed bottom-0 left-0 right-0 z-30 border-t border-slate-200 bg-white shadow-[0_-8px_30px_rgba(15,23,42,0.08)] dark:border-slate-800 dark:bg-slate-950 dark:shadow-none">
+      <div className="fixed bottom-0 left-0 right-0 z-30 border-t border-slate-200 bg-white/96 shadow-[0_-8px_30px_rgba(15,23,42,0.08)] backdrop-blur dark:border-white/10 dark:bg-[#0b1728]/96 dark:shadow-[0_-8px_30px_rgba(2,6,23,0.28)]">
         <div className="mx-auto grid max-w-lg grid-cols-4 px-3 py-2">
           {[
             { key: "home", label: "Home", icon: Home },
@@ -483,9 +524,9 @@ export default function LiveSupportSelectionPage() {
                   setActiveTab(item.key as TabKey);
                 }}
                 className={cn(
-                  "flex flex-col items-center gap-1 rounded-xl px-3 py-2 text-[11px] font-medium transition-colors",
+                  "flex flex-col items-center gap-1 rounded-2xl px-3 py-2 text-[11px] font-medium transition-colors",
                   isActive
-                    ? "text-amber-600 dark:text-[#f0bf38]"
+                    ? "bg-slate-100 text-amber-600 dark:bg-white/8 dark:text-[#f0bf38]"
                     : "text-slate-500 dark:text-slate-400",
                 )}
               >

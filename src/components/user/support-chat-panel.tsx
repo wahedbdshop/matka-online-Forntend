@@ -12,13 +12,12 @@ import {
   Headphones,
   ChevronLeft,
   Loader2,
-  Wifi,
-  WifiOff,
   ImageIcon,
   Video,
   Mic,
   Square,
   MicOff,
+  MoreVertical,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -578,47 +577,46 @@ export function SupportChatPanel({
     requestAgent({ sessionId, identifier });
   };
 
-  const getRoleBadge = (role: string) => {
-    switch (role) {
-      case "AI":
-        return <Badge className="bg-blue-500/20 text-[10px] text-blue-400">AI</Badge>;
-      case "AGENT":
-        return (
-          <Badge className="bg-green-500/20 text-[10px] text-green-400">
-            Agent
-          </Badge>
-        );
-      default:
-        return null;
-    }
-  };
-
   const getStatusInfo = () => {
     if (supportMode === "AI") {
-      return { label: "Live AI", color: "bg-blue-500/20 text-blue-400" };
+      return {
+        label: "Online",
+        color: "bg-blue-500/15 text-blue-700 dark:bg-blue-400/15 dark:text-blue-300",
+      };
     }
 
     if (sessionStatus === "WAITING_AGENT") {
       return {
-        label: "Waiting for Agent",
-        color: "bg-yellow-500/20 text-yellow-400",
+        label: "Waiting for agent",
+        color:
+          "bg-amber-500/15 text-amber-800 dark:bg-amber-400/15 dark:text-amber-300",
       };
     }
 
     switch (sessionStatus) {
       case "AI_HANDLING":
-        return { label: "Live Agent", color: "bg-green-500/20 text-green-400" };
-      case "WAITING_AGENT":
         return {
-          label: "Waiting for Agent",
-          color: "bg-yellow-500/20 text-yellow-400",
+          label: "Connecting",
+          color:
+            "bg-emerald-500/15 text-emerald-800 dark:bg-emerald-400/15 dark:text-emerald-300",
         };
       case "AGENT_HANDLING":
-        return { label: "Live Agent", color: "bg-green-500/20 text-green-400" };
+        return {
+          label: "Online",
+          color:
+            "bg-emerald-500/15 text-emerald-800 dark:bg-emerald-400/15 dark:text-emerald-300",
+        };
       case "CLOSED":
-        return { label: "Closed", color: "bg-slate-500/20 text-slate-400" };
+        return {
+          label: "Closed",
+          color: "bg-slate-500/15 text-slate-700 dark:bg-white/10 dark:text-slate-300",
+        };
       default:
-        return { label: "Support", color: "bg-purple-500/20 text-purple-400" };
+        return {
+          label: "Support",
+          color:
+            "bg-violet-500/15 text-violet-800 dark:bg-violet-400/15 dark:text-violet-300",
+        };
     }
   };
 
@@ -647,10 +645,10 @@ export function SupportChatPanel({
   return (
     <div
       className={cn(
-        "relative flex flex-col overflow-hidden bg-white text-slate-900 dark:bg-[#071120] dark:text-white",
-        "before:pointer-events-none before:absolute before:inset-x-0 before:top-0 before:h-32 before:bg-[radial-gradient(circle_at_top,rgba(168,85,247,0.22),transparent_62%)] before:content-['']",
-        "after:pointer-events-none after:absolute after:inset-0 after:bg-[linear-gradient(135deg,rgba(16,185,129,0.03),transparent_22%,transparent_78%,rgba(168,85,247,0.02))] dark:after:bg-[linear-gradient(135deg,rgba(16,185,129,0.06),transparent_22%,transparent_78%,rgba(168,85,247,0.08))] after:content-['']",
-        embedded ? "min-h-[calc(100vh-11rem)]" : "h-[calc(100vh-8rem)]",
+        "relative flex flex-col overflow-hidden bg-[#efeae2] text-slate-900 dark:bg-[#08101d] dark:text-white",
+        "before:pointer-events-none before:absolute before:inset-0 before:bg-[radial-gradient(circle_at_1px_1px,rgba(15,23,42,0.05)_1px,transparent_0)] before:[background-size:24px_24px] before:opacity-70 before:content-[''] dark:before:bg-[radial-gradient(circle_at_1px_1px,rgba(255,255,255,0.05)_1px,transparent_0)]",
+        "after:pointer-events-none after:absolute after:inset-0 after:bg-[linear-gradient(180deg,rgba(15,23,42,0.02),transparent_18%,transparent_82%,rgba(15,23,42,0.03))] dark:after:bg-[linear-gradient(180deg,rgba(2,6,23,0.15),transparent_20%,transparent_80%,rgba(2,6,23,0.2))] after:content-['']",
+        embedded ? "min-h-[calc(100vh-14rem)] rounded-none pb-20" : "h-[calc(100vh-8rem)] rounded-[28px] border border-slate-200/70 shadow-[0_20px_50px_rgba(15,23,42,0.12)] dark:border-white/10 dark:shadow-[0_20px_50px_rgba(2,6,23,0.4)]",
       )}
     >
       <input
@@ -672,28 +670,69 @@ export function SupportChatPanel({
         <ImagePreviewModal url={previewUrl} onClose={() => setPreviewUrl(null)} />
       )}
 
-      {showBackButton && (
-        <div className="relative z-10 px-3 pt-3">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleBack}
-            className="h-9 rounded-full px-3 text-slate-600 hover:bg-slate-200/80 hover:text-slate-950 dark:text-slate-300 dark:hover:bg-white/10 dark:hover:text-white"
-            aria-label="Go back"
-          >
-            <ChevronLeft className="mr-1 h-4 w-4" />
-            Back
-          </Button>
+      <div className="relative z-10 border-b border-slate-200/80 bg-[linear-gradient(180deg,#0c1830_0%,#10203f_100%)] px-3 py-2 text-white dark:border-white/10">
+        <div className="flex items-center gap-2">
+          {showBackButton && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleBack}
+              className="h-10 w-10 rounded-full p-0 text-white hover:bg-white/10 hover:text-white"
+              aria-label="Go back"
+            >
+              <ChevronLeft className="h-5 w-5" />
+            </Button>
+          )}
+
+          <div className="flex min-w-0 flex-1 items-center gap-3">
+            <Avatar className="h-11 w-11 shrink-0 border border-white/10 bg-white/10">
+              <AvatarFallback
+                className={cn("text-white", {
+                  "bg-[linear-gradient(145deg,#7c3aed_0%,#c026d3_100%)]": supportMode === "AI",
+                  "bg-[linear-gradient(145deg,#047857_0%,#0f766e_100%)]": supportMode === "AGENT",
+                })}
+              >
+                {supportMode === "AI" ? (
+                  <Bot className="h-4.5 w-4.5" />
+                ) : (
+                  <Headphones className="h-4.5 w-4.5" />
+                )}
+              </AvatarFallback>
+            </Avatar>
+
+            <div className="min-w-0">
+              <p className="truncate text-[15px] font-semibold">{activeTitle}</p>
+              <div className="mt-0.5 flex items-center gap-2">
+                <span className={cn("rounded-full px-2 py-0.5 text-[10px] font-medium", statusInfo.color)}>
+                  {statusInfo.label}
+                </span>
+                {isConnected ? (
+                  <span className="text-[11px] text-white/65">secured chat</span>
+                ) : (
+                  <span className="text-[11px] text-white/45">reconnecting...</span>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              className="flex h-10 w-10 items-center justify-center rounded-full text-white/75 transition-colors hover:bg-white/10 hover:text-white"
+              aria-label="More"
+            >
+              <MoreVertical className="h-4.5 w-4.5" />
+            </button>
+          </div>
         </div>
-      )}
+      </div>
       <div
         ref={messagesViewportRef}
         onScroll={handleMessagesScroll}
-        className="hide-scrollbar relative z-10 flex-1 space-y-4 overflow-y-auto px-3 pb-2 pt-2"
+        className="hide-scrollbar relative z-10 flex-1 space-y-4 overflow-y-auto px-2 pb-2 pt-2"
       >
-        <div className="pointer-events-none absolute inset-x-3 inset-y-0 bg-white dark:bg-[#081225]/30" />
-        <div className="pointer-events-none absolute inset-x-4 top-4 h-28 bg-[radial-gradient(circle_at_top_left,rgba(16,185,129,0.015),transparent_58%),radial-gradient(circle_at_top_right,rgba(168,85,247,0.015),transparent_56%)] dark:bg-[radial-gradient(circle_at_top_left,rgba(16,185,129,0.08),transparent_58%),radial-gradient(circle_at_top_right,rgba(168,85,247,0.1),transparent_56%)]" />
-        <div className="relative space-y-4 px-4 py-5">
+        <div className="pointer-events-none absolute inset-0 bg-transparent" />
+        <div className="relative space-y-3 px-3 py-3">
           {isStarting ? (
             <div className="flex h-full items-center justify-center">
               <Loader2 className="h-8 w-8 animate-spin text-violet-400" />
@@ -702,7 +741,7 @@ export function SupportChatPanel({
             <>
               {displayedMessages.length === 0 && supportMode === "AGENT" && (
                 <div className="flex h-full items-center justify-center text-center">
-                  <div className="space-y-2 rounded-2xl bg-white px-5 py-6 text-slate-700 shadow-sm backdrop-blur dark:bg-white/5 dark:text-slate-400 dark:shadow-none">
+                  <div className="space-y-2 rounded-2xl bg-white px-5 py-6 text-slate-700 shadow-sm backdrop-blur dark:bg-white/5 dark:text-slate-300 dark:shadow-none">
                     <Headphones className="mx-auto h-8 w-8 text-emerald-400/70" />
                     <p className="text-sm font-medium text-slate-900 dark:text-white">
                       Live agent chat is separate
@@ -723,11 +762,11 @@ export function SupportChatPanel({
                   })}
                 >
                   {msg.role !== "USER" && (
-                    <Avatar className="mt-1 h-7 w-7 shrink-0 border border-slate-200 bg-white/80 dark:border-white/10 dark:bg-white/5">
+                    <Avatar className="mt-1 h-8 w-8 shrink-0 border border-white/10 bg-white/80 dark:bg-white/5">
                       <AvatarFallback
                         className={cn("text-xs", {
-                          "bg-violet-500/15": msg.role === "AI",
-                          "bg-emerald-500/15": msg.role === "AGENT",
+                          "bg-[linear-gradient(145deg,rgba(124,58,237,0.16),rgba(192,38,211,0.16))]": msg.role === "AI",
+                          "bg-[linear-gradient(145deg,rgba(4,120,87,0.18),rgba(15,118,110,0.18))]": msg.role === "AGENT",
                         })}
                       >
                         {msg.role === "AI" ? (
@@ -739,22 +778,16 @@ export function SupportChatPanel({
                     </Avatar>
                   )}
 
-                  <div className="max-w-[75%] space-y-1">
-                    {msg.role !== "USER" && (
-                      <div className="flex items-center gap-1 px-1.5">
-                        {getRoleBadge(msg.role)}
-                      </div>
-                    )}
-
+                  <div className="max-w-[78%] space-y-1">
                     <div
-                      className={cn("rounded-[22px] px-4 py-3", {
-                        "rounded-br-md border border-slate-200 bg-white text-slate-950 shadow-sm dark:border-transparent dark:bg-[linear-gradient(135deg,#d946ef_0%,#a21caf_48%,#7c3aed_100%)] dark:text-white dark:shadow-[0_16px_34px_rgba(168,85,247,0.34)]":
+                      className={cn("rounded-[18px] px-4 py-2.5", {
+                        "rounded-br-sm border border-fuchsia-300/60 bg-[linear-gradient(135deg,#d946ef_0%,#a21caf_48%,#7c3aed_100%)] text-white shadow-[0_14px_26px_rgba(168,85,247,0.22)]":
                           msg.role === "USER",
-                        "rounded-bl-md border border-slate-300 bg-white text-slate-900 shadow-[0_12px_26px_rgba(148,163,184,0.16)] backdrop-blur dark:border-white/10 dark:bg-white/8 dark:text-slate-100 dark:shadow-[0_12px_26px_rgba(2,6,23,0.24)]":
+                        "rounded-bl-sm border border-slate-200/90 bg-white text-slate-900 shadow-[0_10px_24px_rgba(148,163,184,0.14)] dark:border-white/10 dark:bg-[#101c31] dark:text-slate-100 dark:shadow-[0_10px_24px_rgba(2,6,23,0.24)]":
                           msg.role === "AI" && !isUnavailableAiMessage(msg.message),
-                        "rounded-bl-md border border-amber-300 bg-amber-50 text-amber-950 backdrop-blur dark:border-amber-300/30 dark:bg-amber-400/10 dark:text-amber-100":
+                        "rounded-bl-sm border border-amber-300 bg-amber-50 text-amber-950 backdrop-blur dark:border-amber-300/30 dark:bg-amber-400/10 dark:text-amber-100":
                           msg.role === "AI" && isUnavailableAiMessage(msg.message),
-                        "rounded-bl-md border border-emerald-300 bg-emerald-50 text-emerald-950 shadow-[0_12px_26px_rgba(16,185,129,0.08)] backdrop-blur dark:border-emerald-400/20 dark:bg-emerald-500/12 dark:text-emerald-50 dark:shadow-[0_12px_26px_rgba(16,185,129,0.12)]":
+                        "rounded-bl-sm border border-emerald-300 bg-emerald-50 text-emerald-950 shadow-[0_12px_26px_rgba(16,185,129,0.08)] backdrop-blur dark:border-emerald-400/20 dark:bg-emerald-500/12 dark:text-emerald-50 dark:shadow-[0_12px_26px_rgba(16,185,129,0.12)]":
                           msg.role === "AGENT",
                       })}
                     >
@@ -814,7 +847,7 @@ export function SupportChatPanel({
 
                     {msg.createdAt && !msg.isLoading && (
                       <p
-                        className={cn("px-1.5 text-[10px] text-slate-700 dark:text-slate-500", {
+                        className={cn("px-2 text-[10px] text-slate-600 dark:text-slate-400", {
                           "pr-0 text-right": msg.role === "USER",
                         })}
                       >
@@ -827,7 +860,7 @@ export function SupportChatPanel({
                   </div>
 
                   {msg.role === "USER" && (
-                    <Avatar className="mt-1 h-7 w-7 shrink-0 border border-violet-200 bg-violet-50 dark:border-violet-400/20 dark:bg-violet-500/10">
+                    <Avatar className="mt-1 h-8 w-8 shrink-0 border border-violet-200 bg-violet-50 dark:border-violet-400/20 dark:bg-violet-500/10">
                       <AvatarFallback className="bg-violet-100 text-[10px] font-semibold text-violet-700 dark:bg-violet-500/15 dark:text-violet-200">
                         {userInitial}
                       </AvatarFallback>
@@ -852,9 +885,9 @@ export function SupportChatPanel({
         </div>
       </div>
 
-      <div className="relative z-10 bg-white px-3 pb-3 pt-2 backdrop-blur dark:bg-[#0d1930]/40">
+      <div className="relative z-10 border-t border-slate-200/80 bg-[#f0f2f5] px-2 pb-2 pt-2 backdrop-blur dark:border-white/10 dark:bg-[#0b1728]/90">
         {isRecording && (
-          <div className="mb-3 flex items-center gap-2 rounded-full border border-rose-200 bg-rose-50 px-3 py-2 dark:border-rose-400/15 dark:bg-rose-500/12">
+          <div className="mb-2 flex items-center gap-2 rounded-full border border-rose-200 bg-rose-50 px-3 py-2 dark:border-rose-400/15 dark:bg-rose-500/12">
             <span className="h-2 w-2 animate-pulse rounded-full bg-red-500" />
             <span className="flex-1 text-xs font-medium text-rose-700 dark:text-rose-100">
               Recording… release to send
@@ -863,22 +896,22 @@ export function SupportChatPanel({
           </div>
         )}
 
-        <div className="rounded-2xl bg-white p-2 shadow-sm dark:bg-white/4 dark:shadow-none">
-          <div className="flex items-center gap-2">
+        <div className="flex items-end gap-2">
+          <div className="flex flex-1 items-center gap-2 rounded-[26px] bg-white px-2 py-2 shadow-sm dark:bg-[#101c31] dark:shadow-[0_8px_20px_rgba(2,6,23,0.24)]">
             <Input
               value={inputMessage}
               onChange={(e) => setInputMessage(e.target.value)}
               onKeyDown={handleKeyPress}
               placeholder={isRecording ? "Recording..." : "Type a message..."}
               disabled={isBusy}
-              className="h-11 flex-1 rounded-full border border-slate-300 bg-white px-4 text-sm !text-black placeholder:text-slate-500 caret-black dark:border-white/8 dark:bg-[#1a2740] dark:!text-white dark:caret-white dark:placeholder:text-slate-500"
+              className="h-11 flex-1 border-0 bg-transparent px-3 text-sm !text-black shadow-none placeholder:text-slate-500 caret-black focus-visible:ring-0 focus-visible:ring-offset-0 dark:!text-white dark:caret-white dark:placeholder:text-slate-400"
             />
 
             <button
               type="button"
               onClick={() => imageInputRef.current?.click()}
               disabled={isBusy || !sessionId || supportMode === "AI"}
-              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white !text-black transition-colors hover:bg-slate-100 hover:!text-black disabled:opacity-40 dark:border-transparent dark:bg-[#22314e] dark:!text-slate-300 dark:hover:bg-[#2b3d60] dark:hover:!text-white"
+              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900 disabled:opacity-40 dark:text-slate-300 dark:hover:bg-white/10 dark:hover:text-white"
               aria-label="Send image"
             >
               {isSendingMedia ? (
@@ -892,7 +925,7 @@ export function SupportChatPanel({
               type="button"
               onClick={() => videoInputRef.current?.click()}
               disabled={isBusy || !sessionId || supportMode === "AI"}
-              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white !text-black transition-colors hover:bg-slate-100 hover:!text-black disabled:opacity-40 dark:border-transparent dark:bg-[#22314e] dark:!text-slate-300 dark:hover:bg-[#2b3d60] dark:hover:!text-white"
+              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900 disabled:opacity-40 dark:text-slate-300 dark:hover:bg-white/10 dark:hover:text-white"
               aria-label="Send video"
             >
               {isSendingMedia ? (
@@ -913,8 +946,8 @@ export function SupportChatPanel({
                 isRecording
                   ? "bg-red-500 text-white shadow-[0_0_12px_rgba(239,68,68,0.6)]"
                   : micPermission === "denied"
-                    ? "border border-rose-200 bg-rose-50 !text-black hover:bg-rose-100 dark:border-transparent dark:bg-rose-500/12 dark:!text-rose-300 dark:hover:bg-rose-500/20"
-                    : "border border-slate-200 bg-white !text-black hover:bg-slate-100 hover:!text-black dark:border-transparent dark:bg-[#22314e] dark:!text-slate-300 dark:hover:bg-[#2b3d60] dark:hover:!text-white",
+                    ? "bg-rose-50 text-rose-700 hover:bg-rose-100 dark:bg-rose-500/12 dark:text-rose-300 dark:hover:bg-rose-500/20"
+                    : "bg-transparent text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-white/10 dark:hover:text-white",
               )}
               aria-label="Record voice message"
             >
@@ -925,19 +958,20 @@ export function SupportChatPanel({
               )}
             </button>
 
-            <Button
-              onClick={handleSend}
-              disabled={!inputMessage.trim() || isBusy}
-              size="icon"
-              className="h-11 w-11 shrink-0 rounded-full bg-[linear-gradient(135deg,#7c3aed_0%,#c026d3_100%)] text-white shadow-[0_14px_28px_rgba(168,85,247,0.32)] hover:opacity-95"
-            >
-              {isSending ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Send className="h-4 w-4" />
-              )}
-            </Button>
           </div>
+
+          <Button
+            onClick={handleSend}
+            disabled={!inputMessage.trim() || isBusy}
+            size="icon"
+            className="h-12 w-12 shrink-0 rounded-full bg-[linear-gradient(135deg,#7c3aed_0%,#c026d3_100%)] text-white shadow-[0_14px_28px_rgba(168,85,247,0.32)] hover:opacity-95"
+          >
+            {isSending ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Send className="h-4 w-4" />
+            )}
+          </Button>
         </div>
 
         {supportMode === "AI" && !isRecording && (

@@ -71,7 +71,7 @@ export function AudioBubble({ url }: { url: string }) {
 
   if (failed) {
     return (
-      <div className="flex min-w-[190px] items-center gap-2.5 rounded-xl border border-amber-300/30 bg-amber-500/10 px-3 py-2 text-amber-100">
+      <div className="flex min-w-[190px] items-center gap-2.5 rounded-[16px] border border-amber-300/50 bg-amber-50 px-3 py-2 text-amber-900 dark:border-amber-300/30 dark:bg-amber-500/10 dark:text-amber-100">
         <AlertCircle className="h-4 w-4 shrink-0 text-amber-300" />
         <span className="text-xs font-medium">Voice file is no longer available.</span>
       </div>
@@ -94,7 +94,7 @@ export function AudioBubble({ url }: { url: string }) {
       />
       <button
         onClick={toggle}
-        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/15 transition-colors hover:bg-white/25"
+        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-slate-900/10 text-slate-700 transition-colors hover:bg-slate-900/15 dark:bg-white/15 dark:text-white dark:hover:bg-white/25"
         aria-label={playing ? "Pause" : "Play"}
       >
         {playing
@@ -116,7 +116,7 @@ export function AudioBubble({ url }: { url: string }) {
           className="w-full cursor-pointer accent-cyan-400"
           style={{ height: "4px" }}
         />
-        <div className="flex justify-between text-[10px] text-white/50">
+        <div className="flex justify-between text-[10px] text-slate-500 dark:text-white/50">
           <span>{fmtTime(currentTime)}</span>
           <span>{fmtTime(duration)}</span>
         </div>
@@ -136,7 +136,7 @@ export function ImageBubble({
 
   if (failed) {
     return (
-      <div className="flex min-h-24 min-w-[180px] items-center gap-2 rounded-xl border border-amber-300/30 bg-amber-500/10 px-3 py-2 text-amber-100">
+      <div className="flex min-h-24 min-w-[180px] items-center gap-2 rounded-[16px] border border-amber-300/50 bg-amber-50 px-3 py-2 text-amber-900 dark:border-amber-300/30 dark:bg-amber-500/10 dark:text-amber-100">
         <AlertCircle className="h-4 w-4 shrink-0 text-amber-300" />
         <span className="text-xs font-medium">Image is no longer available.</span>
       </div>
@@ -165,7 +165,7 @@ export function VideoBubble({ url }: { url: string }) {
 
   if (failed) {
     return (
-      <div className="flex min-h-24 min-w-[190px] items-center gap-2 rounded-xl border border-amber-300/30 bg-amber-500/10 px-3 py-2 text-amber-100">
+      <div className="flex min-h-24 min-w-[190px] items-center gap-2 rounded-[16px] border border-amber-300/50 bg-amber-50 px-3 py-2 text-amber-900 dark:border-amber-300/30 dark:bg-amber-500/10 dark:text-amber-100">
         <AlertCircle className="h-4 w-4 shrink-0 text-amber-300" />
         <span className="text-xs font-medium">Video file is no longer available.</span>
       </div>
