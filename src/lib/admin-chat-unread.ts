@@ -8,6 +8,7 @@ type ChatMessage = {
   createdAt?: string | null;
   imageUrl?: string | null;
   voiceUrl?: string | null;
+  videoUrl?: string | null;
 };
 
 type ChatSession = {
@@ -69,6 +70,7 @@ export function buildAdminChatMessageKey(
     message.message ?? "",
     message.imageUrl ?? "",
     message.voiceUrl ?? "",
+    message.videoUrl ?? "",
   ].join(":");
 }
 

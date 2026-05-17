@@ -57,6 +57,8 @@ function getOrigin(value?: string | null) {
 function buildSecurityHeaders(): Record<string, string> {
   const connectSources = new Set(["'self'", "https:", "ws:", "wss:"]);
   const formActionSources = new Set(["'self'", "https:"]);
+  const mediaSources = new Set(["'self'", "blob:", "data:", "https:"]);
+  const imageSources = new Set(["'self'", "data:", "blob:", "https:"]);
 
   const apiOrigin = getOrigin(API_URL);
   const socketOrigin = getOrigin(SOCKET_URL);
@@ -64,6 +66,8 @@ function buildSecurityHeaders(): Record<string, string> {
   if (apiOrigin) {
     connectSources.add(apiOrigin);
     formActionSources.add(apiOrigin);
+    mediaSources.add(apiOrigin);
+    imageSources.add(apiOrigin);
   }
 
   if (socketOrigin) {
@@ -73,7 +77,8 @@ function buildSecurityHeaders(): Record<string, string> {
   return {
     "Content-Security-Policy": [
       "default-src 'self'",
-      "img-src 'self' data: blob: https:",
+      `img-src ${Array.from(imageSources).join(" ")}`,
+      `media-src ${Array.from(mediaSources).join(" ")}`,
       "style-src 'self' 'unsafe-inline' https:",
       "script-src 'self' 'unsafe-inline' 'unsafe-eval' https:",
       `connect-src ${Array.from(connectSources).join(" ")}`,

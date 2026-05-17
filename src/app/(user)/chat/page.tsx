@@ -14,6 +14,7 @@ import {
   Wifi,
   WifiOff,
   ImageIcon,
+  Video,
   Mic,
   Square,
   MicOff,
@@ -41,6 +42,7 @@ import {
   AudioBubble,
   ImageBubble,
   ImagePreviewModal,
+  VideoBubble,
 } from "@/components/chat/media-bubbles";
 import {
   CHAT_SESSION_KEY,
@@ -54,6 +56,7 @@ interface Message {
   message: string | null;
   imageUrl?: string | null;
   voiceUrl?: string | null;
+  videoUrl?: string | null;
   createdAt?: string;
   isLoading?: boolean;
   mode?: SupportMode;
@@ -65,11 +68,11 @@ type ThreadMessage = Message & { thread: SupportMode; originalIndex: number };
 
 const hasRecentDuplicate = (
   list: Message[],
-  incoming: Pick<Message, "role" | "message" | "imageUrl" | "voiceUrl">,
+  incoming: Pick<Message, "role" | "message" | "imageUrl" | "voiceUrl" | "videoUrl">,
 ) =>
   list.some((msg) => {
     if (msg.isLoading) return false;
-    if (incoming.imageUrl || incoming.voiceUrl) return false;
+    if (incoming.imageUrl || incoming.voiceUrl || incoming.videoUrl) return false;
     if (msg.role !== incoming.role || msg.message !== incoming.message) return false;
     if (!msg.createdAt) return true;
     return Date.now() - new Date(msg.createdAt).getTime() < 10000;
@@ -215,6 +218,7 @@ export default function ChatPage() {
   const shouldAutoScrollRef = useRef(true);
   const scrollBehaviorRef = useRef<ScrollBehavior>("smooth");
   const imageInputRef = useRef<HTMLInputElement>(null);
+  const videoInputRef = useRef<HTMLInputElement>(null);
   const autoRequestedAgentRef = useRef(false);
   const { isConnected, joinSession, onNewMessage, onAgentJoined } = useSocket();
   const { isRecording, micPermission, startRecording, stopRecording } = useVoiceRecorder();
@@ -476,11 +480,11 @@ export default function ChatPage() {
     }
   };
 
-  const handleImageFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleMediaFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !sessionId) return;
     if (supportMode === "AI") {
-      toast.info("Images are available in live agent chat.");
+      toast.info("Images and videos are available in live agent chat.");
       e.target.value = "";
       return;
     }
@@ -610,7 +614,14 @@ export default function ChatPage() {
         type="file"
         accept="image/jpeg,image/png,image/gif,image/webp"
         className="hidden"
-        onChange={handleImageFileChange}
+        onChange={handleMediaFileChange}
+      />
+      <input
+        ref={videoInputRef}
+        type="file"
+        accept="video/webm,video/mp4,video/quicktime,video/x-matroska"
+        className="hidden"
+        onChange={handleMediaFileChange}
       />
 
       {/* Image preview modal */}
@@ -767,6 +778,8 @@ export default function ChatPage() {
                       <ImageBubble url={msg.imageUrl} onPreview={setPreviewUrl} />
                     ) : msg.voiceUrl ? (
                       <AudioBubble url={msg.voiceUrl} />
+                    ) : msg.videoUrl ? (
+                      <VideoBubble url={msg.videoUrl} />
                     ) : (
                       <div className="space-y-2">
                         {msg.role === "AI" && isUnavailableAiMessage(msg.message) && (
@@ -881,6 +894,21 @@ export default function ChatPage() {
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
                 <ImageIcon className="h-4 w-4" />
+              )}
+            </button>
+
+            {/* Video button */}
+            <button
+              type="button"
+              onClick={() => videoInputRef.current?.click()}
+              disabled={isBusy || !sessionId || supportMode === "AI"}
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-slate-100 text-slate-600 transition-colors hover:bg-slate-200 hover:text-slate-950 disabled:opacity-40 dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-slate-600 dark:hover:text-white"
+              aria-label="Send video"
+            >
+              {isSendingMedia ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Video className="h-4 w-4" />
               )}
             </button>
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef } from "react";
-import { Play, Pause, X } from "lucide-react";
+import { Play, Pause, X, AlertCircle } from "lucide-react";
 
 function fmtTime(sec: number) {
   if (!isFinite(sec) || isNaN(sec)) return "0:00";
@@ -15,10 +15,11 @@ export function AudioBubble({ url }: { url: string }) {
   const [playing, setPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
+  const [failed, setFailed] = useState(false);
 
   const toggle = () => {
     const audio = audioRef.current;
-    if (!audio) return;
+    if (!audio || failed) return;
     if (playing) {
       audio.pause();
       setPlaying(false);
@@ -26,6 +27,15 @@ export function AudioBubble({ url }: { url: string }) {
       void audio.play().then(() => setPlaying(true)).catch(() => {});
     }
   };
+
+  if (failed) {
+    return (
+      <div className="flex min-w-[190px] items-center gap-2.5 rounded-xl border border-amber-300/30 bg-amber-500/10 px-3 py-2 text-amber-100">
+        <AlertCircle className="h-4 w-4 shrink-0 text-amber-300" />
+        <span className="text-xs font-medium">Voice file is no longer available.</span>
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-w-[170px] items-center gap-2.5">
@@ -36,6 +46,10 @@ export function AudioBubble({ url }: { url: string }) {
         preload="metadata"
         onTimeUpdate={(e) => setCurrentTime(e.currentTarget.currentTime)}
         onLoadedMetadata={(e) => setDuration(e.currentTarget.duration)}
+        onError={() => {
+          setPlaying(false);
+          setFailed(true);
+        }}
         onEnded={() => { setPlaying(false); setCurrentTime(0); }}
       />
       <button
@@ -78,6 +92,17 @@ export function ImageBubble({
   url: string;
   onPreview: (url: string) => void;
 }) {
+  const [failed, setFailed] = useState(false);
+
+  if (failed) {
+    return (
+      <div className="flex min-h-24 min-w-[180px] items-center gap-2 rounded-xl border border-amber-300/30 bg-amber-500/10 px-3 py-2 text-amber-100">
+        <AlertCircle className="h-4 w-4 shrink-0 text-amber-300" />
+        <span className="text-xs font-medium">Image is no longer available.</span>
+      </div>
+    );
+  }
+
   return (
     <button
       type="button"
@@ -88,9 +113,36 @@ export function ImageBubble({
       <img
         src={url}
         alt="Sent image"
+        onError={() => setFailed(true)}
         className="max-h-52 max-w-[220px] rounded-xl object-cover transition-opacity hover:opacity-90"
       />
     </button>
+  );
+}
+
+export function VideoBubble({ url }: { url: string }) {
+  const [failed, setFailed] = useState(false);
+
+  if (failed) {
+    return (
+      <div className="flex min-h-24 min-w-[190px] items-center gap-2 rounded-xl border border-amber-300/30 bg-amber-500/10 px-3 py-2 text-amber-100">
+        <AlertCircle className="h-4 w-4 shrink-0 text-amber-300" />
+        <span className="text-xs font-medium">Video file is no longer available.</span>
+      </div>
+    );
+  }
+
+  return (
+    <div className="overflow-hidden rounded-xl">
+      {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
+      <video
+        src={url}
+        controls
+        preload="metadata"
+        onError={() => setFailed(true)}
+        className="max-h-72 max-w-[260px] rounded-xl bg-black object-contain"
+      />
+    </div>
   );
 }
 

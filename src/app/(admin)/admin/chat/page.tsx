@@ -13,6 +13,7 @@ import {
   ArrowLeft,
   Search,
   ImageIcon,
+  Video,
   Mic,
   Loader2,
   Square,
@@ -38,6 +39,7 @@ import {
   AudioBubble,
   ImageBubble,
   ImagePreviewModal,
+  VideoBubble,
 } from "@/components/chat/media-bubbles";
 
 function StatusDot({ status }: { status: string }) {
@@ -67,6 +69,7 @@ function lastMsgPreview(msg: any): string {
   if (!msg) return "";
   if (msg.imageUrl) return "Image";
   if (msg.voiceUrl) return "Voice";
+  if (msg.videoUrl) return "Video";
   return getMessageText(msg);
 }
 
@@ -109,6 +112,7 @@ function AdminChatPageInner() {
   const scrollBehaviorRef = useRef<ScrollBehavior>("smooth");
   const inputRef = useRef<HTMLInputElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
+  const videoInputRef = useRef<HTMLInputElement>(null);
   const [chatShellHeight, setChatShellHeight] = useState<number | null>(null);
   const { joinSession } = useSocket();
   const { isRecording, micPermission, startRecording, stopRecording } = useVoiceRecorder();
@@ -327,6 +331,13 @@ function AdminChatPageInner() {
         ref={imageInputRef}
         type="file"
         accept="image/jpeg,image/png,image/gif,image/webp"
+        className="hidden"
+        onChange={handleImageFileChange}
+      />
+      <input
+        ref={videoInputRef}
+        type="file"
+        accept="video/webm,video/mp4,video/quicktime,video/x-matroska"
         className="hidden"
         onChange={handleImageFileChange}
       />
@@ -609,6 +620,8 @@ function AdminChatPageInner() {
                               <ImageBubble url={msg.imageUrl} onPreview={setPreviewUrl} />
                             ) : msg.voiceUrl ? (
                               <AudioBubble url={msg.voiceUrl} />
+                            ) : msg.videoUrl ? (
+                              <VideoBubble url={msg.videoUrl} />
                             ) : (
                               <>
                                 <span
@@ -630,7 +643,7 @@ function AdminChatPageInner() {
                                 </span>
                               </>
                             )}
-                            {(msg.imageUrl || msg.voiceUrl) && (
+                            {(msg.imageUrl || msg.voiceUrl || msg.videoUrl) && (
                               <p className="mt-1 text-[10px] text-slate-500 dark:text-slate-300">{time}</p>
                             )}
                           </div>
@@ -669,6 +682,19 @@ function AdminChatPageInner() {
                         <Loader2 className="h-5 w-5 animate-spin" />
                       ) : (
                         <Plus className="h-5 w-5" />
+                      )}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => videoInputRef.current?.click()}
+                      disabled={isBusy}
+                      className="hidden h-10 w-10 shrink-0 items-center justify-center rounded-full text-slate-500 transition-colors hover:bg-violet-50 hover:text-violet-700 disabled:opacity-40 dark:text-slate-300 dark:hover:bg-violet-500/15 dark:hover:text-violet-200 md:flex"
+                      aria-label="Send video"
+                    >
+                      {isSendingMedia ? (
+                        <Loader2 className="h-5 w-5 animate-spin" />
+                      ) : (
+                        <Video className="h-5 w-5" />
                       )}
                     </button>
                     <div className="flex min-h-10 min-w-0 flex-1 items-center gap-2 rounded-full bg-white px-3 py-2 shadow-sm ring-1 ring-slate-200/80 md:px-4 dark:bg-[#1e293b] dark:ring-slate-700/70">

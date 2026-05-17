@@ -8,6 +8,7 @@
     "dev:webpack": "next dev --webpack",
     "dev:turbo": "next dev",
     "build": "next build",
+    "typecheck": "next typegen && tsc --noEmit --incremental false",
     "postbuild": "node scripts/prepare-standalone.mjs",
     "start": "node scripts/start-standalone.mjs",
     "lint": "eslint"
