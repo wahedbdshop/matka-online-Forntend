@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Play, Pause, X, AlertCircle } from "lucide-react";
 
 function fmtTime(sec: number) {
@@ -16,6 +16,47 @@ export function AudioBubble({ url }: { url: string }) {
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [failed, setFailed] = useState(false);
+
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+
+    let cancelled = false;
+
+    const applyDuration = (value: number) => {
+      if (!cancelled && isFinite(value) && !Number.isNaN(value) && value > 0) {
+        setDuration(value);
+      }
+    };
+
+    const resolveDuration = () => {
+      applyDuration(audio.duration);
+
+      if (audio.duration === Infinity) {
+        const previousTime = audio.currentTime;
+        audio.currentTime = 1e10;
+
+        const handleResolved = () => {
+          audio.currentTime = previousTime;
+          applyDuration(audio.duration);
+          audio.removeEventListener("timeupdate", handleResolved);
+        };
+
+        audio.addEventListener("timeupdate", handleResolved, { once: true });
+      }
+    };
+
+    audio.addEventListener("loadedmetadata", resolveDuration);
+    audio.addEventListener("durationchange", resolveDuration);
+
+    resolveDuration();
+
+    return () => {
+      cancelled = true;
+      audio.removeEventListener("loadedmetadata", resolveDuration);
+      audio.removeEventListener("durationchange", resolveDuration);
+    };
+  }, [url]);
 
   const toggle = () => {
     const audio = audioRef.current;
@@ -45,7 +86,6 @@ export function AudioBubble({ url }: { url: string }) {
         src={url}
         preload="metadata"
         onTimeUpdate={(e) => setCurrentTime(e.currentTarget.currentTime)}
-        onLoadedMetadata={(e) => setDuration(e.currentTarget.duration)}
         onError={() => {
           setPlaying(false);
           setFailed(true);
