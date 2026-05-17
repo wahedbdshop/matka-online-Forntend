@@ -19,7 +19,10 @@ type RequestConfigWithAuth = InternalAxiosRequestConfig & {
 };
 
 export const api = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL?.replace(/\/+$/, ""),
+  baseURL:
+    typeof window === "undefined"
+      ? process.env.NEXT_PUBLIC_API_URL?.replace(/\/+$/, "")
+      : "/backend-api",
   withCredentials: true,
   headers: {
     "Content-Type": "application/json",
@@ -27,7 +30,10 @@ export const api = axios.create({
 });
 
 export const publicApi = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL?.replace(/\/+$/, ""),
+  baseURL:
+    typeof window === "undefined"
+      ? process.env.NEXT_PUBLIC_API_URL?.replace(/\/+$/, "")
+      : "/backend-api",
   withCredentials: true,
   timeout: 15000,
   headers: {

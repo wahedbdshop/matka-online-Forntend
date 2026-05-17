@@ -14,6 +14,8 @@ export function UserLayoutShell({
   const segments = useSelectedLayoutSegments();
   const isLudoRoute = segments[0] === "games" && segments[1] === "ludo";
   const isLudoRoomRoute = isLudoRoute && segments[2] === "room";
+  const isSupportHubRoute =
+    segments[0] === "support" && segments[1] === "live";
 
   return (
     <>
@@ -22,7 +24,9 @@ export function UserLayoutShell({
         className={
           isLudoRoomRoute
             ? "flex-1 w-full overflow-hidden pb-16"
-            : "flex-1 max-w-lg w-full mx-auto px-4 pt-4 pb-24"
+            : `flex-1 max-w-lg w-full mx-auto px-4 pt-4 ${
+                isSupportHubRoute ? "pb-6" : "pb-24"
+              }`
         }
         style={
           isLudoRoomRoute
@@ -36,7 +40,7 @@ export function UserLayoutShell({
       >
         {children}
       </main>
-      <BottomNav />
+      {!isSupportHubRoute && <BottomNav />}
     </>
   );
 }

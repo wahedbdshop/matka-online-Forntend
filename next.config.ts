@@ -1,6 +1,7 @@
 import type { NextConfig } from "next";
 
 const isProd = process.env.NODE_ENV === "production";
+const backendApiBaseUrl = process.env.NEXT_PUBLIC_API_URL?.replace(/\/+$/, "");
 
 const nextConfig: NextConfig = {
   output: "standalone",
@@ -25,6 +26,18 @@ const nextConfig: NextConfig = {
             value: "microphone=*, camera=*",
           },
         ],
+      },
+    ];
+  },
+  async rewrites() {
+    if (!backendApiBaseUrl) {
+      return [];
+    }
+
+    return [
+      {
+        source: "/backend-api/:path*",
+        destination: `${backendApiBaseUrl}/:path*`,
       },
     ];
   },

@@ -2,7 +2,10 @@ import { clearClientAuthCookies, setClientAuthCookies } from "@/lib/auth-cookie"
 import { pathnameMatchesRoute } from "@/lib/auth-role";
 import { useAuthStore } from "@/store/auth.store";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL?.replace(/\/+$/, "");
+const API_BASE_URL =
+  typeof window === "undefined"
+    ? process.env.NEXT_PUBLIC_API_URL?.replace(/\/+$/, "")
+    : "/backend-api";
 const REFRESH_ENDPOINT_PATH = "/auth/refresh-token";
 const LOGIN_REDIRECT_PATHS = [
   "/dashboard",

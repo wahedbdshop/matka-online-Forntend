@@ -1,7 +1,6 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
-import { Bot, Headphones, Loader2, MessageCircle, PhoneCall } from "lucide-react";
+import { MessageCircle } from "lucide-react";
 import { useRouter } from "next/navigation";
 import {
   type CSSProperties,
@@ -11,10 +10,7 @@ import {
   useRef,
   useState,
 } from "react";
-import { toast } from "sonner";
-import { AdminService } from "@/services/admin.service";
 import { ChatService } from "@/services/chat.service";
-import { DepositService } from "@/services/deposit.service";
 import { hasClientAuthCookie } from "@/lib/auth-cookie";
 import {
   CHAT_AGENT_COUNT_KEY,
@@ -31,17 +27,10 @@ const BUTTON_SIZE = 58;
 const EDGE_GAP = 12;
 const DRAG_THRESHOLD = 4;
 const POSITION_STORAGE_KEY = "floating-chat-button-position";
-const WHATSAPP_NUMBER_KEY = "live_chat_whatsapp_number";
-const WHATSAPP_MESSAGE_KEY = "live_chat_whatsapp_message";
-const DEFAULT_WHATSAPP_MESSAGE = "Hello, I need support.";
 
 type ButtonPosition = {
   x: number;
   y: number;
-};
-
-type GlobalAgent = {
-  whatsappNumber?: string | null;
 };
 
 function isUnauthorizedError(error: unknown) {
@@ -98,37 +87,12 @@ export function FloatingChatButton({
   const router = useRouter();
   const [position, setPosition] = useState<ButtonPosition | null>(null);
   const [isDragging, setIsDragging] = useState(false);
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const startPointerRef = useRef<ButtonPosition | null>(null);
   const startPositionRef = useRef<ButtonPosition | null>(null);
   const currentPositionRef = useRef<ButtonPosition | null>(position);
   const hasDraggedRef = useRef(false);
   const suppressClickRef = useRef(false);
-  const containerRef = useRef<HTMLDivElement>(null);
-
-  const { data: globalAgentsData, isFetching: isLoadingAgents } = useQuery({
-    queryKey: ["floating-chat-global-agents"],
-    queryFn: DepositService.getGlobalAgents,
-    enabled: isMenuOpen,
-    staleTime: 60000,
-  });
-
-  const { data: publicSettingsData, isFetching: isLoadingSettings } = useQuery({
-    queryKey: ["public-settings"],
-    queryFn: AdminService.getPublicSettings,
-    enabled: isMenuOpen,
-    staleTime: 60000,
-  });
-
-  const globalAgents: GlobalAgent[] = globalAgentsData?.data ?? [];
-  const publicSettings = publicSettingsData?.data ?? [];
-  const liveChatWhatsappNumber =
-    publicSettings.find((setting: any) => setting.key === WHATSAPP_NUMBER_KEY)?.value ??
-    "";
-  const liveChatWhatsappMessage =
-    publicSettings.find((setting: any) => setting.key === WHATSAPP_MESSAGE_KEY)?.value ||
-    DEFAULT_WHATSAPP_MESSAGE;
 
   useEffect(() => {
     const savedPosition = readSavedPosition();
@@ -152,20 +116,12 @@ export function FloatingChatButton({
       );
     };
 
-    const handleDocumentPointerDown = (event: globalThis.PointerEvent) => {
-      if (!containerRef.current?.contains(event.target as Node)) {
-        setIsMenuOpen(false);
-      }
-    };
-
     window.addEventListener("resize", handleResize);
-    document.addEventListener("pointerdown", handleDocumentPointerDown);
     return () => {
       if (restorePositionTimeout !== null) {
         window.clearTimeout(restorePositionTimeout);
       }
       window.removeEventListener("resize", handleResize);
-      document.removeEventListener("pointerdown", handleDocumentPointerDown);
     };
   }, []);
 
@@ -298,38 +254,11 @@ export function FloatingChatButton({
 
   const handleMainClick = () => {
     if (suppressClickRef.current) return;
-    setIsMenuOpen((open) => !open);
-  };
-
-  const goToChat = (mode: "ai" | "agent") => {
-    setIsMenuOpen(false);
-    if (mode === "agent") {
-      if (!hasClientAuthCookie()) {
-        router.push("/login");
-        return;
-      }
-
+    if (hasClientAuthCookie()) {
       markChatAgentMessagesSeen();
       setUnreadCount(0);
     }
-    router.push(`/chat?mode=${mode}`);
-  };
-
-  const handleWhatsApp = () => {
-    const agent = globalAgents.find((item) => item.whatsappNumber);
-    const phoneNumber = (liveChatWhatsappNumber || agent?.whatsappNumber || "").replace(
-      /[^0-9]/g,
-      "",
-    );
-
-    if (!phoneNumber) {
-      toast.error("No WhatsApp agent is available right now.");
-      return;
-    }
-
-    setIsMenuOpen(false);
-    const message = encodeURIComponent(liveChatWhatsappMessage);
-    window.open(`https://wa.me/${phoneNumber}?text=${message}`, "_blank", "noopener,noreferrer");
+    router.push("/support/live");
   };
 
   const style = position
@@ -369,50 +298,9 @@ export function FloatingChatButton({
         }
       `}</style>
       <div
-        ref={containerRef}
         style={style}
         className={`fixed ${position ? "" : `${bottomClassName} right-4`} z-[120] h-[58px] w-[58px] touch-none select-none`}
       >
-        {isMenuOpen && (
-          <div className="absolute bottom-[68px] right-0 w-40 overflow-hidden rounded-lg border border-slate-700/80 bg-slate-900/95 p-1.5 shadow-[0_18px_42px_rgba(2,8,20,0.55)] backdrop-blur">
-            <button
-              type="button"
-              onClick={() => goToChat("ai")}
-              className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-xs font-semibold text-slate-100 transition-colors hover:bg-blue-500/15 hover:text-blue-200"
-            >
-              <Bot className="h-4 w-4 text-blue-300" />
-              AI
-            </button>
-            <button
-              type="button"
-              onClick={() => goToChat("agent")}
-              className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-xs font-semibold text-slate-100 transition-colors hover:bg-emerald-500/15 hover:text-emerald-200"
-            >
-              <Headphones className="h-4 w-4 text-emerald-300" />
-              <span className="flex min-w-0 flex-1 items-center justify-between gap-2">
-                <span>Agent</span>
-                <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wide text-emerald-300">
-                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(74,222,128,0.9)]" />
-                  Live
-                </span>
-              </span>
-            </button>
-            <button
-              type="button"
-              onClick={handleWhatsApp}
-              disabled={isLoadingAgents || isLoadingSettings}
-              className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-xs font-semibold text-slate-100 transition-colors hover:bg-green-500/15 hover:text-green-200 disabled:cursor-wait disabled:opacity-70"
-            >
-              {isLoadingAgents || isLoadingSettings ? (
-                <Loader2 className="h-4 w-4 animate-spin text-green-300" />
-              ) : (
-                <PhoneCall className="h-4 w-4 text-green-300" />
-              )}
-              WhatsApp
-            </button>
-          </div>
-        )}
-
         <button
           type="button"
           className={`floating-chat-link group flex h-[58px] w-[58px] items-center justify-center rounded-full border-2 border-white/90 bg-gradient-to-br from-[#0b1328] via-[#0f1d3d] to-[#050b18] text-white shadow-[0_14px_32px_rgba(2,8,20,0.55)] transition-all duration-300 hover:-translate-y-1 hover:scale-[1.05] hover:shadow-[0_18px_38px_rgba(34,211,238,0.22)] active:scale-[0.97] ${isDragging ? "cursor-grabbing transition-none hover:translate-y-0 hover:scale-100" : "cursor-grab"}`}
