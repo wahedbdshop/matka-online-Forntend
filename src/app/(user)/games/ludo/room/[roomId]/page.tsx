@@ -500,6 +500,8 @@ export default function LudoRoomPage() {
   const animTimersRef   = useRef<ReturnType<typeof setTimeout>[]>([]);
   const isAnimatingRef  = useRef(false);
   const [animRoom, setAnimRoom] = useState<LudoRoom | null>(null);
+  const [turnPresentationRoom, setTurnPresentationRoom] = useState<LudoRoom | null>(null);
+  const turnPresentationTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // ── Three consecutive 6s rule ────────────────────────────────────────────
   // Tracks how many 6s in a row the current player has rolled.
@@ -511,9 +513,11 @@ export default function LudoRoomPage() {
   // dice. A draining ring shows the remaining time. When it hits 0 the dice
   // is auto-rolled so the turn passes to the opponent.
   const ROLL_TIMEOUT_SEC = 20;
-  const LOCAL_DICE_ROLL_MS = 620;
-  const REMOTE_DICE_ROLL_MS = 360;
-  const DICE_SETTLE_MS = 160;
+  const LOCAL_DICE_ROLL_MS = 1500;
+  const REMOTE_DICE_ROLL_MS = 1500;
+  const DICE_SETTLE_MS = 0;
+  const TOKEN_MOVE_TOTAL_MS = 1000;
+  const POST_MOVE_TURN_DELAY_MS = 1500;
   const LOCAL_DICE_ANIMATION_MS = LOCAL_DICE_ROLL_MS + DICE_SETTLE_MS;
   const REMOTE_DICE_ANIMATION_MS = REMOTE_DICE_ROLL_MS + DICE_SETTLE_MS;
   const [rollCountdown, setRollCountdown] = useState<number | null>(null);
@@ -637,6 +641,33 @@ export default function LudoRoomPage() {
     osc.stop(ctx.currentTime + duration);
   }, [getAudioContext, soundEnabled, soundVolume]);
 
+  const playToneSweep = useCallback((
+    fromFrequency: number,
+    toFrequency: number,
+    duration = 0.12,
+    type: OscillatorType = "triangle",
+    gainValue = 0.12,
+  ) => {
+    if (!soundEnabled || soundVolume <= 0) return;
+    const ctx = getAudioContext();
+    if (!ctx) return;
+
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = type;
+    osc.frequency.setValueAtTime(fromFrequency, ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(
+      Math.max(1, toFrequency),
+      ctx.currentTime + duration,
+    );
+    gain.gain.setValueAtTime(gainValue * soundVolume, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start();
+    osc.stop(ctx.currentTime + duration);
+  }, [getAudioContext, soundEnabled, soundVolume]);
+
   const playNoise = useCallback((duration = 0.12, gainValue = 0.14) => {
     if (!soundEnabled || soundVolume <= 0) return;
     const ctx = getAudioContext();
@@ -672,16 +703,26 @@ export default function LudoRoomPage() {
   const startDiceSound = useCallback((durationMs?: number) => {
     if (!soundEnabled || soundVolume <= 0) return;
     stopDiceSound();
-    playNoise(0.07, 0.09);
-    playTone(170, 0.045, "triangle", 0.08);
+    playNoise(0.045, 0.04);
+    playToneSweep(640, 420, 0.07, "sine", 0.022);
+    setTimeout(() => playTone(960, 0.03, "triangle", 0.018), 18);
     diceSoundIntervalRef.current = setInterval(() => {
-      playNoise(0.055, 0.075);
-      playTone(140 + Math.random() * 120, 0.035, "triangle", 0.055);
-    }, 90);
+      playNoise(0.026, 0.024);
+      playToneSweep(
+        560 + Math.random() * 180,
+        300 + Math.random() * 120,
+        0.04,
+        "sine",
+        0.016,
+      );
+      if (Math.random() > 0.45) {
+        setTimeout(() => playTone(880 + Math.random() * 240, 0.02, "triangle", 0.012), 10);
+      }
+    }, 72);
     if (durationMs) {
       diceSoundStopRef.current = setTimeout(stopDiceSound, durationMs);
     }
-  }, [playNoise, playTone, soundEnabled, soundVolume, stopDiceSound]);
+  }, [playNoise, playTone, playToneSweep, soundEnabled, soundVolume, stopDiceSound]);
 
   const clearDiceVisualTimers = useCallback(() => {
     if (diceShuffleIntervalRef.current) {
@@ -704,6 +745,9 @@ export default function LudoRoomPage() {
     diceRollStartRef.current = Date.now();
     setDiceAnimationState("rolling");
     setDiceFaceValue(Math.floor(Math.random() * 6) + 1);
+    diceShuffleIntervalRef.current = setInterval(() => {
+      setDiceFaceValue(Math.floor(Math.random() * 6) + 1);
+    }, 90);
   }, [clearDiceVisualTimers]);
 
   const settleDiceRollVisual = useCallback((finalValue: number, minimumRollMs = 0) => {
@@ -746,6 +790,10 @@ export default function LudoRoomPage() {
   useEffect(() => {
     return () => {
       clearDiceVisualTimers();
+      if (turnPresentationTimeoutRef.current) {
+        clearTimeout(turnPresentationTimeoutRef.current);
+        turnPresentationTimeoutRef.current = null;
+      }
       if (roomRefetchTimeoutRef.current) {
         clearTimeout(roomRefetchTimeoutRef.current);
         roomRefetchTimeoutRef.current = null;
@@ -754,31 +802,39 @@ export default function LudoRoomPage() {
   }, [clearDiceVisualTimers]);
 
   const playStepSound = useCallback(() => {
-    playTone(620, 0.035, "square", 0.09);
+    playTone(760, 0.022, "triangle", 0.05);
+    setTimeout(() => playTone(980, 0.028, "sine", 0.032), 10);
   }, [playTone]);
 
   const playKillSound = useCallback(() => {
-    playNoise(0.22, 0.32);
-    playTone(92, 0.22, "sawtooth", 0.18);
-  }, [playNoise, playTone]);
+    playNoise(0.18, 0.18);
+    playToneSweep(220, 82, 0.16, "sawtooth", 0.11);
+    setTimeout(() => playTone(64, 0.18, "triangle", 0.08), 26);
+  }, [playNoise, playTone, playToneSweep]);
 
   const playWinSound = useCallback(() => {
-    [523, 659, 784].forEach((frequency, index) => {
-      setTimeout(() => playTone(frequency, 0.11, "triangle", 0.12), index * 85);
+    [523, 659, 784, 1046].forEach((frequency, index) => {
+      setTimeout(() => {
+        playTone(frequency, 0.09, "triangle", 0.09);
+        setTimeout(() => playTone(frequency * 2, 0.06, "sine", 0.035), 18);
+      }, index * 78);
     });
   }, [playTone]);
 
   const playLossSound = useCallback(() => {
-    [330, 247, 196].forEach((frequency, index) => {
-      setTimeout(() => playTone(frequency, 0.18, "sine", 0.1), index * 140);
+    [392, 311, 247].forEach((frequency, index) => {
+      setTimeout(() => {
+        playTone(frequency, 0.15, "triangle", 0.075);
+        setTimeout(() => playTone(Math.max(80, frequency / 2), 0.12, "sine", 0.03), 24);
+      }, index * 130);
     });
   }, [playTone]);
 
   const playTurnWarningSound = useCallback(() => {
     [0, 1, 2, 3, 4].forEach((step) => {
       setTimeout(() => {
-        playTone(880, 0.06, "triangle", 0.11);
-        setTimeout(() => playTone(740, 0.08, "triangle", 0.09), 80);
+        playTone(988, 0.05, "triangle", 0.08);
+        setTimeout(() => playTone(784, 0.07, "triangle", 0.06), 70);
       }, step * 1000);
     });
   }, [playTone]);
@@ -977,6 +1033,27 @@ export default function LudoRoomPage() {
     applyRoomUpdateRef.current(pendingUpdate);
   }, []);
 
+  const completeRoomTransitionAfterDelay = useCallback((fromRoom: LudoRoom, toRoom: LudoRoom) => {
+    if (turnPresentationTimeoutRef.current) {
+      clearTimeout(turnPresentationTimeoutRef.current);
+    }
+
+    latestRoomRef.current = toRoom;
+    rememberTokenPaths(toRoom);
+    setRoomState(toRoom);
+    setAnimRoom(null);
+    setTurnPresentationRoom(fromRoom);
+    setTokenMoveLocked(true);
+
+    turnPresentationTimeoutRef.current = setTimeout(() => {
+      turnPresentationTimeoutRef.current = null;
+      setTurnPresentationRoom(null);
+      setTokenMoveLocked(false);
+      isAnimatingRef.current = false;
+      flushPendingRoomUpdate();
+    }, POST_MOVE_TURN_DELAY_MS);
+  }, [POST_MOVE_TURN_DELAY_MS, flushPendingRoomUpdate, rememberTokenPaths]);
+
   function applyNormalizedRoomUpdate(nextRoom: LudoRoom) {
     const previousRoom = latestRoomRef.current;
     const nextDiceValue =
@@ -1007,6 +1084,7 @@ export default function LudoRoomPage() {
       animTimersRef.current = [];
       latestRoomRef.current = nextRoom;
       setRoomState(nextRoom);
+      setTurnPresentationRoom(previousRoom);
       setAnimRoom(previousRoom);
       isAnimatingRef.current = true;
 
@@ -1050,29 +1128,28 @@ export default function LudoRoomPage() {
     animTimersRef.current = [];
     latestRoomRef.current = toRoom;
     setRoomState(toRoom);
+    setTurnPresentationRoom(fromRoom);
     setAnimRoom(roomWithCaptureReturnFrame(toRoom, captures, 0));
     isAnimatingRef.current = true;
+    const frameDurationMs = Math.max(80, Math.round(TOKEN_MOVE_TOTAL_MS / maxFrames));
 
     for (let frame = 1; frame <= maxFrames; frame++) {
       const timer = setTimeout(() => {
         if (frame === maxFrames) {
-          isAnimatingRef.current = false;
           animTimersRef.current = [];
-          setAnimRoom(null);
-          rememberTokenPaths(toRoom);
-          flushPendingRoomUpdate();
+          completeRoomTransitionAfterDelay(fromRoom, toRoom);
           return;
         }
 
         playStepSound();
         setAnimRoom(roomWithCaptureReturnFrame(toRoom, captures, frame));
-      }, frame * 70);
+      }, frame * frameDurationMs);
 
       animTimersRef.current.push(timer);
     }
 
     return true;
-  }, [flushPendingRoomUpdate, getCapturedReturns, playKillSound, playStepSound, rememberTokenPaths]);
+  }, [TOKEN_MOVE_TOTAL_MS, completeRoomTransitionAfterDelay, getCapturedReturns, playKillSound, playStepSound, rememberTokenPaths]);
 
   const finishMoveAnimation = useCallback((fromRoom: LudoRoom, toRoom: LudoRoom) => {
     setAnimRoom(null);
@@ -1085,12 +1162,8 @@ export default function LudoRoomPage() {
       playWinSound();
     }
 
-    isAnimatingRef.current = false;
-    latestRoomRef.current = toRoom;
-    rememberTokenPaths(toRoom);
-    setRoomState(toRoom);
-    flushPendingRoomUpdate();
-  }, [didTokenFinish, flushPendingRoomUpdate, playCaptureReturnAnimation, playWinSound, rememberTokenPaths]);
+    completeRoomTransitionAfterDelay(fromRoom, toRoom);
+  }, [completeRoomTransitionAfterDelay, didTokenFinish, playCaptureReturnAnimation, playWinSound]);
 
   const playTokenMoveAnimation = useCallback((fromRoom: LudoRoom, toRoom: LudoRoom) => {
     const move = findTokenMoveAnimation(fromRoom, toRoom);
@@ -1098,17 +1171,13 @@ export default function LudoRoomPage() {
 
     const steps = move.toProgress - move.fromProgress;
     if (steps <= 0) return false;
-    const stepDurationMs =
-      steps >= 6 ? 154 :
-      steps >= 5 ? 168 :
-      steps >= 4 ? 184 :
-      steps >= 3 ? 206 :
-      238;
+    const stepDurationMs = Math.max(110, Math.round(TOKEN_MOVE_TOTAL_MS / steps));
 
     animTimersRef.current.forEach(clearTimeout);
     animTimersRef.current = [];
     latestRoomRef.current = toRoom;
     setRoomState(toRoom);
+    setTurnPresentationRoom(fromRoom);
     isAnimatingRef.current = true;
     setAnimRoom(fromRoom);
 
@@ -1117,7 +1186,7 @@ export default function LudoRoomPage() {
       const singleStepTimer = setTimeout(() => {
         animTimersRef.current = [];
         finishMoveAnimation(fromRoom, toRoom);
-      }, 126);
+      }, TOKEN_MOVE_TOTAL_MS);
       animTimersRef.current.push(singleStepTimer);
       return true;
     }
@@ -1130,22 +1199,19 @@ export default function LudoRoomPage() {
         playStepSound();
 
         if (isLast) {
-          const finishTimer = setTimeout(() => {
-            animTimersRef.current = [];
-            finishMoveAnimation(fromRoom, toRoom);
-          }, 96);
-          animTimersRef.current.push(finishTimer);
+          animTimersRef.current = [];
+          finishMoveAnimation(fromRoom, toRoom);
           return;
         }
 
         setAnimRoom(roomWithMoveProgress(fromRoom, move, progress));
-      }, step * stepDurationMs);
+      }, Math.min(TOKEN_MOVE_TOTAL_MS, step * stepDurationMs));
 
       animTimersRef.current.push(timer);
     }
 
     return true;
-  }, [findTokenMoveAnimation, finishMoveAnimation, playStepSound, roomWithMoveProgress]);
+  }, [TOKEN_MOVE_TOTAL_MS, findTokenMoveAnimation, finishMoveAnimation, playStepSound, roomWithMoveProgress]);
 
   // Normalize any socket/API payload and preserve per-client yourColor.
   // Server broadcasts the same room object to all clients so yourColor is absent.
@@ -1245,6 +1311,7 @@ export default function LudoRoomPage() {
       if (fromRoom && autoMovedByRoll) {
         latestRoomRef.current = data;
         setRoomState(data);
+        setTurnPresentationRoom(fromRoom);
         setAnimRoom(fromRoom);
         isAnimatingRef.current = true;
         const timer = setTimeout(() => {
@@ -1324,13 +1391,13 @@ export default function LudoRoomPage() {
   });
 
   const leaveMutation = useMutation({
-    mutationFn: () => LudoService.leaveRoom(roomId),
+    mutationFn: async () => null,
     onSuccess: () => {
       setExitConfirmOpen(false);
-      toast.success("Left room");
+      toast.success("Board exited. Game will continue in auto mode.");
       router.push("/games/ludo");
     },
-    onError: (err: unknown) => { toast.error(getErrorMessage(err, "Failed to leave room")); },
+    onError: (err: unknown) => { toast.error(getErrorMessage(err, "Failed to exit board")); },
   });
 
   const openExitConfirm = useCallback(() => {
@@ -1399,12 +1466,13 @@ export default function LudoRoomPage() {
         ? "win"
         : "loss"
       : null;
+  const turnRoom = turnPresentationRoom ?? room;
   const turnRequiresRoll =
-    room?.status === "LIVE" &&
+    turnRoom?.status === "LIVE" &&
     !isFinished &&
-    (room?.availableTokenIds?.length ?? 0) === 0;
-  const myTurn   = Boolean(me && room?.currentTurnUserId === me.userId);
-  const availSet = useMemo(() => new Set(room?.availableTokenIds ?? []), [room?.availableTokenIds]);
+    (turnRoom?.availableTokenIds?.length ?? 0) === 0;
+  const myTurn   = Boolean(me && turnRoom?.currentTurnUserId === me.userId);
+  const availSet = useMemo(() => new Set(turnRoom?.availableTokenIds ?? []), [turnRoom?.availableTokenIds]);
   const displaySeatColors = useMemo(
     () =>
       getDisplaySeatColors(
@@ -1414,7 +1482,7 @@ export default function LudoRoomPage() {
     [me?.color, opponent?.color, room?.yourColor],
   );
   const canRoll  =
-    room?.status === "LIVE" &&
+    turnRoom?.status === "LIVE" &&
     myTurn &&
     !thirdSixPenaltyPending &&
     !rollMutation.isPending &&
@@ -1681,7 +1749,7 @@ export default function LudoRoomPage() {
       ? Math.max(0, Math.min(1, displayTurnCountdown / ROLL_TIMEOUT_SEC))
       : 0;
   const stakeLabel = Number(room.stakeAmount) <= 0 ? "FREE" : `BDT ${room.stakeAmount}`;
-  const activeTurnUserId = room.currentTurnUserId ?? null;
+  const activeTurnUserId = turnRoom?.currentTurnUserId ?? null;
   const isDiceAnimating = diceAnimationState !== "idle";
   const shouldShowTopActiveDice = Boolean(opponent?.userId && activeDiceOwnerId === opponent.userId && isDiceAnimating);
   const shouldShowBottomActiveDice = Boolean(me?.userId && activeDiceOwnerId === me.userId && isDiceAnimating);
@@ -1696,7 +1764,7 @@ export default function LudoRoomPage() {
 
   return (
     <div
-      className="relative flex h-[calc(100dvh-10.75rem)] min-h-0 flex-col overflow-hidden"
+      className="relative flex h-dvh min-h-dvh w-full flex-col overflow-hidden"
       style={{
         background:
           "radial-gradient(circle at top center, rgba(54,104,255,0.34), transparent 30%), linear-gradient(180deg,#173aa7 0%,#153596 42%,#08133b 100%)",
@@ -1705,7 +1773,7 @@ export default function LudoRoomPage() {
       <div className="pointer-events-none absolute inset-0 opacity-[0.1] bg-[radial-gradient(circle_at_1px_1px,white_1px,transparent_0)] bg-size-[22px_22px]" />
       <div className="pointer-events-none absolute inset-x-0 top-0 h-24 bg-[linear-gradient(180deg,rgba(255,255,255,0.1),transparent)]" />
 
-      <div className="relative z-10 flex items-center justify-between px-4 pt-3">
+      <div className="relative z-10 flex items-center justify-between px-4 pt-4">
         <button
           type="button"
           onClick={openExitConfirm}
@@ -1797,7 +1865,7 @@ export default function LudoRoomPage() {
                 <span>
                   <span className="block text-[10px] font-black uppercase tracking-[0.16em] text-white/70">Match</span>
                   <span className="block text-sm font-black">
-                    {leaveMutation.isPending ? "Leaving..." : "Leave room"}
+                    {leaveMutation.isPending ? "Exiting..." : "Exit board"}
                   </span>
                 </span>
                 <DoorOpen className="h-4 w-4" />
@@ -1817,7 +1885,7 @@ export default function LudoRoomPage() {
         </div>
       )}
 
-      <div className="relative z-10 flex min-h-0 flex-1 items-center justify-center px-5 pb-3 pt-2 sm:px-7 sm:pb-4">
+      <div className="relative z-10 flex min-h-0 flex-1 items-center justify-center px-5 pb-5 pt-3 sm:px-7 sm:pb-4">
         <div className="relative flex h-full w-full max-w-[500px] flex-col items-center justify-center">
           <div className="pointer-events-none absolute inset-x-8 top-2 z-0 h-10 rounded-full bg-[radial-gradient(circle,rgba(255,255,255,0.18)_0%,transparent_72%)] blur-xl" />
 
@@ -1827,7 +1895,7 @@ export default function LudoRoomPage() {
                 {getPlayerLabel(opponent, "Opponent")}
               </p>
               <p className="mt-1 truncate text-[10px] font-bold uppercase tracking-[0.18em] text-white/68">
-                {room.currentTurnUserId === opponent?.userId ? "Opponent turn" : getPlayerSubLabel(opponent, "Opponent")}
+                {activeTurnUserId === opponent?.userId ? "Opponent turn" : getPlayerSubLabel(opponent, "Opponent")}
               </p>
               <div className="mt-1 flex justify-end">
                 <AutoMoveDots count={opponent?.autoMoveCount} />
@@ -1867,7 +1935,7 @@ export default function LudoRoomPage() {
               <PlayerAvatarBadge
                 player={opponent}
                 color={COLOR_HEX[oppColor] ?? "#2ba8ef"}
-                active={room.currentTurnUserId === opponent?.userId}
+                active={activeTurnUserId === opponent?.userId}
                 countdownProgress={shouldGlowTopTurn ? turnCountdownProgress : null}
                 danger={shouldGlowTopTurn && turnCountdownDanger}
               />
@@ -1953,8 +2021,11 @@ export default function LudoRoomPage() {
                   {getPlayerLabel(me, "You")}
                 </p>
                 <p className="mt-1 truncate text-[10px] font-bold uppercase tracking-[0.18em] text-white/68">
-                  {myTurn ? "Your turn" : getPlayerSubLabel(me, "You")}
+                  {activeTurnUserId === me?.userId ? "Your turn" : getPlayerSubLabel(me, "You")}
                 </p>
+                <div className="mt-1 flex">
+                  <AutoMoveDots count={me?.autoMoveCount} />
+                </div>
               </div>
             </div>
           </div>
@@ -1979,9 +2050,9 @@ export default function LudoRoomPage() {
       {exitConfirmOpen && (
         <div className="absolute inset-0 z-40 flex items-center justify-center bg-[#020817]/72 px-5 backdrop-blur-[2px]">
           <div className="w-full max-w-[320px] rounded-[22px] border border-white/15 bg-[#10245f] p-5 text-white shadow-[0_20px_45px_rgba(0,0,0,0.4)]">
-            <h2 className="text-base font-black">Cancel Game?</h2>
+            <h2 className="text-base font-black">Exit Board?</h2>
             <p className="mt-2 text-sm leading-5 text-white/78">
-              Are you sure you want to cancel the game? If you leave now, you will lose and your opponent will win.
+              If you exit now, the match will keep running in auto mode. You can rejoin this board before the 5 auto turns finish.
             </p>
             <div className="mt-5 flex gap-3">
               <button
@@ -1990,7 +2061,7 @@ export default function LudoRoomPage() {
                 disabled={leaveMutation.isPending}
                 className="flex-1 rounded-full bg-red-500 px-4 py-2.5 text-sm font-black text-white shadow-sm disabled:opacity-60"
               >
-                {leaveMutation.isPending ? "Leaving..." : "Yes"}
+                {leaveMutation.isPending ? "Exiting..." : "Yes"}
               </button>
               <button
                 type="button"

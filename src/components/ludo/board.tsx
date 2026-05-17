@@ -374,6 +374,17 @@ function Cell({
   const first = tokens[0];
   const multi = tokens.length > 1;
   const routeTokenFill = "108%";
+  const singleToken = first ? (
+    <div className="absolute -inset-[7%] z-20 flex items-center justify-center overflow-visible">
+      <div className="translate-y-[-14%]">
+        <TokenPin
+          token={first}
+          fill={routeTokenFill}
+          onMove={first.available ? onMove : undefined}
+        />
+      </div>
+    </div>
+  ) : null;
 
   // ── HOME OUTER — solid color, no border ───────────────────────────────────
   if (kind.t === "home-outer") {
@@ -447,11 +458,7 @@ function Cell({
         style={{ backgroundColor: PALETTE[kind.color].tint }}
       >
         {!multi && first ? (
-          <TokenPin
-            token={first}
-            fill={routeTokenFill}
-            onMove={first.available ? onMove : undefined}
-          />
+          singleToken
         ) : (
           null
         )}
@@ -469,7 +476,7 @@ function Cell({
         style={{ boxShadow: `inset 0 0 0 2.5px ${hex}` }}
       >
         {!multi && first ? (
-          <TokenPin token={first} fill={routeTokenFill} onMove={first.available ? onMove : undefined} />
+          singleToken
         ) : (
           <span
             className="rounded-full opacity-55"
@@ -487,9 +494,7 @@ function Cell({
     const softHex = darkenHex(hex, 0.18);
     return (
       <div className="relative z-20 flex aspect-square items-center justify-center overflow-visible border border-[#b7b7b7] bg-white">
-        {!multi && first && (
-          <TokenPin token={first} fill={routeTokenFill} onMove={first.available ? onMove : undefined} />
-        )}
+        {!multi && first && singleToken}
         {!first && (
           <svg viewBox="0 0 20 20" className="h-[68%] w-[68%]" fill={`${hex}26`} stroke={softHex} strokeWidth="1.25">
             <polygon points="10,2 12.4,7.8 18.5,8.5 14,12.8 15.3,19 10,15.8 4.7,19 6,12.8 1.5,8.5 7.6,7.8" />
@@ -504,9 +509,7 @@ function Cell({
   if (kind.t === "direction") {
     return (
       <div className="relative z-20 flex aspect-square items-center justify-center overflow-visible border border-[#b7b7b7] bg-white">
-        {!multi && first && (
-          <TokenPin token={first} fill={routeTokenFill} onMove={first.available ? onMove : undefined} />
-        )}
+        {!multi && first && singleToken}
         {!first && (
           <span
             className="select-none pointer-events-none leading-none"
@@ -523,9 +526,7 @@ function Cell({
   // ── REGULAR PATH ──────────────────────────────────────────────────────────
   return (
     <div className="relative z-20 flex aspect-square items-center justify-center overflow-visible border border-[#b7b7b7] bg-white">
-      {!multi && first && (
-        <TokenPin token={first} fill={routeTokenFill} onMove={first.available ? onMove : undefined} />
-      )}
+      {!multi && first && singleToken}
       {multi && <MultiTokens tokens={tokens} onMove={onMove} />}
     </div>
   );
@@ -575,7 +576,7 @@ function MultiTokens({
               top: pos.top,
               width: pos.size,
               height: pos.size,
-              transform: "translate(-50%, -50%)",
+              transform: "translate(-50%, -64%)",
             }}
           >
             <ClassicTokenPin

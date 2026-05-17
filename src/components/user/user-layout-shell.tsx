@@ -19,11 +19,13 @@ export function UserLayoutShell({
 
   return (
     <>
-      <TopHeader initialIsAuthenticated={initialIsAuthenticated} />
+      {!isLudoRoomRoute && (
+        <TopHeader initialIsAuthenticated={initialIsAuthenticated} />
+      )}
       <main
         className={
           isLudoRoomRoute
-            ? "flex-1 w-full overflow-hidden pb-16"
+            ? "flex min-h-dvh w-full overflow-hidden"
             : `flex-1 max-w-lg w-full mx-auto px-4 pt-4 ${
                 isSupportHubRoute ? "pb-6" : "pb-24"
               }`
@@ -40,7 +42,7 @@ export function UserLayoutShell({
       >
         {children}
       </main>
-      {!isSupportHubRoute && <BottomNav />}
+      {!isSupportHubRoute && !isLudoRoomRoute && <BottomNav />}
     </>
   );
 }
