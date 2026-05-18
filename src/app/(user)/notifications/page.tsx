@@ -37,6 +37,8 @@ const cleanNotificationText = (value?: string | null) => {
     .replace(/αº│/g, "৳")
     .replace(/├ù/g, "×")
     .replace(/≡ƒÄë/g, "🎉")
+    .replace(/≡ƒÆ╕/g, "💸")
+    .replace(/≡ƒÆ░/g, "💰")
     .replace(/Γ£à/g, "✓")
     .replace(/à§³/g, "৳")
     .replace(/Â/g, "")

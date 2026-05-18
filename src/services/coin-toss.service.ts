@@ -52,6 +52,16 @@ export type CoinTossLobby = {
     tail: number;
     totalStake: string;
   };
+  liveBetStats: {
+    head: {
+      userCount: number;
+      betCount: number;
+    };
+    tail: {
+      userCount: number;
+      betCount: number;
+    };
+  };
   richestPlayers: CoinTossLeaderboardPlayer[];
   bigWinners: CoinTossLeaderboardPlayer[];
   roadmap: CoinTossRoadmapCell[];

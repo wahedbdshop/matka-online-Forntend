@@ -31,6 +31,17 @@ type PlacedBetState = {
   stake: number;
 };
 
+const liveChipPositions = [
+  { left: "10%", top: "18%" },
+  { left: "24%", top: "10%" },
+  { left: "39%", top: "22%" },
+  { left: "55%", top: "12%" },
+  { left: "69%", top: "24%" },
+  { left: "18%", top: "32%" },
+  { left: "47%", top: "34%" },
+  { left: "77%", top: "16%" },
+];
+
 const formatAmount = (value: number | string) =>
   Number(value || 0).toLocaleString("en-BD", {
     maximumFractionDigits: 2,
@@ -94,13 +105,13 @@ function PlayerRail({
   players: CoinTossLeaderboardPlayer[];
 }) {
   return (
-    <div className="flex w-[72px] flex-col items-center gap-1">
+    <div className="flex w-[52px] shrink-0 flex-col items-center gap-1 sm:w-[72px]">
       <div className="text-center text-[10px] font-black uppercase leading-3 text-[#ffe77a] [writing-mode:vertical-rl]">
         {title}
       </div>
       {players.slice(0, 3).map((player, index) => (
         <div key={player.name} className="relative">
-          <div className="h-12 w-12 overflow-hidden rounded-lg border-2 border-[#f0bf38] bg-gradient-to-br from-amber-300 to-rose-500 shadow-[0_4px_10px_rgba(0,0,0,0.35)]">
+          <div className="h-10 w-10 overflow-hidden rounded-lg border-2 border-[#f0bf38] bg-gradient-to-br from-amber-300 to-rose-500 shadow-[0_4px_10px_rgba(0,0,0,0.35)] sm:h-12 sm:w-12">
             {player.image ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
@@ -114,13 +125,13 @@ function PlayerRail({
               </div>
             )}
           </div>
-          <div className="absolute -bottom-2 left-1/2 w-14 -translate-x-1/2 rounded-sm bg-[#0d332a] px-1 text-center text-[9px] font-bold text-white">
+          <div className="absolute -bottom-2 left-1/2 w-12 -translate-x-1/2 rounded-sm bg-[#0d332a] px-1 text-center text-[8px] font-bold text-white sm:w-14 sm:text-[9px]">
             {getMaskedName(player.username || player.name)}
           </div>
           <div className="absolute -right-1 -top-1 rounded-sm bg-[#111827] px-1 text-[9px] font-black text-[#f0bf38]">
             No.{index + 1}
           </div>
-          <div className="absolute -left-1 top-8 rounded-sm bg-[#f0bf38] px-1 text-[8px] font-black text-[#3f2614]">
+          <div className="absolute -left-1 top-7 rounded-sm bg-[#f0bf38] px-1 text-[7px] font-black text-[#3f2614] sm:top-8 sm:text-[8px]">
             {formatAmount(player.amount)}
           </div>
         </div>
@@ -146,44 +157,44 @@ function CoinScene({
   const title = isReveal ? outcome : phase === "cover" ? "LOCKED" : "READY";
 
   return (
-    <div className="relative flex h-40 flex-1 items-center justify-center overflow-hidden rounded-lg border border-[#5c8d70] bg-[linear-gradient(135deg,#286653,#79b28d)]">
+    <div className="relative flex h-28 min-w-0 flex-1 items-center justify-center overflow-hidden rounded-lg border border-[#5c8d70] bg-[linear-gradient(135deg,#286653,#79b28d)] sm:h-40">
       <div className="absolute inset-0 bg-[linear-gradient(45deg,rgba(255,255,255,0.06)_25%,transparent_25%,transparent_50%,rgba(255,255,255,0.06)_50%,rgba(255,255,255,0.06)_75%,transparent_75%)] bg-[length:34px_34px]" />
-      <div className="absolute top-2 rounded-full bg-black/28 px-3 py-1 text-[10px] font-black tracking-[0.18em] text-[#ffe77a]">
+      <div className="absolute top-2 rounded-full bg-black/28 px-2.5 py-1 text-[9px] font-black tracking-[0.18em] text-[#ffe77a] sm:px-3 sm:text-[10px]">
         {title}
       </div>
 
       <div
-        className={`absolute z-20 h-24 w-36 rounded-[48px_48px_38px_38px] bg-[#f5d2bd] shadow-[0_10px_22px_rgba(55,31,13,0.22)] transition-transform duration-700 ease-out ${
+        className={`absolute z-20 h-20 w-28 rounded-[40px_40px_32px_32px] bg-[#f5d2bd] shadow-[0_10px_22px_rgba(55,31,13,0.22)] transition-transform duration-700 ease-out sm:h-24 sm:w-36 sm:rounded-[48px_48px_38px_38px] ${
           phase === "reveal"
-            ? "-translate-x-20 -translate-y-8 -rotate-[18deg]"
-            : "-translate-x-10 translate-y-2 rotate-[8deg]"
+            ? "-translate-x-14 -translate-y-6 -rotate-[18deg] sm:-translate-x-20 sm:-translate-y-8"
+            : "-translate-x-7 translate-y-2 rotate-[8deg] sm:-translate-x-10"
         }`}
       >
-        <span className="absolute bottom-2 left-5 h-9 w-5 rounded-full bg-[#f9dccd]" />
-        <span className="absolute bottom-1 left-11 h-11 w-5 rounded-full bg-[#f9dccd]" />
-        <span className="absolute bottom-2 left-[70px] h-10 w-5 rounded-full bg-[#f9dccd]" />
-        <span className="absolute bottom-3 left-[98px] h-8 w-5 rounded-full bg-[#f9dccd]" />
+        <span className="absolute bottom-2 left-4 h-7 w-4 rounded-full bg-[#f9dccd] sm:left-5 sm:h-9 sm:w-5" />
+        <span className="absolute bottom-1 left-9 h-9 w-4 rounded-full bg-[#f9dccd] sm:left-11 sm:h-11 sm:w-5" />
+        <span className="absolute bottom-2 left-[56px] h-8 w-4 rounded-full bg-[#f9dccd] sm:left-[70px] sm:h-10 sm:w-5" />
+        <span className="absolute bottom-3 left-[77px] h-6 w-4 rounded-full bg-[#f9dccd] sm:left-[98px] sm:h-8 sm:w-5" />
       </div>
 
       <div
-        className={`absolute z-30 h-24 w-36 rounded-[48px_48px_38px_38px] bg-[#f2c7b0] shadow-[0_10px_22px_rgba(55,31,13,0.24)] transition-transform duration-700 ease-out ${
+        className={`absolute z-30 h-20 w-28 rounded-[40px_40px_32px_32px] bg-[#f2c7b0] shadow-[0_10px_22px_rgba(55,31,13,0.24)] transition-transform duration-700 ease-out sm:h-24 sm:w-36 sm:rounded-[48px_48px_38px_38px] ${
           phase === "reveal"
-            ? "translate-x-20 -translate-y-8 rotate-[18deg]"
-            : "translate-x-10 translate-y-2 -rotate-[8deg]"
+            ? "translate-x-14 -translate-y-6 rotate-[18deg] sm:translate-x-20 sm:-translate-y-8"
+            : "translate-x-7 translate-y-2 -rotate-[8deg] sm:translate-x-10"
         }`}
       >
-        <span className="absolute bottom-2 right-5 h-9 w-5 rounded-full bg-[#f8d7c5]" />
-        <span className="absolute bottom-1 right-11 h-11 w-5 rounded-full bg-[#f8d7c5]" />
-        <span className="absolute bottom-2 right-[70px] h-10 w-5 rounded-full bg-[#f8d7c5]" />
-        <span className="absolute bottom-3 right-[98px] h-8 w-5 rounded-full bg-[#f8d7c5]" />
+        <span className="absolute bottom-2 right-4 h-7 w-4 rounded-full bg-[#f8d7c5] sm:right-5 sm:h-9 sm:w-5" />
+        <span className="absolute bottom-1 right-9 h-9 w-4 rounded-full bg-[#f8d7c5] sm:right-11 sm:h-11 sm:w-5" />
+        <span className="absolute bottom-2 right-[56px] h-8 w-4 rounded-full bg-[#f8d7c5] sm:right-[70px] sm:h-10 sm:w-5" />
+        <span className="absolute bottom-3 right-[77px] h-6 w-4 rounded-full bg-[#f8d7c5] sm:right-[98px] sm:h-8 sm:w-5" />
       </div>
 
       <div
-        className={`relative z-10 flex h-24 w-24 items-center justify-center rounded-full border-[6px] border-[#8b4d16] bg-[radial-gradient(circle_at_35%_28%,#fff2a8_0%,#f0bf38_42%,#b86b13_100%)] shadow-[0_12px_18px_rgba(15,23,42,0.35)] transition-all duration-500 ${
+        className={`relative z-10 flex h-20 w-20 items-center justify-center rounded-full border-[5px] border-[#8b4d16] bg-[radial-gradient(circle_at_35%_28%,#fff2a8_0%,#f0bf38_42%,#b86b13_100%)] shadow-[0_12px_18px_rgba(15,23,42,0.35)] transition-all duration-500 sm:h-24 sm:w-24 sm:border-[6px] ${
           phase === "cover" ? "scale-90 opacity-80" : "scale-100 opacity-100"
         } ${phase === "reveal" ? "animate-[coin-pop_650ms_ease-out]" : ""}`}
       >
-        <span className="text-4xl font-black text-[#7c2d12]">
+        <span className="text-3xl font-black text-[#7c2d12] sm:text-4xl">
           {label}
         </span>
       </div>
@@ -417,8 +428,12 @@ function BetPanel({
   outcome,
   selected,
   onSelect,
+  disabled,
+  overlayMessage,
   payoutMultiplier,
   stake,
+  liveBetCount,
+  liveStakeTotal,
   winningOutcome,
   isReveal,
   showWinPayout,
@@ -427,8 +442,12 @@ function BetPanel({
   outcome: CoinTossOutcome;
   selected: boolean;
   onSelect: () => void;
+  disabled: boolean;
+  overlayMessage?: string | null;
   payoutMultiplier: string;
   stake: number;
+  liveBetCount: number;
+  liveStakeTotal: string;
   winningOutcome?: CoinTossOutcome | null;
   isReveal: boolean;
   showWinPayout: boolean;
@@ -442,12 +461,15 @@ function BetPanel({
   const powerLevel = Math.max(0, Math.floor(Number(powerMultiplier) || 0));
   const sparkCount = powerLevel >= 4 ? 8 : powerLevel >= 2 ? 5 : 0;
   const powerAnimationMs = Math.max(1800, (powerLevel + 1) * 650);
+  const visibleChipCount = Math.min(liveBetCount, liveChipPositions.length);
+  const overflowChipCount = Math.max(0, liveBetCount - visibleChipCount);
 
   return (
     <button
       type="button"
       onClick={onSelect}
-      className={`relative min-h-[190px] overflow-hidden rounded-lg border-2 text-left shadow-[0_8px_12px_rgba(67,36,14,0.25)] transition active:scale-[0.99] ${
+      disabled={disabled}
+      className={`relative min-h-[142px] overflow-hidden rounded-lg border-2 text-left shadow-[0_8px_12px_rgba(67,36,14,0.25)] transition active:scale-[0.99] sm:min-h-[190px] ${
         isWinner
           ? "border-[#fef08a] bg-[#fff2bd] shadow-[0_0_0_4px_rgba(250,204,21,0.35),0_0_28px_rgba(250,204,21,0.6)]"
           : showPowerLight
@@ -455,8 +477,13 @@ function BetPanel({
           : selected
           ? "border-[#f7d154] bg-[#f8e4bd]"
           : "border-[#6b3f1c] bg-[#d8b487]"
-      } ${isLoser ? "opacity-55" : ""}`}
+      } ${isLoser ? "opacity-55" : ""} ${disabled ? "cursor-not-allowed" : ""}`}
     >
+      {overlayMessage ? (
+        <div className="absolute inset-x-2 top-2 z-30 rounded-md bg-[linear-gradient(180deg,#b91c1c,#7f1d1d)] px-2 py-1 text-center text-[10px] font-black text-white shadow-[0_4px_10px_rgba(0,0,0,0.3)] sm:text-xs">
+          {overlayMessage}
+        </div>
+      ) : null}
       {showPowerLight ? (
         <>
           <div className="pointer-events-none absolute inset-0 z-10 opacity-90 mix-blend-screen">
@@ -495,20 +522,38 @@ function BetPanel({
         </>
       ) : null}
       {isWinner ? (
-        <div className="absolute left-1/2 top-2 z-20 -translate-x-1/2 rounded-full border border-[#fff7ad] bg-[linear-gradient(180deg,#22c55e,#15803d)] px-4 py-1 text-sm font-black text-white shadow-[0_4px_12px_rgba(21,128,61,0.45)]">
+        <div className="absolute left-1/2 top-2 z-20 -translate-x-1/2 rounded-full border border-[#fff7ad] bg-[linear-gradient(180deg,#22c55e,#15803d)] px-3 py-1 text-xs font-black text-white shadow-[0_4px_12px_rgba(21,128,61,0.45)] sm:px-4 sm:text-sm">
           WIN
         </div>
       ) : null}
       <div
-        className={`flex h-16 items-center justify-center text-3xl font-black text-[#f5e1bc] ${
+        className={`flex h-10 items-center justify-center text-xl font-black text-[#f5e1bc] sm:h-16 sm:text-3xl ${
           isHead ? "bg-[#bb7a34]" : "bg-[#829554]"
         }`}
       >
         {outcome}
       </div>
-      <div className="flex h-[126px] flex-col items-center justify-center bg-[#d8b487]">
+      <div className="flex h-[96px] flex-col items-center justify-center bg-[#d8b487] sm:h-[126px]">
+        {visibleChipCount > 0 ? (
+          <div className="pointer-events-none absolute inset-x-3 bottom-8 top-12 z-10 sm:inset-x-5 sm:bottom-10 sm:top-16">
+            {liveChipPositions.slice(0, visibleChipCount).map((position, index) => (
+              <div
+                key={`${outcome}-live-chip-${index}`}
+                className="absolute flex h-6 min-w-6 items-center justify-center rounded-full border-[3px] border-slate-200 bg-white px-1 text-[7px] font-black text-slate-500 shadow-[0_3px_8px_rgba(0,0,0,0.28)] sm:h-7 sm:min-w-7 sm:text-[8px]"
+                style={position}
+              >
+                {index === 0 ? formatAmount(liveStakeTotal) : liveBetCount}
+              </div>
+            ))}
+            {overflowChipCount > 0 ? (
+              <div className="absolute right-[8%] top-[18%] flex h-6 min-w-6 items-center justify-center rounded-full border-[3px] border-[#fff7ad] bg-[#7c2d12] px-1 text-[8px] font-black text-[#fff7ad] shadow-[0_3px_8px_rgba(0,0,0,0.28)] sm:h-7 sm:min-w-7 sm:text-[9px]">
+                +{overflowChipCount}
+              </div>
+            ) : null}
+          </div>
+        ) : null}
         <div
-          className={`flex h-20 w-20 items-center justify-center rounded-full border-4 ${
+          className={`relative z-20 flex h-14 w-14 items-center justify-center rounded-full border-4 sm:h-20 sm:w-20 ${
             isWinner
               ? "border-[#fef08a] bg-[#f8d370] text-[#15803d] shadow-[0_0_18px_rgba(250,204,21,0.75)]"
               : selected
@@ -516,29 +561,29 @@ function BetPanel({
               : "border-[#9f5b32]/45 bg-[#d3aa72]/60 text-[#9f5b32]/35"
           }`}
         >
-          <span className="text-4xl font-black">{isHead ? "H" : "T"}</span>
+          <span className="text-2xl font-black sm:text-4xl">{isHead ? "H" : "T"}</span>
         </div>
-        <div className="mt-2 text-xl font-black text-[#6b3f1c]">
+        <div className="mt-1 text-base font-black text-[#6b3f1c] sm:mt-2 sm:text-xl">
           1 : {payoutMultiplier}
         </div>
       </div>
       {selected ? (
-        <div className="absolute left-12 top-[92px] flex h-9 w-9 items-center justify-center rounded-full border-4 border-slate-100 bg-white text-[11px] font-black text-slate-600 shadow-[0_2px_5px_rgba(0,0,0,0.35)]">
+        <div className="absolute left-4 top-[58px] flex h-7 w-7 items-center justify-center rounded-full border-4 border-slate-100 bg-white text-[9px] font-black text-slate-600 shadow-[0_2px_5px_rgba(0,0,0,0.35)] sm:left-12 sm:top-[92px] sm:h-9 sm:w-9 sm:text-[11px]">
           {stake}
         </div>
       ) : null}
       {showWinPayout ? (
         <>
-          <div className="absolute left-[88px] top-[82px] flex h-9 w-9 animate-[win-chip-float_900ms_ease-out_infinite_alternate] items-center justify-center rounded-full border-4 border-[#fef08a] bg-white text-[10px] font-black text-emerald-700 shadow-[0_4px_10px_rgba(0,0,0,0.35)]">
+          <div className="absolute left-[52px] top-[56px] flex h-7 w-7 animate-[win-chip-float_900ms_ease-out_infinite_alternate] items-center justify-center rounded-full border-4 border-[#fef08a] bg-white text-[8px] font-black text-emerald-700 shadow-[0_4px_10px_rgba(0,0,0,0.35)] sm:left-[88px] sm:top-[82px] sm:h-9 sm:w-9 sm:text-[10px]">
             +{formatAmount(stake * Number(payoutMultiplier))}
           </div>
-          <div className="absolute left-[122px] top-[112px] flex h-9 w-9 animate-[win-chip-float_900ms_ease-out_160ms_infinite_alternate] items-center justify-center rounded-full border-4 border-[#86efac] bg-white text-[10px] font-black text-emerald-700 shadow-[0_4px_10px_rgba(0,0,0,0.35)]">
+          <div className="absolute left-[76px] top-[72px] flex h-7 w-7 animate-[win-chip-float_900ms_ease-out_160ms_infinite_alternate] items-center justify-center rounded-full border-4 border-[#86efac] bg-white text-[8px] font-black text-emerald-700 shadow-[0_4px_10px_rgba(0,0,0,0.35)] sm:left-[122px] sm:top-[112px] sm:h-9 sm:w-9 sm:text-[10px]">
             WIN
           </div>
         </>
       ) : null}
       {powerMultiplier && !isReveal ? (
-        <div className="absolute bottom-3 right-9 z-20 rounded-md border border-[#fff7ad] bg-[linear-gradient(180deg,#fff176,#f59e0b)] px-2 py-0.5 text-sm font-black text-[#78350f] shadow-[0_4px_10px_rgba(245,158,11,0.45)]">
+        <div className="absolute bottom-3 right-4 z-20 rounded-md border border-[#fff7ad] bg-[linear-gradient(180deg,#fff176,#f59e0b)] px-2 py-0.5 text-xs font-black text-[#78350f] shadow-[0_4px_10px_rgba(245,158,11,0.45)] sm:right-9 sm:text-sm">
           <PowerMultiplierText multiplier={powerMultiplier} />
         </div>
       ) : null}
@@ -766,31 +811,22 @@ function ChipSelector({
 }
 
 function Roadmap({ cells }: { cells: CoinTossRoadmapCell[] }) {
-  const scrollRef = useRef<HTMLDivElement | null>(null);
   const columns = Math.max(14, ...cells.map((cell) => cell.column + 1), 1);
+  const visibleColumns = Math.min(columns, 8);
+  const startColumn = Math.max(0, columns - visibleColumns);
   const lookup = new Map(cells.map((cell) => [`${cell.column}-${cell.row}`, cell]));
 
-  useEffect(() => {
-    const container = scrollRef.current;
-    if (!container) return;
-
-    container.scrollLeft = container.scrollWidth;
-  }, [cells]);
-
   return (
-    <div
-      ref={scrollRef}
-      className="coin-roadmap-scroll overflow-x-auto border-t border-[#70401f] bg-[radial-gradient(circle_at_50%_0%,rgba(255,231,122,0.16),transparent_32%),linear-gradient(180deg,#fff6df_0%,#f8e1b8_100%)] px-1.5 py-1.5"
-    >
+    <div className="border-t border-[#70401f] bg-[radial-gradient(circle_at_50%_0%,rgba(255,231,122,0.16),transparent_32%),linear-gradient(180deg,#fff6df_0%,#f8e1b8_100%)] px-1.5 py-1.5">
       <div
-        className="grid min-w-[520px] overflow-hidden rounded-md border border-[#b7834a] bg-[linear-gradient(135deg,rgba(111,69,35,0.09)_25%,transparent_25%,transparent_50%,rgba(111,69,35,0.09)_50%,rgba(111,69,35,0.09)_75%,transparent_75%),#fffaf0] shadow-[inset_0_0_0_1px_rgba(255,255,255,0.55),inset_0_0_18px_rgba(111,63,28,0.12)] bg-[length:18px_18px]"
+        className="grid overflow-hidden rounded-md border border-[#b7834a] bg-[linear-gradient(135deg,rgba(111,69,35,0.09)_25%,transparent_25%,transparent_50%,rgba(111,69,35,0.09)_50%,rgba(111,69,35,0.09)_75%,transparent_75%),#fffaf0] shadow-[inset_0_0_0_1px_rgba(255,255,255,0.55),inset_0_0_18px_rgba(111,63,28,0.12)] bg-[length:18px_18px]"
         style={{
-          gridTemplateColumns: `repeat(${columns}, minmax(36px, 1fr))`,
-          gridTemplateRows: `repeat(${maxRoadmapRows}, 36px)`,
+          gridTemplateColumns: `repeat(${visibleColumns}, minmax(0, 1fr))`,
+          gridTemplateRows: `repeat(${maxRoadmapRows}, minmax(0, 30px))`,
         }}
       >
-        {Array.from({ length: columns * maxRoadmapRows }, (_, index) => {
-          const column = Math.floor(index / maxRoadmapRows);
+        {Array.from({ length: visibleColumns * maxRoadmapRows }, (_, index) => {
+          const column = startColumn + Math.floor(index / maxRoadmapRows);
           const row = index % maxRoadmapRows;
           const cell = lookup.get(`${column}-${row}`);
 
@@ -802,7 +838,7 @@ function Roadmap({ cells }: { cells: CoinTossRoadmapCell[] }) {
               <span className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle,rgba(255,255,255,0.42)_0%,transparent_58%)] opacity-45" />
               {cell ? (
                 <span
-                  className={`relative flex h-6 w-6 items-center justify-center rounded-full border-2 border-white/80 ${
+                  className={`relative flex h-5 w-5 items-center justify-center rounded-full border-2 border-white/80 sm:h-6 sm:w-6 ${
                     cell.outcome === "HEAD"
                       ? "bg-[radial-gradient(circle_at_32%_28%,#ffe39a_0%,#f0a400_44%,#9f5b00_100%)] shadow-[0_0_0_2px_rgba(240,164,0,0.18),0_4px_8px_rgba(159,91,0,0.28),inset_0_2px_0_rgba(255,255,255,0.48)]"
                       : "bg-[radial-gradient(circle_at_32%_28%,#a7f3c0_0%,#24914a_46%,#0f5f32_100%)] shadow-[0_0_0_2px_rgba(36,145,74,0.18),0_4px_8px_rgba(15,95,50,0.28),inset_0_2px_0_rgba(255,255,255,0.45)]"
@@ -810,7 +846,7 @@ function Roadmap({ cells }: { cells: CoinTossRoadmapCell[] }) {
                   title={`${cell.roundCode} ${cell.outcome}`}
                 >
                   {cell.powerMultiplier ? (
-                    <span className="absolute -top-2.5 left-1/2 z-10 -translate-x-1/2 rounded-full border border-[#fff7ad] bg-[linear-gradient(180deg,#7c2d12,#3f1608)] px-1.5 text-[8px] font-black leading-3 text-[#fff7ad] shadow-[0_0_8px_rgba(250,204,21,0.95)]">
+                    <span className="absolute -top-2 left-1/2 z-10 -translate-x-1/2 rounded-full border border-[#fff7ad] bg-[linear-gradient(180deg,#7c2d12,#3f1608)] px-1 text-[7px] font-black leading-3 text-[#fff7ad] shadow-[0_0_8px_rgba(250,204,21,0.95)] sm:-top-2.5 sm:px-1.5 sm:text-[8px]">
                       {Number(cell.powerMultiplier).toFixed(0)}x
                     </span>
                   ) : null}
@@ -820,20 +856,6 @@ function Roadmap({ cells }: { cells: CoinTossRoadmapCell[] }) {
           );
         })}
       </div>
-      <style jsx>{`
-        .coin-roadmap-scroll::-webkit-scrollbar {
-          height: 8px;
-        }
-        .coin-roadmap-scroll::-webkit-scrollbar-track {
-          background: rgba(107, 63, 28, 0.22);
-          border-radius: 999px;
-        }
-        .coin-roadmap-scroll::-webkit-scrollbar-thumb {
-          background: linear-gradient(90deg, #d18e09, #278b45);
-          border-radius: 999px;
-          border: 2px solid rgba(255, 246, 223, 0.9);
-        }
-      `}</style>
     </div>
   );
 }
@@ -848,15 +870,15 @@ function TopBar({
   isLocked: boolean;
 }) {
   return (
-    <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2 bg-[#322218] px-2 py-2 text-white">
+    <div className="grid shrink-0 grid-cols-[1fr_auto_1fr] items-center gap-2 bg-[#322218] px-2 py-2 text-white">
       <div className="flex items-center gap-2">
         <Users className="h-5 w-5 text-[#f0bf38]" />
-        <span className="text-2xl font-black">
+        <span className="text-xl font-black sm:text-2xl">
           {lobby?.activeViewerCount ?? lobby?.activePlayerCount ?? 0}
         </span>
       </div>
       <div
-        className={`min-w-[145px] rounded-b-[42px] border-x border-b px-4 pb-2 pt-1 text-center shadow-[0_6px_12px_rgba(0,0,0,0.35)] ${
+        className={`min-w-[118px] rounded-b-[32px] border-x border-b px-3 pb-2 pt-1 text-center shadow-[0_6px_12px_rgba(0,0,0,0.35)] sm:min-w-[145px] sm:rounded-b-[42px] sm:px-4 ${
           isLocked
             ? "border-[#ff8dbb] bg-[linear-gradient(180deg,#d82f79,#8e164f)]"
             : "border-[#96dfc4] bg-[linear-gradient(180deg,#119472,#0d6954)]"
@@ -869,7 +891,7 @@ function TopBar({
         >
           {isLocked ? "BET LOCK" : "Place bet now"}
         </div>
-        <div className="text-3xl font-black leading-7 text-[#f0bf38]">
+        <div className="text-2xl font-black leading-6 text-[#f0bf38] sm:text-3xl sm:leading-7">
           {secondsLeft}
         </div>
       </div>
@@ -878,7 +900,7 @@ function TopBar({
           <div>{formatAmount(lobby?.settings.minBet ?? 300)} Min</div>
           <div>{formatAmount(lobby?.settings.maxBet ?? 6315)} Max</div>
         </div>
-        <Menu className="h-7 w-7 text-[#f0bf38]" />
+        <Menu className="h-6 w-6 text-[#f0bf38] sm:h-7 sm:w-7" />
       </div>
     </div>
   );
@@ -897,6 +919,8 @@ export default function CoinTossPage() {
     useState<CoinTossOutcome | null>(null);
   const [revealUntil, setRevealUntil] = useState(0);
   const [placedBet, setPlacedBet] = useState<PlacedBetState | null>(null);
+  const [cardErrorMessage, setCardErrorMessage] = useState<string | null>(null);
+  const [cardErrorOutcome, setCardErrorOutcome] = useState<CoinTossOutcome | null>(null);
   const [activePowerRoundCode, setActivePowerRoundCode] = useState<string | null>(
     null,
   );
@@ -962,6 +986,8 @@ export default function CoinTossPage() {
       };
 
       setPlacedBet(nextPlacedBet);
+      setCardErrorMessage(null);
+      setCardErrorOutcome(null);
       updateUser({ balance: Number(response.data.balance) });
       toast.success("Bet placed");
       await refetch();
@@ -976,6 +1002,14 @@ export default function CoinTossPage() {
           ? (error as { response?: { data?: { message?: string } } }).response!
               .data!.message!
           : "Failed to place bet";
+      setCardErrorMessage(
+        message.toLowerCase().includes("insufficient balance")
+          ? "Insufficient balance"
+          : null,
+      );
+      if (message.toLowerCase().includes("insufficient balance")) {
+        setCardErrorOutcome(selectedOutcome);
+      }
       toast.error(message);
     },
   });
@@ -1004,19 +1038,49 @@ export default function CoinTossPage() {
     isResultReveal && Boolean(placedBet) && placedBet?.outcome === revealedOutcome;
   const isUserLossReveal =
     isResultReveal && Boolean(placedBet) && placedBet?.outcome !== revealedOutcome;
+  const hasPlacedBetInCurrentRound = placedBet?.roundId === lobby?.currentRound.id;
+  const headOwnPlacedStake =
+    hasPlacedBetInCurrentRound && placedBet?.outcome === "HEAD" ? placedBet.stake : 0;
+  const tailOwnPlacedStake =
+    hasPlacedBetInCurrentRound && placedBet?.outcome === "TAIL" ? placedBet.stake : 0;
+  const headLiveBetCount = Math.max(
+    0,
+    (lobby?.liveBetStats.head.betCount ?? 0) - (headOwnPlacedStake > 0 ? 1 : 0),
+  );
+  const tailLiveBetCount = Math.max(
+    0,
+    (lobby?.liveBetStats.tail.betCount ?? 0) - (tailOwnPlacedStake > 0 ? 1 : 0),
+  );
+  const headLiveStakeTotal = Math.max(
+    0,
+    Number(lobby?.currentRound.totalHeadStake ?? 0) - headOwnPlacedStake,
+  ).toString();
+  const tailLiveStakeTotal = Math.max(
+    0,
+    Number(lobby?.currentRound.totalTailStake ?? 0) - tailOwnPlacedStake,
+  ).toString();
 
   const selectOutcomeAndBet = (outcome: CoinTossOutcome) => {
+    if (isLocked || isLoading || placeBetMutation.isPending) return;
+    if (displayBalance < stake) {
+      setCardErrorMessage("Insufficient balance");
+      setCardErrorOutcome(outcome);
+      return;
+    }
+
+    setCardErrorMessage(null);
+    setCardErrorOutcome(null);
     setSelectedOutcome(outcome);
     setIsChipSelectorOpen(false);
-
-    if (isLocked || isLoading || placeBetMutation.isPending) return;
-
     placeBetMutation.mutate(outcome);
   };
 
   useEffect(() => {
     if (isLocked) {
       setIsChipSelectorOpen(false);
+      setSelectedOutcome(null);
+      setCardErrorMessage(null);
+      setCardErrorOutcome(null);
     }
   }, [isLocked]);
 
@@ -1074,6 +1138,8 @@ export default function CoinTossPage() {
       clearBetTimerRef.current = setTimeout(() => {
         setSelectedOutcome(null);
         setPlacedBet(null);
+        setCardErrorMessage(null);
+        setCardErrorOutcome(null);
       }, resultRevealMs);
     }, revealDelayMs);
   }, [latestHistoryRound?.outcome, latestHistoryRound?.roundCode, updateUser]);
@@ -1091,9 +1157,9 @@ export default function CoinTossPage() {
   );
 
   return (
-    <div className="min-h-dvh w-full bg-[#241a14] pb-5 text-[#3f2614]">
-      <div className="mx-auto w-full max-w-[540px] overflow-hidden bg-[#b8794b] shadow-[0_0_0_1px_rgba(0,0,0,0.25)]">
-        <div className="flex items-center justify-between bg-[#695f53] px-3 py-1 text-[11px] font-bold text-white">
+    <div className="h-[100svh] w-full overflow-hidden bg-[#241a14] text-[#3f2614]">
+      <div className="mx-auto flex h-full w-full max-w-[540px] flex-col overflow-hidden bg-[#b8794b] shadow-[0_0_0_1px_rgba(0,0,0,0.25)]">
+        <div className="flex shrink-0 items-center justify-between bg-[#695f53] px-2.5 py-1 text-[10px] font-bold text-white sm:px-3 sm:text-[11px]">
           <span>Min. Bet : 🪙 {formatAmount(lobby?.settings.minBet ?? 300)}</span>
           <div className="flex items-center gap-2">
             <span>ID : {displayName}</span>
@@ -1108,7 +1174,7 @@ export default function CoinTossPage() {
           </div>
         </div>
 
-        <div className="flex gap-2 bg-[#6b5646] p-2">
+        <div className="flex shrink-0 gap-1.5 bg-[#6b5646] p-1.5 sm:gap-2 sm:p-2">
           <PlayerRail title="Richest" players={lobby?.richestPlayers ?? []} />
           <CoinScene outcome={revealedOutcome} phase={coinPhase} />
           <PlayerRail title="Big Winners" players={lobby?.bigWinners ?? []} />
@@ -1116,15 +1182,23 @@ export default function CoinTossPage() {
 
         <TopBar lobby={lobby} secondsLeft={secondsLeft} isLocked={isLocked} />
 
-        <div className="bg-[#b8794b] p-3">
-          <div className="relative rounded-lg border-2 border-[#603719] bg-[#a9633b] p-4 pb-12 shadow-[inset_0_2px_0_rgba(255,255,255,0.15)]">
-            <div className="grid grid-cols-2 gap-8">
+        <div className="flex min-h-0 flex-1 flex-col bg-[#b8794b] p-1.5 sm:p-3">
+          <div className="relative shrink-0 rounded-lg border-2 border-[#603719] bg-[#a9633b] p-2 pb-9 shadow-[inset_0_2px_0_rgba(255,255,255,0.15)] sm:p-4 sm:pb-12">
+            <div className="grid grid-cols-2 gap-2 sm:gap-8">
               <BetPanel
                 outcome="HEAD"
                 selected={displaySelectedOutcome === "HEAD" && !isUserLossReveal}
                 onSelect={() => selectOutcomeAndBet("HEAD")}
+                disabled={isLocked || isLoading || placeBetMutation.isPending}
+                overlayMessage={
+                  cardErrorMessage && cardErrorOutcome === "HEAD"
+                    ? cardErrorMessage
+                    : null
+                }
                 payoutMultiplier={payoutMultiplier}
                 stake={displayStake}
+                liveBetCount={headLiveBetCount}
+                liveStakeTotal={headLiveStakeTotal}
                 winningOutcome={revealedOutcome}
                 isReveal={isResultReveal}
                 showWinPayout={isUserWinReveal && placedBet?.outcome === "HEAD"}
@@ -1134,8 +1208,16 @@ export default function CoinTossPage() {
                 outcome="TAIL"
                 selected={displaySelectedOutcome === "TAIL" && !isUserLossReveal}
                 onSelect={() => selectOutcomeAndBet("TAIL")}
+                disabled={isLocked || isLoading || placeBetMutation.isPending}
+                overlayMessage={
+                  cardErrorMessage && cardErrorOutcome === "TAIL"
+                    ? cardErrorMessage
+                    : null
+                }
                 payoutMultiplier={payoutMultiplier}
                 stake={displayStake}
+                liveBetCount={tailLiveBetCount}
+                liveStakeTotal={tailLiveStakeTotal}
                 winningOutcome={revealedOutcome}
                 isReveal={isResultReveal}
                 showWinPayout={isUserWinReveal && placedBet?.outcome === "TAIL"}
@@ -1156,14 +1238,14 @@ export default function CoinTossPage() {
             />
           </div>
 
-          <div className="mt-3 rounded-lg border border-[#70401f] bg-[#f3d5ac]">
-            <div className="flex items-center gap-3 px-3 py-2">
-              <div className="h-12 w-12 rounded-lg border-2 border-[#f0bf38] bg-gradient-to-br from-pink-300 to-rose-500" />
+          <div className="mt-1.5 flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border border-[#70401f] bg-[#f3d5ac] sm:mt-3">
+            <div className="flex shrink-0 items-center gap-2 px-2 py-1.5 sm:gap-3 sm:px-3 sm:py-2">
+              <div className="h-9 w-9 rounded-lg border-2 border-[#f0bf38] bg-gradient-to-br from-pink-300 to-rose-500 sm:h-12 sm:w-12" />
               <div className="min-w-0 flex-1">
-                <div className="truncate text-sm font-black text-[#5c3217]">
+                <div className="truncate text-[13px] font-black text-[#5c3217] sm:text-sm">
                   {displayName}
                 </div>
-                <div className="text-xs font-black text-[#7c5b3a]">
+                <div className="text-[11px] font-black text-[#7c5b3a] sm:text-xs">
                   Balance: {formatAmount(displayBalance)}
                 </div>
               </div>
@@ -1177,14 +1259,39 @@ export default function CoinTossPage() {
                   </div>
                 </div>
               ) : null}
-              <div className="flex h-14 w-14 items-center justify-center rounded-full border-4 border-[#2f86a6] bg-white text-xl font-black">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full border-4 border-[#2f86a6] bg-white text-base font-black sm:h-14 sm:w-14 sm:text-xl">
                 {stake}
               </div>
             </div>
             <Roadmap cells={lobby?.roadmap ?? []} />
-            <div className="grid grid-cols-2 border-t border-[#b9b9b9] bg-[#e5e5e5] px-3 py-1 text-sm font-black">
-              <div className="text-[#b96917]">HEAD {headPct.toFixed(2)}%</div>
-              <div className="text-right text-[#278b45]">TAIL {tailPct.toFixed(2)}%</div>
+            <div className="grid shrink-0 grid-cols-[1fr_1fr_auto] items-end gap-2 border-t border-[#b9b9b9] bg-[#e5e5e5] px-2.5 py-1 text-[10px] font-black sm:px-3 sm:text-sm">
+              <div className="text-[#b96917]">
+                <div className="flex items-center gap-1">
+                  <span>HEAD</span>
+                  <span className="flex h-3.5 w-3.5 items-center justify-center rounded-full border border-[#d7d7d7] bg-[radial-gradient(circle_at_35%_28%,#ffffff_0%,#f6dde5_44%,#d1a7b5_100%)] text-[7px] font-black text-[#b96917] sm:h-4 sm:w-4 sm:text-[8px]">
+                    H
+                  </span>
+                  <span>{headPct.toFixed(0)}%</span>
+                </div>
+                <div className="text-[8px] leading-3 text-[#8c5a25] sm:text-[9px]">
+                  {headLiveBetCount} bet
+                </div>
+              </div>
+              <div className="text-center text-[#278b45]">
+                <div className="flex items-center justify-center gap-1">
+                  <span>TAIL</span>
+                  <span className="h-3.5 w-3.5 rounded-full border border-[#bdbdbd] bg-white/70 sm:h-4 sm:w-4" />
+                  <span>{tailPct.toFixed(0)}%</span>
+                </div>
+                <div className="text-[8px] leading-3 text-[#2e7a44] sm:text-[9px]">
+                  {tailLiveBetCount} bet
+                </div>
+              </div>
+              <div className="text-right text-[8px] leading-3 text-[#7c7c7c] sm:text-[10px]">
+                Calculated from
+                <br />
+                last 60 rounds
+              </div>
             </div>
           </div>
 
