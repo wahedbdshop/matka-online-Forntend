@@ -17,6 +17,7 @@ import {
   Lock,
   BadgeDollarSign,
   Gift,
+  History,
   Languages,
   Gauge,
 } from "lucide-react";
@@ -84,6 +85,13 @@ const menuItems = [
     labelKey: "bonusHistory" as const,
     color: "text-emerald-600 dark:text-emerald-400",
     bg: "bg-emerald-100 dark:bg-emerald-500/10",
+  },
+  {
+    href: "/bet-history",
+    icon: History,
+    label: "Bet History",
+    color: "text-cyan-600 dark:text-cyan-400",
+    bg: "bg-cyan-100 dark:bg-cyan-500/10",
   },
   {
     href: "/profile/turnover",
@@ -373,7 +381,7 @@ export default function ProfilePage() {
                   <item.icon className={`h-4 w-4 ${item.color}`} />
                 </div>
                 <span className="text-sm font-medium text-slate-950 dark:text-white">
-                  {t.profile[item.labelKey]}
+                  {"label" in item ? item.label : t.profile[item.labelKey]}
                 </span>
               </div>
               <ChevronRight className="h-4 w-4 text-slate-500" />

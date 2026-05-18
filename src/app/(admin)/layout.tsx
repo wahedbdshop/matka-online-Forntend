@@ -380,6 +380,14 @@ const navItems: NavItem[] = [
   },
 
   {
+    icon: HandCoins,
+    label: "Coin Toss",
+    children: [
+      { href: "/admin/coin-toss", icon: LayoutDashboard, label: "Control" },
+    ],
+  },
+
+  {
     icon: Gift,
     label: "Referral",
     section: "Finance",

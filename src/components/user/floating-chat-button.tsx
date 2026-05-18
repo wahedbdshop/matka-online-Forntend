@@ -258,7 +258,7 @@ export function FloatingChatButton({
       markChatAgentMessagesSeen();
       setUnreadCount(0);
     }
-    router.push("/support/live");
+    router.push("/support/live?tab=agent");
   };
 
   const style = position

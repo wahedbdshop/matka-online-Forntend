@@ -4,7 +4,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
-import { Download, TrendingUp, Trophy, Users } from "lucide-react";
+import { Download, History, TrendingUp, Trophy, Users } from "lucide-react";
 import { FloatingChatButton } from "@/components/user/floating-chat-button";
 import { GlobalNoticeBar } from "@/components/shared/global-notice-bar";
 import { DomainActionList } from "@/components/shared/domain-action-list";
@@ -202,6 +202,27 @@ export default function DashboardPage() {
         <BannerSlider banners={banners} />
         <GlobalNoticeBar />
         <HomeGameHub popularGames={popularGames} />
+
+        <Link
+          href="/bet-history"
+          className="flex items-center gap-3 rounded-xl border border-amber-200 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md dark:border-amber-500/20 dark:bg-slate-800/60"
+        >
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[#f0bf38]/15 text-[#b77905]">
+            <History className="h-6 w-6" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-black text-slate-950 dark:text-white">
+              Bet History
+            </p>
+            <p className="mt-0.5 text-xs text-slate-600 dark:text-slate-400">
+              Thai, Kalyan, Ludo and Coin Toss history
+            </p>
+          </div>
+          <div className="rounded-full bg-[#f0bf38] px-3 py-1.5 text-xs font-black text-[#1a1f39]">
+            View
+          </div>
+        </Link>
+
         <WinnerCard
           title={text.kalyanWinners}
           bets={kalyanWinners}

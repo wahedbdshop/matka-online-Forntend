@@ -30,6 +30,28 @@ type BonusHistoryItem = {
 
 const BONUS_NOTIFICATION_READ_KEY = "read-bonus-notification-ids";
 
+const cleanNotificationText = (value?: string | null) => {
+  const text = String(value ?? "");
+
+  return text
+    .replace(/αº│/g, "৳")
+    .replace(/├ù/g, "×")
+    .replace(/≡ƒÄë/g, "🎉")
+    .replace(/Γ£à/g, "✓")
+    .replace(/à§³/g, "৳")
+    .replace(/Â/g, "")
+    .replace(/Ã—/g, "×")
+    .replace(/â‚¹/g, "₹")
+    .replace(/âœ“/g, "✓")
+    .replace(/âœ—/g, "✗")
+    .replace(/â€™/g, "'")
+    .replace(/â€œ|â€/g, '"')
+    .replace(/â€“|â€”/g, "-")
+    .replace(/^=\?+\s*/g, "")
+    .replace(/\s{2,}/g, " ")
+    .trim();
+};
+
 function getBonusNotificationLabel(type?: string) {
   if (type === "DEPOSIT_BONUS") return "Deposit Bonus";
   if (type === "MANUAL_DEPOSIT_BONUS") return "Manual Deposit Bonus";
@@ -263,8 +285,8 @@ export default function NotificationsPage() {
                   />
                 <div className="flex-1">
                   <div className="flex items-start justify-between gap-2">
-                    <p className="text-slate-950 font-semibold text-sm dark:text-white">
-                      {notification.title}
+                    <p className="break-words text-sm font-semibold text-slate-950 dark:text-white">
+                      {cleanNotificationText(notification.title)}
                     </p>
                     <Badge
                       className={cn(
@@ -275,8 +297,8 @@ export default function NotificationsPage() {
                       {notification.type.replace(/_/g, " ")}
                     </Badge>
                   </div>
-                  <p className="text-slate-600 text-xs mt-1 dark:text-slate-400">
-                    {notification.message}
+                  <p className="mt-1 whitespace-pre-wrap break-words text-xs text-slate-600 dark:text-slate-400">
+                    {cleanNotificationText(notification.message)}
                   </p>
                   <p className="text-slate-500 text-[10px] mt-1 dark:text-slate-500">
                     {formatNotificationDate(notification.createdAt)}

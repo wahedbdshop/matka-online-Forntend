@@ -34,6 +34,28 @@ import {
 import { getClientAccessTokenCookie } from "@/lib/auth-cookie";
 import { isAdminPortalRole } from "@/lib/auth-role";
 
+const cleanNotificationText = (value?: string | null) => {
+  const text = String(value ?? "");
+
+  return text
+    .replace(/αº│/g, "৳")
+    .replace(/├ù/g, "×")
+    .replace(/≡ƒÄë/g, "🎉")
+    .replace(/Γ£à/g, "✓")
+    .replace(/à§³/g, "৳")
+    .replace(/Â/g, "")
+    .replace(/Ã—/g, "×")
+    .replace(/â‚¹/g, "₹")
+    .replace(/âœ“/g, "✓")
+    .replace(/âœ—/g, "✗")
+    .replace(/â€™/g, "'")
+    .replace(/â€œ|â€/g, '"')
+    .replace(/â€“|â€”/g, "-")
+    .replace(/^=\?+\s*/g, "")
+    .replace(/\s{2,}/g, " ")
+    .trim();
+};
+
 function normalizeMetricKey(value: string) {
   return value.replace(/[^a-z0-9]/gi, "").toLowerCase();
 }
@@ -903,8 +925,8 @@ export default function UserDetailPage({
                     }`}
                   >
                     <div className="flex items-start justify-between gap-2">
-                      <p className="text-xs font-medium text-white">
-                        {notif.title}
+                      <p className="min-w-0 break-words text-xs font-medium text-white">
+                        {cleanNotificationText(notif.title)}
                       </p>
                       <div className="flex items-center gap-2 shrink-0">
                         {!notif.isRead && (
@@ -920,8 +942,8 @@ export default function UserDetailPage({
                         </button>
                       </div>
                     </div>
-                    <p className="text-[11px] text-slate-400">
-                      {notif.message}
+                    <p className="whitespace-pre-wrap break-words text-[11px] leading-5 text-slate-400">
+                      {cleanNotificationText(notif.message)}
                     </p>
                     <p className="text-[10px] text-slate-600">
                       {new Date(notif.createdAt).toLocaleString("en-BD", {

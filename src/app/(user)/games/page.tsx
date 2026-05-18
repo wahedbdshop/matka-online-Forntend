@@ -54,6 +54,16 @@ const games: GameItem[] = [
     glow: "59,130,246",
   },
   {
+    href: "/games/coin-toss",
+    titleKey: "coinTossTitle",
+    subtitleKey: "coinTossSubtitle",
+    logoSrc: GAME_LOGO_SRC.coinToss,
+    active: true,
+    accentFrom: "#b7791f",
+    accentTo: "#f0bf38",
+    glow: "240,191,56",
+  },
+  {
     href: "/games",
     titleKey: "pcsoTitle",
     subtitleKey: "pcsoSubtitle",
@@ -80,6 +90,8 @@ type GamesText = {
   kalyanSubtitle: string;
   ludoTitle: string;
   ludoSubtitle: string;
+  coinTossTitle: string;
+  coinTossSubtitle: string;
   pcsoTitle: string;
   pcsoSubtitle: string;
 };
@@ -225,6 +237,8 @@ export default function GamesPage() {
       kalyanSubtitle: "India's most trusted satta matka",
       ludoTitle: "Ludo Bet",
       ludoSubtitle: "1 vs 1 token battle",
+      coinTossTitle: "Coin Toss",
+      coinTossSubtitle: "Head Tail live betting",
       pcsoTitle: "PCSO Lottery",
       pcsoSubtitle: "Philippine Charity Sweepstakes",
     },
@@ -243,6 +257,8 @@ export default function GamesPage() {
       kalyanSubtitle: "ভারতের বিশ্বস্ত সাট্টা মাটকা",
       ludoTitle: "লুডু বেট",
       ludoSubtitle: "১ বনাম ১ টোকেন ব্যাটল",
+      coinTossTitle: "কয়েন টস",
+      coinTossSubtitle: "হেড টেইল লাইভ বেটিং",
       pcsoTitle: "পিসিএসও লটারি",
       pcsoSubtitle: "ফিলিপাইন চ্যারিটি সুইপস্টেকস",
     },
@@ -261,6 +277,8 @@ export default function GamesPage() {
       kalyanSubtitle: "भारत का भरोसेमंद सट्टा मटका",
       ludoTitle: "लूडो बेट",
       ludoSubtitle: "1 बनाम 1 टोकन बैटल",
+      coinTossTitle: "कॉइन टॉस",
+      coinTossSubtitle: "हेड टेल लाइव बेटिंग",
       pcsoTitle: "PCSO लॉटरी",
       pcsoSubtitle: "फिलिपीन चैरिटी स्वीपस्टेक्स",
     },

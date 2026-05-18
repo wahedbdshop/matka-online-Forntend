@@ -16,8 +16,8 @@ import {
   PhoneCall,
   Search,
 } from "lucide-react";
-import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { AdminService } from "@/services/admin.service";
 import { DepositService } from "@/services/deposit.service";
@@ -101,7 +101,7 @@ function MessageRow({ item }: { item: FeedItem }) {
     <button
       type="button"
       onClick={item.action}
-      className="flex w-full items-center gap-3 rounded-[22px] px-4 py-3 text-left transition-colors hover:bg-slate-100/70 dark:hover:bg-slate-800/60"
+      className="flex w-full items-center gap-3 border-b border-slate-200/70 px-1 py-3 text-left transition-colors last:border-b-0 hover:bg-slate-100/40 dark:border-white/8 dark:hover:bg-white/[0.03]"
     >
       <FeedAvatar title={item.title} kind={item.kind} imageUrl={item.imageUrl} />
 
@@ -129,7 +129,15 @@ function MessageRow({ item }: { item: FeedItem }) {
 
 export default function LiveSupportSelectionPage() {
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState<TabKey>("home");
+  const searchParams = useSearchParams();
+  const requestedTab = searchParams.get("tab");
+  const [activeTab, setActiveTab] = useState<TabKey>(
+    requestedTab === "agent" ||
+      requestedTab === "ai" ||
+      requestedTab === "whatsapp"
+      ? requestedTab
+      : "home",
+  );
   const isLoggedIn = hasClientAuthCookie();
   const user = useAuthStore((state) => state.user);
   const welcomeName = user?.name?.trim() || "there";
@@ -214,6 +222,26 @@ export default function LiveSupportSelectionPage() {
     );
   };
 
+  useEffect(() => {
+    if (
+      requestedTab !== "agent" &&
+      requestedTab !== "ai" &&
+      requestedTab !== "whatsapp"
+    ) {
+      return;
+    }
+
+    if (requestedTab === "agent") {
+      if (!isLoggedIn) {
+        router.push("/login");
+        return;
+      }
+      markChatAgentMessagesSeen();
+    }
+
+    setActiveTab(requestedTab);
+  }, [isLoggedIn, requestedTab, router]);
+
   const feedItems: FeedItem[] = useMemo(() => {
     const fromMarquees = marquees.slice(0, 3).map((item: any, index: number) => ({
       id: `marquee-${index}`,
@@ -258,7 +286,14 @@ export default function LiveSupportSelectionPage() {
   }, [banners, favouriteSlides]);
 
   return (
-    <div className="mx-auto max-w-lg overflow-hidden rounded-[32px] border border-slate-200/70 bg-[#f7f9fc] pb-20 shadow-[0_24px_70px_rgba(15,23,42,0.12)] dark:border-white/10 dark:bg-[#071120] dark:shadow-[0_24px_70px_rgba(2,6,23,0.4)]">
+    <div
+      className={cn(
+        "mx-auto max-w-lg overflow-hidden bg-[#f7f9fc] shadow-[0_24px_70px_rgba(15,23,42,0.12)] dark:bg-[#071120] dark:shadow-[0_24px_70px_rgba(2,6,23,0.4)]",
+        activeTab === "agent" || activeTab === "ai"
+          ? "flex h-[calc(100dvh-9.25rem)] flex-col border-x border-slate-200/70 pb-0 dark:border-white/10"
+          : "border-x border-slate-200/70 pb-20 dark:border-white/10",
+      )}
+    >
       <style>{`
         @keyframes whatsappGlow {
           0%, 100% {
@@ -276,52 +311,63 @@ export default function LiveSupportSelectionPage() {
         }
       `}</style>
 
-      <div className="sticky top-0 z-20 border-b border-slate-200/80 bg-white/95 px-4 py-3 backdrop-blur dark:border-white/10 dark:bg-[#0b1728]/95">
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex min-w-0 items-center gap-3">
-            <Button
-              type="button"
-              variant="ghost"
-              onClick={goBack}
-              className="h-10 w-10 rounded-full p-0 text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-white/10 dark:hover:text-white"
-            >
-              <ChevronLeft className="h-5 w-5" />
-            </Button>
-            <div className="min-w-0">
-              <p className="text-lg font-semibold text-slate-900 dark:text-white">
-                Support
-              </p>
+      {activeTab === "home" || activeTab === "whatsapp" ? (
+        <div className="sticky top-0 z-20 border-b border-slate-200/80 bg-white/95 px-4 py-3 backdrop-blur dark:border-white/10 dark:bg-[#0b1728]/95">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex min-w-0 items-center gap-3">
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={goBack}
+                className="h-10 w-10 rounded-full p-0 text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-white/10 dark:hover:text-white"
+              >
+                <ChevronLeft className="h-5 w-5" />
+              </Button>
+              <div className="min-w-0">
+                <p className="text-lg font-semibold text-slate-900 dark:text-white">
+                  Support
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                className="flex h-10 w-10 items-center justify-center rounded-full text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-white/10 dark:hover:text-white"
+                aria-label="Search support"
+              >
+                <Search className="h-4.5 w-4.5" />
+              </button>
+              <button
+                type="button"
+                className="flex h-10 w-10 items-center justify-center rounded-full text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-white/10 dark:hover:text-white"
+                aria-label="More options"
+              >
+                <MoreVertical className="h-4.5 w-4.5" />
+              </button>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              className="flex h-10 w-10 items-center justify-center rounded-full text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-white/10 dark:hover:text-white"
-              aria-label="Search support"
-            >
-              <Search className="h-4.5 w-4.5" />
-            </button>
-            <button
-              type="button"
-              className="flex h-10 w-10 items-center justify-center rounded-full text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-white/10 dark:hover:text-white"
-              aria-label="More options"
-            >
-              <MoreVertical className="h-4.5 w-4.5" />
-            </button>
-          </div>
         </div>
-      </div>
+      ) : (
+        <button
+          type="button"
+          onClick={goBack}
+          className="absolute left-2 top-2 z-30 flex h-8 w-8 items-center justify-center rounded-full bg-[#0b1728]/80 text-white backdrop-blur transition-colors hover:bg-[#10203a] dark:bg-[#0b1728]/80"
+          aria-label="Back to support"
+        >
+          <ChevronLeft className="h-4.5 w-4.5" />
+        </button>
+      )}
 
       {activeTab === "home" && (
-        <div className="space-y-4 bg-[#efeae2] px-3 py-3 dark:bg-[#08101d]">
-          <section className="rounded-[26px] bg-[linear-gradient(180deg,rgba(10,18,38,0.98)_0%,rgba(18,31,58,0.98)_100%)] p-4 text-white shadow-[0_18px_44px_rgba(15,23,42,0.18)] dark:shadow-[0_18px_44px_rgba(2,6,23,0.3)]">
-            <div className="flex items-center gap-3 rounded-[20px] bg-white/8 px-4 py-3 backdrop-blur">
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[linear-gradient(145deg,#f0bf38,#d89a10)] text-[#1a1f39]">
+        <div className="space-y-5 bg-[#efeae2] px-4 py-4 dark:bg-[#08101d]">
+          <section className="space-y-3 text-white">
+            <div className="flex items-center gap-3">
+              <div className="flex h-11 w-11 items-center justify-center rounded-full bg-[linear-gradient(145deg,#f0bf38,#d89a10)] text-[#1a1f39]">
                 <MessageSquareText className="h-5 w-5" />
               </div>
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-semibold">Matka24 Support</p>
-                <p className="truncate text-xs text-white/65">
+                <p className="truncate text-xs text-slate-400">
                   Hi {welcomeName}, open a conversation any time
                 </p>
               </div>
@@ -330,27 +376,27 @@ export default function LiveSupportSelectionPage() {
             <button
               type="button"
               onClick={openLiveAgent}
-              className="mt-4 flex w-full items-center justify-between rounded-[22px] bg-white px-4 py-3 text-left text-slate-900 transition-transform hover:scale-[1.01] dark:bg-white/95 dark:text-slate-900"
+              className="flex w-full items-center justify-between border-y border-slate-200/70 bg-white/95 px-1 py-3 text-left text-slate-900 transition-colors hover:bg-white dark:border-white/10 dark:bg-transparent dark:text-white dark:hover:bg-white/[0.03]"
             >
               <div>
                 <p className="text-sm font-semibold">Send us a message</p>
-                <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-600">
+                <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
                   Open live agent chat in WhatsApp-style view
                 </p>
               </div>
-              <div className="flex h-11 w-11 items-center justify-center rounded-full bg-[linear-gradient(145deg,#7c3aed_0%,#c026d3_100%)] text-white shadow-[0_10px_24px_rgba(168,85,247,0.28)]">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[linear-gradient(145deg,#7c3aed_0%,#c026d3_100%)] text-white shadow-[0_10px_24px_rgba(168,85,247,0.28)]">
                 <MoveRight className="h-5 w-5" />
               </div>
             </button>
           </section>
 
-          <section className="overflow-hidden rounded-[28px] border border-slate-200/80 bg-white shadow-[0_16px_40px_rgba(15,23,42,0.08)] dark:border-white/10 dark:bg-[#0b1728] dark:shadow-[0_16px_40px_rgba(2,6,23,0.28)]">
-            <div className="border-b border-slate-200/80 px-4 py-3 dark:border-white/10">
+          <section>
+            <div className="border-b border-slate-200/80 py-3 dark:border-white/10">
               <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500 dark:text-slate-400">
                 Recent chats
               </p>
             </div>
-            <div className="space-y-1 bg-white px-2 py-2 dark:bg-[#0b1728]">
+            <div>
               {feedItems.map((item) => (
                 <MessageRow key={item.id} item={item} />
               ))}
@@ -361,9 +407,9 @@ export default function LiveSupportSelectionPage() {
             {featuredCards.map((item: any, index: number) => (
               <div
                 key={item.id ?? index}
-                className="overflow-hidden rounded-[24px] border border-slate-200 bg-white shadow-[0_12px_30px_rgba(15,23,42,0.08)] dark:border-white/10 dark:bg-[#0b1728] dark:shadow-[0_12px_30px_rgba(2,6,23,0.2)]"
+                className="overflow-hidden border-b border-slate-200 pb-4 dark:border-white/10"
               >
-                <div className="relative aspect-[16/9] overflow-hidden">
+                <div className="relative aspect-[16/9] overflow-hidden rounded-[18px]">
                   <Image
                     src={item.imageUrl}
                     alt={item.title ?? `Support card ${index + 1}`}
@@ -372,7 +418,7 @@ export default function LiveSupportSelectionPage() {
                     className="object-cover"
                   />
                 </div>
-                <div className="space-y-2 p-4">
+                <div className="space-y-2 pt-3">
                   <p className="text-xl font-semibold tracking-tight text-slate-900 dark:text-white">
                     {item.title ?? "Support Update"}
                   </p>
@@ -385,7 +431,7 @@ export default function LiveSupportSelectionPage() {
             ))}
           </section>
 
-          <div className="rounded-[24px] bg-white p-4 shadow-[0_12px_30px_rgba(15,23,42,0.08)] dark:bg-[#0b1728] dark:shadow-[0_12px_30px_rgba(2,6,23,0.2)]">
+          <div className="border-t border-slate-200 pt-4 dark:border-white/10">
             <p className="text-sm font-bold text-slate-900 dark:text-white">
               Best support topics
             </p>
@@ -407,7 +453,7 @@ export default function LiveSupportSelectionPage() {
       )}
 
       {activeTab === "agent" && (
-        <div className="bg-[#efeae2] px-0 py-0 dark:bg-[#08101d]">
+        <div className="min-h-0 flex-1 bg-[#efeae2] px-0 py-0 dark:bg-[#08101d]">
           <SupportChatPanel
             initialMode="AGENT"
             embedded
@@ -418,7 +464,7 @@ export default function LiveSupportSelectionPage() {
       )}
 
       {activeTab === "ai" && (
-        <div className="bg-[#efeae2] px-0 py-0 dark:bg-[#08101d]">
+        <div className="min-h-0 flex-1 bg-[#efeae2] px-0 py-0 dark:bg-[#08101d]">
           <SupportChatPanel
             initialMode="AI"
             embedded
@@ -499,7 +545,7 @@ export default function LiveSupportSelectionPage() {
         </div>
       )}
 
-      <div className="fixed bottom-0 left-0 right-0 z-30 border-t border-slate-200 bg-white/96 shadow-[0_-8px_30px_rgba(15,23,42,0.08)] backdrop-blur dark:border-white/10 dark:bg-[#0b1728]/96 dark:shadow-[0_-8px_30px_rgba(2,6,23,0.28)]">
+      <div className="fixed bottom-0 left-0 right-0 z-30 border-t border-slate-200 bg-white/96 shadow-[0_-8px_30px_rgba(15,23,42,0.08)] backdrop-blur dark:border-white/10 dark:bg-[#0b1728]/96 dark:shadow-none">
         <div className="mx-auto grid max-w-lg grid-cols-4 px-3 py-2">
           {[
             { key: "home", label: "Home", icon: Home },

@@ -11,6 +11,7 @@ import {
   Rocket,
   ChevronRight,
   Dices,
+  Coins,
 } from "lucide-react";
 import { toast } from "sonner";
 import { GAME_LOGO_SRC } from "@/lib/game-branding";
@@ -21,6 +22,7 @@ type HubTabId =
   | "thai"
   | "kalyan"
   | "ludo"
+  | "coin"
   | "pcso"
   | "sports"
   | "slot"
@@ -45,6 +47,7 @@ const tabs: {
   { id: "thai", label: "Thai", icon: Flame, logoSrc: GAME_LOGO_SRC.thai },
   { id: "kalyan", label: "Kalyan", icon: Flame, logoSrc: GAME_LOGO_SRC.kalyan },
   { id: "ludo", label: "Ludo", icon: Dices, logoSrc: GAME_LOGO_SRC.ludo },
+  { id: "coin", label: "Coin", icon: Coins, logoSrc: GAME_LOGO_SRC.coinToss },
   { id: "pcso", label: "PCSO", icon: Flame, logoSrc: GAME_LOGO_SRC.pcso },
   { id: "sports", label: "Sports", icon: Goal },
   { id: "slot", label: "Slot", icon: Cherry },
@@ -78,6 +81,11 @@ const sectionMeta: Record<
     title: "Ludo Bet",
     subtitle: "Quick 1 vs 1 stake rooms and fast queue join",
     accent: "from-blue-400 to-cyan-600",
+  },
+  coin: {
+    title: "Coin Toss",
+    subtitle: "Head Tail rounds with quick live betting",
+    accent: "from-yellow-400 to-amber-700",
   },
   pcso: {
     title: "PCSO",
@@ -125,6 +133,13 @@ const sectionGames: Record<HubTabId, HubGame[]> = {
       href: "/games/ludo",
     },
     {
+      id: "coin-hot",
+      name: "Coin Toss",
+      subtitle: "Head Tail table",
+      logoSrc: GAME_LOGO_SRC.coinToss,
+      href: "/games/coin-toss",
+    },
+    {
       id: "pcso-hot",
       name: "PCSO Lottery",
       subtitle: "PCSO board preview",
@@ -157,6 +172,15 @@ const sectionGames: Record<HubTabId, HubGame[]> = {
       subtitle: "Open 1 vs 1 lobby",
       logoSrc: GAME_LOGO_SRC.ludo,
       href: "/games/ludo",
+    },
+  ],
+  coin: [
+    {
+      id: "coin-main",
+      name: "Coin Toss",
+      subtitle: "Open Head Tail table",
+      logoSrc: GAME_LOGO_SRC.coinToss,
+      href: "/games/coin-toss",
     },
   ],
   pcso: [
@@ -417,6 +441,7 @@ export function HomeGameHub({ popularGames }: { popularGames: any[] }) {
           {(activeTab === "thai" ||
             activeTab === "kalyan" ||
             activeTab === "ludo" ||
+            activeTab === "coin" ||
             activeTab === "pcso") && (
             <div className="mt-4 rounded-lg border border-slate-200 bg-white p-3 dark:border-[#3e4772] dark:bg-[#2d355a]">
               <div className="flex items-center gap-3">
@@ -429,6 +454,8 @@ export function HomeGameHub({ popularGames }: { popularGames: any[] }) {
                           ? GAME_LOGO_SRC.kalyan
                           : activeTab === "ludo"
                             ? GAME_LOGO_SRC.ludo
+                            : activeTab === "coin"
+                              ? GAME_LOGO_SRC.coinToss
                             : GAME_LOGO_SRC.pcso
                     }
                     alt={activeTab}
@@ -445,11 +472,15 @@ export function HomeGameHub({ popularGames }: { popularGames: any[] }) {
                         ? "Kalyan Lottery Board"
                         : activeTab === "ludo"
                           ? "Ludo 1 vs 1 Lobby"
+                          : activeTab === "coin"
+                            ? "Coin Toss Table"
                           : "PCSO Board"}
                   </p>
                   <p className="text-[11px] text-slate-600 dark:text-slate-400">
                     {activeTab === "pcso"
                       ? "This section will show as coming soon for now."
+                      : activeTab === "coin"
+                        ? "Head Tail cards, chip selector, and round history."
                       : activeTab === "ludo"
                         ? "Stake rooms, active players, and fast queue join."
                         : activeTab === "kalyan"
@@ -476,7 +507,9 @@ export function HomeGameHub({ popularGames }: { popularGames: any[] }) {
                         ? "/thai-lottery"
                         : activeTab === "kalyan"
                           ? "/kalyan"
-                          : "/games/ludo"
+                          : activeTab === "ludo"
+                            ? "/games/ludo"
+                            : "/games/coin-toss"
                     }
                     className="rounded-full bg-gradient-to-r from-[#f0bf38] to-[#d99100] px-3 py-2 text-xs font-black text-[#1c2037]"
                   >

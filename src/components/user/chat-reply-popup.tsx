@@ -48,7 +48,11 @@ export function ChatReplyPopup() {
 
   useEffect(() => {
     const unsub = onNewMessage((data: { role?: string; message?: string }) => {
-      if (data.role === "AGENT" && pathname !== "/chat") {
+      if (
+        data.role === "AGENT" &&
+        pathname !== "/chat" &&
+        pathname !== "/support/live"
+      ) {
         setLastMessage(data.message ?? "Admin replied to your message");
         const nextUnreadCount = readChatUnreadCount() + 1;
         writeChatUnreadCount(nextUnreadCount);
@@ -61,7 +65,7 @@ export function ChatReplyPopup() {
 
   // HTTP polling fallback catches messages when socket is unreliable on mobile.
   useEffect(() => {
-    if (pathname === "/chat") return;
+    if (pathname === "/chat" || pathname === "/support/live") return;
     const sessionId = localStorage.getItem(CHAT_SESSION_KEY);
     if (!sessionId) return;
 
@@ -100,7 +104,7 @@ export function ChatReplyPopup() {
   const openChat = () => {
     setShow(false);
     markChatAgentMessagesSeen();
-    router.push("/chat?mode=agent");
+    router.push("/support/live?tab=agent");
   };
 
   const onPointerDown = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
@@ -125,7 +129,7 @@ export function ChatReplyPopup() {
     isDragging.current = false;
   }, []);
 
-  if (!show || pathname === "/chat") return null;
+  if (!show || pathname === "/chat" || pathname === "/support/live") return null;
 
   return (
     <div

@@ -14,18 +14,22 @@ export function UserLayoutShell({
   const segments = useSelectedLayoutSegments();
   const isLudoRoute = segments[0] === "games" && segments[1] === "ludo";
   const isLudoRoomRoute = isLudoRoute && segments[2] === "room";
+  const isCoinTossRoute = segments[0] === "games" && segments[1] === "coin-toss";
+  const isFullScreenGameRoute = isLudoRoomRoute || isCoinTossRoute;
   const isSupportHubRoute =
     segments[0] === "support" && segments[1] === "live";
 
   return (
     <>
-      {!isLudoRoomRoute && (
+      {!isFullScreenGameRoute && (
         <TopHeader initialIsAuthenticated={initialIsAuthenticated} />
       )}
       <main
         className={
           isLudoRoomRoute
             ? "flex min-h-dvh w-full overflow-hidden"
+            : isCoinTossRoute
+            ? "block min-h-dvh w-full overflow-x-hidden overflow-y-auto"
             : `flex-1 max-w-lg w-full mx-auto px-4 pt-4 ${
                 isSupportHubRoute ? "pb-6" : "pb-24"
               }`
@@ -42,7 +46,7 @@ export function UserLayoutShell({
       >
         {children}
       </main>
-      {!isSupportHubRoute && !isLudoRoomRoute && <BottomNav />}
+      {!isSupportHubRoute && !isFullScreenGameRoute && <BottomNav />}
     </>
   );
 }
