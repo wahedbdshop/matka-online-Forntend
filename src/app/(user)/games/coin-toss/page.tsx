@@ -596,9 +596,6 @@ function BetPanel({
         <div className="mt-1 text-base font-black text-[#6b3f1c] sm:mt-2 sm:text-xl">
           1 : {payoutMultiplier}
         </div>
-        <div className="mt-1 text-[10px] font-black uppercase tracking-[0.08em] text-[#8c5a25] sm:text-xs">
-          Round Total: {formatAmount(liveStakeTotal)}
-        </div>
       </div>
       {selected ? (
         <div className="absolute left-4 top-[58px] flex h-7 w-7 items-center justify-center rounded-full border-4 border-slate-100 bg-white text-[9px] font-black text-slate-600 shadow-[0_2px_5px_rgba(0,0,0,0.35)] sm:left-12 sm:top-[92px] sm:h-9 sm:w-9 sm:text-[11px]">
