@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import {
   Menu,
@@ -20,15 +20,27 @@ import {
 import { UserService } from "@/services/user.service";
 import { useAuthStore } from "@/store/auth.store";
 
+declare global {
+  interface Window {
+    webkitAudioContext?: typeof AudioContext;
+  }
+}
+
 const maxRoadmapRows = 4;
 const presenceStorageKey = "coin_toss_presence_session_id";
 const resultRevealMs = 2400;
+const roundResetMs = 850;
+const roundStartFlashMs = 1000;
+const countdownSoundVolume = 0.08;
 
 type PlacedBetState = {
   id: string;
   roundId: string;
   outcome: CoinTossOutcome;
   stake: number;
+  totalStake: number;
+  headStake: number;
+  tailStake: number;
 };
 
 const liveChipPositions = [
@@ -150,11 +162,18 @@ function CoinScene({
   phase,
 }: {
   outcome?: CoinTossOutcome | null;
-  phase: "idle" | "cover" | "reveal";
+  phase: "idle" | "cover" | "reveal" | "reset";
 }) {
   const isReveal = phase === "reveal" && outcome;
+  const isReset = phase === "reset";
   const label = isReveal ? (outcome === "TAIL" ? "T" : "H") : "?";
-  const title = isReveal ? outcome : phase === "cover" ? "LOCKED" : "READY";
+  const title = isReveal
+    ? outcome
+    : isReset
+      ? "NEXT ROUND"
+      : phase === "cover"
+        ? "LOCKED"
+        : "READY";
 
   return (
     <div className="relative flex h-28 min-w-0 flex-1 items-center justify-center overflow-hidden rounded-lg border border-[#5c8d70] bg-[linear-gradient(135deg,#286653,#79b28d)] sm:h-40">
@@ -167,7 +186,9 @@ function CoinScene({
         className={`absolute z-20 h-20 w-28 rounded-[40px_40px_32px_32px] bg-[#f5d2bd] shadow-[0_10px_22px_rgba(55,31,13,0.22)] transition-transform duration-700 ease-out sm:h-24 sm:w-36 sm:rounded-[48px_48px_38px_38px] ${
           phase === "reveal"
             ? "-translate-x-14 -translate-y-6 -rotate-[18deg] sm:-translate-x-20 sm:-translate-y-8"
-            : "-translate-x-7 translate-y-2 rotate-[8deg] sm:-translate-x-10"
+            : isReset
+              ? "-translate-x-4 translate-y-1 rotate-[3deg] sm:-translate-x-6 sm:translate-y-1"
+              : "-translate-x-7 translate-y-2 rotate-[8deg] sm:-translate-x-10"
         }`}
       >
         <span className="absolute bottom-2 left-4 h-7 w-4 rounded-full bg-[#f9dccd] sm:left-5 sm:h-9 sm:w-5" />
@@ -180,7 +201,9 @@ function CoinScene({
         className={`absolute z-30 h-20 w-28 rounded-[40px_40px_32px_32px] bg-[#f2c7b0] shadow-[0_10px_22px_rgba(55,31,13,0.24)] transition-transform duration-700 ease-out sm:h-24 sm:w-36 sm:rounded-[48px_48px_38px_38px] ${
           phase === "reveal"
             ? "translate-x-14 -translate-y-6 rotate-[18deg] sm:translate-x-20 sm:-translate-y-8"
-            : "translate-x-7 translate-y-2 -rotate-[8deg] sm:translate-x-10"
+            : isReset
+              ? "translate-x-4 translate-y-1 -rotate-[3deg] sm:translate-x-6 sm:translate-y-1"
+              : "translate-x-7 translate-y-2 -rotate-[8deg] sm:translate-x-10"
         }`}
       >
         <span className="absolute bottom-2 right-4 h-7 w-4 rounded-full bg-[#f8d7c5] sm:right-5 sm:h-9 sm:w-5" />
@@ -190,9 +213,13 @@ function CoinScene({
       </div>
 
       <div
-        className={`relative z-10 flex h-20 w-20 items-center justify-center rounded-full border-[5px] border-[#8b4d16] bg-[radial-gradient(circle_at_35%_28%,#fff2a8_0%,#f0bf38_42%,#b86b13_100%)] shadow-[0_12px_18px_rgba(15,23,42,0.35)] transition-all duration-500 sm:h-24 sm:w-24 sm:border-[6px] ${
-          phase === "cover" ? "scale-90 opacity-80" : "scale-100 opacity-100"
-        } ${phase === "reveal" ? "animate-[coin-pop_650ms_ease-out]" : ""}`}
+        className={`relative flex h-20 w-20 items-center justify-center rounded-full border-[5px] border-[#8b4d16] bg-[radial-gradient(circle_at_35%_28%,#fff2a8_0%,#f0bf38_42%,#b86b13_100%)] shadow-[0_12px_18px_rgba(15,23,42,0.35)] transition-all duration-500 sm:h-24 sm:w-24 sm:border-[6px] ${
+          isReveal
+            ? "z-40 opacity-100 animate-[coin-pop_700ms_ease-out]"
+            : isReset
+              ? "z-10 scale-[0.62] opacity-0"
+              : "z-10 translate-y-4 scale-[0.58] opacity-0 sm:translate-y-5"
+        }`}
       >
         <span className="text-3xl font-black text-[#7c2d12] sm:text-4xl">
           {label}
@@ -202,13 +229,16 @@ function CoinScene({
       <style jsx>{`
         @keyframes coin-pop {
           0% {
-            transform: scale(0.88) rotateY(0deg);
+            transform: translateY(18px) scale(0.54) rotateY(0deg);
+            opacity: 0;
           }
           55% {
-            transform: scale(1.14) rotateY(180deg);
+            transform: translateY(-10px) scale(1.14) rotateY(180deg);
+            opacity: 1;
           }
           100% {
-            transform: scale(1) rotateY(360deg);
+            transform: translateY(-20px) scale(1) rotateY(360deg);
+            opacity: 1;
           }
         }
       `}</style>
@@ -566,6 +596,9 @@ function BetPanel({
         <div className="mt-1 text-base font-black text-[#6b3f1c] sm:mt-2 sm:text-xl">
           1 : {payoutMultiplier}
         </div>
+        <div className="mt-1 text-[10px] font-black uppercase tracking-[0.08em] text-[#8c5a25] sm:text-xs">
+          Round Total: {formatAmount(liveStakeTotal)}
+        </div>
       </div>
       {selected ? (
         <div className="absolute left-4 top-[58px] flex h-7 w-7 items-center justify-center rounded-full border-4 border-slate-100 bg-white text-[9px] font-black text-slate-600 shadow-[0_2px_5px_rgba(0,0,0,0.35)] sm:left-12 sm:top-[92px] sm:h-9 sm:w-9 sm:text-[11px]">
@@ -864,10 +897,12 @@ function TopBar({
   lobby,
   secondsLeft,
   isLocked,
+  isRoundStartFlash,
 }: {
   lobby?: CoinTossLobby;
   secondsLeft: number;
   isLocked: boolean;
+  isRoundStartFlash: boolean;
 }) {
   return (
     <div className="grid shrink-0 grid-cols-[1fr_auto_1fr] items-center gap-2 bg-[#322218] px-2 py-2 text-white">
@@ -889,10 +924,10 @@ function TopBar({
             isLocked ? "animate-pulse text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.75)]" : ""
           }`}
         >
-          {isLocked ? "BET LOCK" : "Place bet now"}
+          {isRoundStartFlash ? "ROUND START" : isLocked ? "BET LOCK" : "Place bet now"}
         </div>
         <div className="text-2xl font-black leading-6 text-[#f0bf38] sm:text-3xl sm:leading-7">
-          {secondsLeft}
+          {isRoundStartFlash ? "-" : secondsLeft}
         </div>
       </div>
       <div className="flex items-center justify-end gap-2">
@@ -918,6 +953,8 @@ export default function CoinTossPage() {
   const [revealedOutcome, setRevealedOutcome] =
     useState<CoinTossOutcome | null>(null);
   const [revealUntil, setRevealUntil] = useState(0);
+  const [resetUntil, setResetUntil] = useState(0);
+  const [roundStartUntil, setRoundStartUntil] = useState(0);
   const [placedBet, setPlacedBet] = useState<PlacedBetState | null>(null);
   const [cardErrorMessage, setCardErrorMessage] = useState<string | null>(null);
   const [cardErrorOutcome, setCardErrorOutcome] = useState<CoinTossOutcome | null>(null);
@@ -925,10 +962,16 @@ export default function CoinTossPage() {
     null,
   );
   const lastRevealedRoundRef = useRef<string | null>(null);
+  const lastRoundIdRef = useRef<string | null>(null);
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const lastCountdownSecondRef = useRef<number | null>(null);
+  const lastRoundStartSoundRoundRef = useRef<string | null>(null);
+  const lastRoundStartSpeechRoundRef = useRef<string | null>(null);
   const revealDelayTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
     null,
   );
   const clearBetTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const balanceRefreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const { data: lobbyData, isLoading, refetch } = useQuery({
     queryKey: ["coin-toss-lobby"],
@@ -940,6 +983,106 @@ export default function CoinTossPage() {
     const timer = window.setInterval(() => setNow(Date.now()), 1000);
     return () => window.clearInterval(timer);
   }, []);
+
+  const getAudioContext = useCallback(() => {
+    if (typeof window === "undefined") return null;
+    const AudioContextCtor =
+      window.AudioContext ?? window.webkitAudioContext ?? null;
+    if (!AudioContextCtor) return null;
+
+    if (!audioContextRef.current) {
+      audioContextRef.current = new AudioContextCtor();
+    }
+
+    if (audioContextRef.current.state === "suspended") {
+      void audioContextRef.current.resume().catch(() => {});
+    }
+
+    return audioContextRef.current;
+  }, []);
+
+  const playTone = useCallback(
+    (frequency: number, durationMs: number, gainValue = countdownSoundVolume) => {
+      const ctx = getAudioContext();
+      if (!ctx) return;
+      if (ctx.state !== "running") {
+        void ctx.resume().then(() => {
+          window.setTimeout(() => playTone(frequency, durationMs, gainValue), 20);
+        }).catch(() => {});
+        return;
+      }
+
+      const oscillator = ctx.createOscillator();
+      const gain = ctx.createGain();
+      oscillator.type = "sine";
+      oscillator.frequency.setValueAtTime(frequency, ctx.currentTime);
+      gain.gain.setValueAtTime(0.0001, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(
+        gainValue,
+        ctx.currentTime + 0.01,
+      );
+      gain.gain.exponentialRampToValueAtTime(
+        0.0001,
+        ctx.currentTime + durationMs / 1000,
+      );
+      oscillator.connect(gain);
+      gain.connect(ctx.destination);
+      oscillator.start();
+      oscillator.stop(ctx.currentTime + durationMs / 1000 + 0.02);
+    },
+    [getAudioContext],
+  );
+
+  const playRoundStartSound = useCallback(() => {
+    playTone(660, 110, 0.09);
+    window.setTimeout(() => playTone(880, 140, 0.07), 110);
+  }, [playTone]);
+
+  const speakRoundStartHindi = useCallback(() => {
+    if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
+
+    const utterance = new SpeechSynthesisUtterance("Apna bet lagaiye");
+    utterance.lang = "hi-IN";
+    utterance.rate = 1;
+    utterance.pitch = 1;
+    utterance.volume = 0.9;
+
+    const voices = window.speechSynthesis.getVoices();
+    const hindiVoice =
+      voices.find((voice) => voice.lang.toLowerCase().startsWith("hi")) ??
+      voices.find((voice) => voice.lang.toLowerCase().startsWith("en-in")) ??
+      null;
+
+    if (hindiVoice) {
+      utterance.voice = hindiVoice;
+    }
+
+    window.speechSynthesis.cancel();
+    window.speechSynthesis.speak(utterance);
+  }, []);
+
+  useEffect(() => {
+    const unlockAudio = () => {
+      const ctx = getAudioContext();
+      if (!ctx) return;
+      if (ctx.state === "suspended") {
+        void ctx.resume().then(() => {
+          const gain = ctx.createGain();
+          gain.gain.setValueAtTime(0.0001, ctx.currentTime);
+          gain.connect(ctx.destination);
+        }).catch(() => {});
+      }
+    };
+
+    window.addEventListener("pointerdown", unlockAudio, { passive: true });
+    window.addEventListener("touchstart", unlockAudio, { passive: true });
+    window.addEventListener("keydown", unlockAudio);
+    return () => {
+      window.removeEventListener("pointerdown", unlockAudio);
+      window.removeEventListener("touchstart", unlockAudio);
+      window.removeEventListener("keydown", unlockAudio);
+    };
+  }, [getAudioContext]);
 
   useEffect(() => {
     const sessionId = getPresenceSessionId();
@@ -983,16 +1126,30 @@ export default function CoinTossPage() {
         roundId: bet.roundId,
         outcome: bet.outcome,
         stake: Number(bet.stake),
+        totalStake: Number(bet.stake),
+        headStake: bet.outcome === "HEAD" ? Number(bet.stake) : 0,
+        tailStake: bet.outcome === "TAIL" ? Number(bet.stake) : 0,
       };
 
-      setPlacedBet(nextPlacedBet);
+      setPlacedBet((current) => {
+        if (!current || current.roundId !== nextPlacedBet.roundId) {
+          return nextPlacedBet;
+        }
+
+        return {
+          ...nextPlacedBet,
+          totalStake: current.totalStake + nextPlacedBet.stake,
+          headStake: current.headStake + nextPlacedBet.headStake,
+          tailStake: current.tailStake + nextPlacedBet.tailStake,
+        };
+      });
       setCardErrorMessage(null);
       setCardErrorOutcome(null);
       updateUser({ balance: Number(response.data.balance) });
       toast.success("Bet placed");
       await refetch();
     },
-    onError: (error: unknown) => {
+    onError: (error: unknown, attemptedOutcome) => {
       const message =
         typeof error === "object" &&
         error !== null &&
@@ -1002,13 +1159,22 @@ export default function CoinTossPage() {
           ? (error as { response?: { data?: { message?: string } } }).response!
               .data!.message!
           : "Failed to place bet";
+      const isInsufficientBalance = message
+        .toLowerCase()
+        .includes("insufficient balance");
+      const isOppositeSideBlocked =
+        message.toLowerCase().includes("already placed a bet on") &&
+        message.toLowerCase().includes("same round");
+
       setCardErrorMessage(
-        message.toLowerCase().includes("insufficient balance")
+        isInsufficientBalance
           ? "Insufficient balance"
-          : null,
+          : isOppositeSideBlocked
+            ? "Already bet on other side"
+            : null,
       );
-      if (message.toLowerCase().includes("insufficient balance")) {
-        setCardErrorOutcome(selectedOutcome);
+      if (isInsufficientBalance || isOppositeSideBlocked) {
+        setCardErrorOutcome(attemptedOutcome);
       }
       toast.error(message);
     },
@@ -1020,8 +1186,17 @@ export default function CoinTossPage() {
   const displayBalance = Number(currentUser?.balance ?? 0);
   const latestHistoryRound = lobby?.history.at(-1);
   const coinPhase =
-    now < revealUntil ? "reveal" : secondsLeft <= 2 ? "cover" : "idle";
+    now < revealUntil
+      ? "reveal"
+      : now < resetUntil
+        ? "reset"
+        : secondsLeft <= 2
+          ? "cover"
+          : "idle";
   const isResultReveal = coinPhase === "reveal" && Boolean(revealedOutcome);
+  const isRoundStartFlash =
+    now < roundStartUntil && coinPhase === "idle" && !isResultReveal;
+  const roundStartText = isRoundStartFlash ? "Round Start" : null;
   const displaySelectedOutcome = placedBet?.outcome ?? selectedOutcome;
   const displayStake = placedBet?.stake ?? stake;
   const headPower =
@@ -1040,9 +1215,9 @@ export default function CoinTossPage() {
     isResultReveal && Boolean(placedBet) && placedBet?.outcome !== revealedOutcome;
   const hasPlacedBetInCurrentRound = placedBet?.roundId === lobby?.currentRound.id;
   const headOwnPlacedStake =
-    hasPlacedBetInCurrentRound && placedBet?.outcome === "HEAD" ? placedBet.stake : 0;
+    hasPlacedBetInCurrentRound && placedBet ? placedBet.headStake : 0;
   const tailOwnPlacedStake =
-    hasPlacedBetInCurrentRound && placedBet?.outcome === "TAIL" ? placedBet.stake : 0;
+    hasPlacedBetInCurrentRound && placedBet ? placedBet.tailStake : 0;
   const headLiveBetCount = Math.max(
     0,
     (lobby?.liveBetStats.head.betCount ?? 0) - (headOwnPlacedStake > 0 ? 1 : 0),
@@ -1059,9 +1234,32 @@ export default function CoinTossPage() {
     0,
     Number(lobby?.currentRound.totalTailStake ?? 0) - tailOwnPlacedStake,
   ).toString();
+  const currentRoundOwnBetTotal =
+    hasPlacedBetInCurrentRound && placedBet ? placedBet.totalStake : 0;
 
   const selectOutcomeAndBet = (outcome: CoinTossOutcome) => {
-    if (isLocked || isLoading || placeBetMutation.isPending) return;
+    if (
+      isLocked ||
+      isLoading ||
+      placeBetMutation.isPending ||
+      isRoundStartFlash
+    ) {
+      return;
+    }
+
+    if (
+      hasPlacedBetInCurrentRound &&
+      placedBet &&
+      placedBet.outcome !== outcome
+    ) {
+      setCardErrorMessage("Already bet on other side");
+      setCardErrorOutcome(outcome);
+      toast.error(
+        `You already bet on ${placedBet.outcome}. Betting on both HEAD and TAIL in the same round is not allowed`,
+      );
+      return;
+    }
+
     if (displayBalance < stake) {
       setCardErrorMessage("Insufficient balance");
       setCardErrorOutcome(outcome);
@@ -1094,21 +1292,51 @@ export default function CoinTossPage() {
   }, [minBet, maxBet]);
 
   useEffect(() => {
+    if (!lobby?.currentRound.id) return;
+    if (lastRoundIdRef.current === lobby.currentRound.id) return;
+
+    lastRoundIdRef.current = lobby.currentRound.id;
+    if (lobby.currentRound.status === "BETTING") {
+      setRoundStartUntil(Date.now() + roundStartFlashMs);
+    }
+  }, [lobby?.currentRound.id, lobby?.currentRound.status]);
+
+  useEffect(() => {
+    const roundId = lobby?.currentRound.id;
+    if (!roundId || !isRoundStartFlash) return;
+    if (lastRoundStartSoundRoundRef.current === roundId) return;
+
+    lastRoundStartSoundRoundRef.current = roundId;
+    playRoundStartSound();
+  }, [isRoundStartFlash, lobby?.currentRound.id, playRoundStartSound]);
+
+  useEffect(() => {
+    const roundId = lobby?.currentRound.id;
+    if (!roundId || !isRoundStartFlash) return;
+    if (lastRoundStartSpeechRoundRef.current === roundId) return;
+
+    lastRoundStartSpeechRoundRef.current = roundId;
+    speakRoundStartHindi();
+  }, [isRoundStartFlash, lobby?.currentRound.id, speakRoundStartHindi]);
+
+  useEffect(() => {
+    if (isRoundStartFlash || isLocked || secondsLeft <= 0) {
+      lastCountdownSecondRef.current = null;
+      return;
+    }
+
+    if (lastCountdownSecondRef.current === secondsLeft) return;
+    lastCountdownSecondRef.current = secondsLeft;
+    playTone(secondsLeft <= 3 ? 980 : 720, 90, secondsLeft <= 3 ? 0.1 : 0.06);
+  }, [isLocked, isRoundStartFlash, playTone, secondsLeft]);
+
+  useEffect(() => {
     if (!latestHistoryRound?.roundCode || !latestHistoryRound.outcome) return;
     if (lastRevealedRoundRef.current === latestHistoryRound.roundCode) return;
 
     lastRevealedRoundRef.current = latestHistoryRound.roundCode;
     setRevealUntil(0);
-    void UserService.getProfile({ silent: true })
-      .then((profileResponse) => {
-        const balance = Number(profileResponse?.data?.balance);
-        if (Number.isFinite(balance)) {
-          updateUser({ balance });
-        }
-      })
-      .catch(() => {
-        // Balance refresh is best-effort; the next profile refresh will recover it.
-      });
+    setResetUntil(0);
     setActivePowerRoundCode(
       latestHistoryRound.powerMultiplier ? latestHistoryRound.roundCode : null,
     );
@@ -1129,10 +1357,15 @@ export default function CoinTossPage() {
     revealDelayTimerRef.current = setTimeout(() => {
       setActivePowerRoundCode(null);
       setRevealedOutcome(latestHistoryRound.outcome);
-      setRevealUntil(Date.now() + resultRevealMs);
+      const revealEndsAt = Date.now() + resultRevealMs;
+      setRevealUntil(revealEndsAt);
+      setResetUntil(revealEndsAt + roundResetMs);
 
       if (clearBetTimerRef.current) {
         clearTimeout(clearBetTimerRef.current);
+      }
+      if (balanceRefreshTimerRef.current) {
+        clearTimeout(balanceRefreshTimerRef.current);
       }
 
       clearBetTimerRef.current = setTimeout(() => {
@@ -1140,6 +1373,18 @@ export default function CoinTossPage() {
         setPlacedBet(null);
         setCardErrorMessage(null);
         setCardErrorOutcome(null);
+      }, resultRevealMs);
+      balanceRefreshTimerRef.current = setTimeout(() => {
+        void UserService.getProfile({ silent: true })
+          .then((profileResponse) => {
+            const balance = Number(profileResponse?.data?.balance);
+            if (Number.isFinite(balance)) {
+              updateUser({ balance });
+            }
+          })
+          .catch(() => {
+            // Balance refresh is best-effort; the next profile refresh will recover it.
+          });
       }, resultRevealMs);
     }, revealDelayMs);
   }, [latestHistoryRound?.outcome, latestHistoryRound?.roundCode, updateUser]);
@@ -1151,6 +1396,9 @@ export default function CoinTossPage() {
       }
       if (clearBetTimerRef.current) {
         clearTimeout(clearBetTimerRef.current);
+      }
+      if (balanceRefreshTimerRef.current) {
+        clearTimeout(balanceRefreshTimerRef.current);
       }
     },
     [],
@@ -1180,7 +1428,12 @@ export default function CoinTossPage() {
           <PlayerRail title="Big Winners" players={lobby?.bigWinners ?? []} />
         </div>
 
-        <TopBar lobby={lobby} secondsLeft={secondsLeft} isLocked={isLocked} />
+        <TopBar
+          lobby={lobby}
+          secondsLeft={secondsLeft}
+          isLocked={isLocked}
+          isRoundStartFlash={isRoundStartFlash}
+        />
 
         <div className="flex min-h-0 flex-1 flex-col bg-[#b8794b] p-1.5 sm:p-3">
           <div className="relative shrink-0 rounded-lg border-2 border-[#603719] bg-[#a9633b] p-2 pb-9 shadow-[inset_0_2px_0_rgba(255,255,255,0.15)] sm:p-4 sm:pb-12">
@@ -1224,6 +1477,67 @@ export default function CoinTossPage() {
                 powerMultiplier={tailPower}
               />
             </div>
+            {roundStartText ? (
+              <div className="pointer-events-none absolute inset-x-3 top-[68px] z-30 overflow-hidden rounded-full sm:inset-x-8 sm:top-[96px]">
+                <div className="relative h-12 rounded-full border border-[#fff0b8]/75 bg-[linear-gradient(180deg,rgba(121,63,23,0.9),rgba(82,39,12,0.95))] shadow-[0_10px_24px_rgba(77,33,8,0.32)] sm:h-14">
+                  <div className="absolute inset-0 bg-[linear-gradient(90deg,transparent_0%,rgba(255,255,255,0.12)_18%,rgba(255,255,255,0.28)_50%,rgba(255,255,255,0.12)_82%,transparent_100%)] opacity-70" />
+                  <div className="absolute inset-y-0 left-0 w-[42%] bg-[linear-gradient(90deg,rgba(250,204,21,0.24),transparent)]" />
+                  <div className="absolute inset-0 overflow-hidden rounded-full">
+                    <Lightning
+                      hue={195}
+                      xOffset={0}
+                      speed={1.9}
+                      intensity={0.82}
+                      size={1.35}
+                    />
+                  </div>
+                  <div className="absolute inset-y-[22%] left-[-18%] w-20 rotate-[10deg] bg-[linear-gradient(90deg,transparent,rgba(120,255,255,0.92),transparent)] blur-[2px] opacity-0 animate-[round-start-electric_1000ms_ease-out_forwards]" />
+                  <div className="absolute inset-y-[30%] left-[8%] w-12 -rotate-[8deg] bg-[linear-gradient(90deg,transparent,rgba(255,255,255,0.95),transparent)] blur-[1px] opacity-0 animate-[round-start-electric_1000ms_ease-out_140ms_forwards]" />
+                  <div
+                    className="absolute left-0 top-1/2 -translate-y-1/2 whitespace-nowrap bg-[linear-gradient(180deg,#fff8d6,#facc15)] bg-clip-text text-base font-black uppercase tracking-[0.22em] text-transparent drop-shadow-[0_1px_0_rgba(0,0,0,0.24)] sm:text-lg"
+                    style={{ animation: "round-start-sweep 1800ms ease-out forwards" }}
+                  >
+                    {roundStartText}
+                  </div>
+                </div>
+                <style jsx>{`
+                  @keyframes round-start-sweep {
+                    0% {
+                      transform: translate(-30%, -50%);
+                      opacity: 0;
+                    }
+                    12% {
+                      opacity: 1;
+                    }
+                    72% {
+                      transform: translate(118%, -50%);
+                      opacity: 1;
+                    }
+                    100% {
+                      transform: translate(136%, -50%);
+                      opacity: 0;
+                    }
+                  }
+                  @keyframes round-start-electric {
+                    0% {
+                      transform: translateX(0) scaleX(0.35);
+                      opacity: 0;
+                    }
+                    18% {
+                      opacity: 0.95;
+                    }
+                    55% {
+                      transform: translateX(210%) scaleX(1);
+                      opacity: 0.88;
+                    }
+                    100% {
+                      transform: translateX(320%) scaleX(0.7);
+                      opacity: 0;
+                    }
+                  }
+                `}</style>
+              </div>
+            ) : null}
 
             <ChipSelector
               stake={stake}
@@ -1249,6 +1563,16 @@ export default function CoinTossPage() {
                   Balance: {formatAmount(displayBalance)}
                 </div>
               </div>
+              {currentRoundOwnBetTotal > 0 ? (
+                <div className="ml-auto rounded-xl bg-[#f7e4c0] px-2.5 py-1 text-right shadow-[inset_0_1px_0_rgba(255,255,255,0.6)] sm:px-3">
+                  <div className="text-[9px] font-black uppercase tracking-[0.08em] text-[#8a4b17] sm:text-[10px]">
+                    Total Bet
+                  </div>
+                  <div className="text-sm font-black text-[#5c3217] sm:text-base">
+                    {formatAmount(currentRoundOwnBetTotal)}
+                  </div>
+                </div>
+              ) : null}
               {isUserWinReveal ? (
                 <div className="flex items-center gap-1">
                   <div className="flex h-9 w-9 animate-bounce items-center justify-center rounded-full border-4 border-[#fef08a] bg-white text-[10px] font-black text-emerald-700 shadow-[0_3px_8px_rgba(0,0,0,0.3)]">
@@ -1260,7 +1584,7 @@ export default function CoinTossPage() {
                 </div>
               ) : null}
               <div className="flex h-10 w-10 items-center justify-center rounded-full border-4 border-[#2f86a6] bg-white text-base font-black sm:h-14 sm:w-14 sm:text-xl">
-                {stake}
+                {formatAmount(stake)}
               </div>
             </div>
             <Roadmap cells={lobby?.roadmap ?? []} />
