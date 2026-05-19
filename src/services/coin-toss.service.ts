@@ -2,7 +2,11 @@ import { api } from "@/lib/axios";
 import type { ApiResponse } from "@/types";
 
 export type CoinTossOutcome = "HEAD" | "TAIL";
-export type CoinTossRoundStatus = "BETTING" | "LOCKED" | "SETTLED" | "CANCELLED";
+export type CoinTossRoundStatus =
+  | "BETTING"
+  | "LOCKED"
+  | "SETTLED"
+  | "CANCELLED";
 export type CoinTossBetStatus = "PENDING" | "WON" | "LOST" | "REFUNDED";
 
 export type CoinTossRound = {
@@ -128,17 +132,20 @@ export const CoinTossService = {
 
 export const CoinTossAdminService = {
   async getSettings() {
-    const res = await api.get<ApiResponse<{
-      id: string;
-      isEnabled: boolean;
-      bettingWindowSec: number;
-      minBet: string;
-      maxBet: string;
-      payoutMultiplier: string;
-      historyLimit: number;
-      createdAt: string;
-      updatedAt: string;
-    }>>("/coin-toss/admin/settings");
+    const res = await api.get<
+      ApiResponse<{
+        id: string;
+        isEnabled: boolean;
+        bettingWindowSec: number;
+        minBet: string;
+        maxBet: string;
+        payoutMultiplier: string;
+        historyLimit: number;
+        enableAntiLoss: boolean; // এখানে টাইপ যোগ করা হলো
+        createdAt: string;
+        updatedAt: string;
+      }>
+    >("/coin-toss/admin/settings");
     return res.data;
   },
 
@@ -149,18 +156,22 @@ export const CoinTossAdminService = {
     maxBet?: number;
     payoutMultiplier?: number;
     historyLimit?: number;
+    enableAntiLoss?: boolean; // এখানেও পেলোড টাইপ যোগ করা হলো
   }) {
-    const res = await api.patch<ApiResponse<{
-      id: string;
-      isEnabled: boolean;
-      bettingWindowSec: number;
-      minBet: string;
-      maxBet: string;
-      payoutMultiplier: string;
-      historyLimit: number;
-      createdAt: string;
-      updatedAt: string;
-    }>>("/coin-toss/admin/settings", payload);
+    const res = await api.patch<
+      ApiResponse<{
+        id: string;
+        isEnabled: boolean;
+        bettingWindowSec: number;
+        minBet: string;
+        maxBet: string;
+        payoutMultiplier: string;
+        historyLimit: number;
+        enableAntiLoss: boolean; // রিটার্ন টাইপ আপডেট করা হলো
+        createdAt: string;
+        updatedAt: string;
+      }>
+    >("/coin-toss/admin/settings", payload);
     return res.data;
   },
 
@@ -169,31 +180,33 @@ export const CoinTossAdminService = {
       ...(params?.fromDate ? { fromDate: params.fromDate } : {}),
       ...(params?.toDate ? { toDate: params.toDate } : {}),
     }).toString();
-    const res = await api.get<ApiResponse<{
-      fromDate: string;
-      toDate: string;
-      totalBets: number;
-      totalRounds: number;
-      wonBetCount: number;
-      lostBetCount: number;
-      totalStake: string;
-      totalPayout: string;
-      userProfit: string;
-      adminProfit: string;
-      adminLoss: string;
-      recentRounds: Array<{
-        roundCode: string;
-        outcome: CoinTossOutcome | null;
-        powerOutcome: CoinTossOutcome | null;
-        powerMultiplier: string | null;
-        totalHeadStake: string;
-        totalTailStake: string;
+    const res = await api.get<
+      ApiResponse<{
+        fromDate: string;
+        toDate: string;
+        totalBets: number;
+        totalRounds: number;
+        wonBetCount: number;
+        lostBetCount: number;
         totalStake: string;
         totalPayout: string;
+        userProfit: string;
         adminProfit: string;
-        settledAt: string | null;
-      }>;
-    }>>(`/coin-toss/admin/report${query ? `?${query}` : ""}`);
+        adminLoss: string;
+        recentRounds: Array<{
+          roundCode: string;
+          outcome: CoinTossOutcome | null;
+          powerOutcome: CoinTossOutcome | null;
+          powerMultiplier: string | null;
+          totalHeadStake: string;
+          totalTailStake: string;
+          totalStake: string;
+          totalPayout: string;
+          adminProfit: string;
+          settledAt: string | null;
+        }>;
+      }>
+    >(`/coin-toss/admin/report${query ? `?${query}` : ""}`);
     return res.data;
   },
 };

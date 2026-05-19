@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ArrowUpFromLine,
@@ -65,10 +65,10 @@ export default function CoinTossAdminPage() {
   });
 
   const settings = data?.data;
-  const [minBetInput, setMinBetInput] = useState("");
-  const [maxBetInput, setMaxBetInput] = useState("");
-  const [payoutInput, setPayoutInput] = useState("");
-  const [roundTimeInput, setRoundTimeInput] = useState("");
+  const [minBetDraft, setMinBetDraft] = useState<string | null>(null);
+  const [maxBetDraft, setMaxBetDraft] = useState<string | null>(null);
+  const [payoutDraft, setPayoutDraft] = useState<string | null>(null);
+  const [roundTimeDraft, setRoundTimeDraft] = useState<string | null>(null);
   const [reportFrom, setReportFrom] = useState(todayDhaka);
   const [reportTo, setReportTo] = useState(todayDhaka);
 
@@ -111,15 +111,13 @@ export default function CoinTossAdminPage() {
   });
 
   const isEnabled = Boolean(settings?.isEnabled);
+  const isAntiLossEnabled = Boolean(settings?.enableAntiLoss); 
   const report = reportData?.data;
-
-  useEffect(() => {
-    if (!settings) return;
-    setMinBetInput(settings.minBet);
-    setMaxBetInput(settings.maxBet);
-    setPayoutInput(settings.payoutMultiplier);
-    setRoundTimeInput(String(settings.bettingWindowSec));
-  }, [settings]);
+  const minBetInput = minBetDraft ?? settings?.minBet ?? "";
+  const maxBetInput = maxBetDraft ?? settings?.maxBet ?? "";
+  const payoutInput = payoutDraft ?? settings?.payoutMultiplier ?? "";
+  const roundTimeInput =
+    roundTimeDraft ?? String(settings?.bettingWindowSec ?? "");
 
   const saveBetLimit = () => {
     const minBet = Number(minBetInput);
@@ -168,12 +166,17 @@ export default function CoinTossAdminPage() {
     updateSettings({ bettingWindowSec });
   };
 
+  // অ্যান্টি-লস চেঞ্জ করার ফাংশন
+  const toggleAntiLoss = () => {
+    updateSettings({ enableAntiLoss: !isAntiLossEnabled });
+  };
+
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-xl font-bold text-white">Coin Toss Control</h1>
         <p className="mt-0.5 text-xs text-slate-400">
-          Turn the Coin Toss game on or off from admin dashboard.
+          Turn the Coin Toss game on or off and manage winning modes from admin dashboard.
         </p>
       </div>
 
@@ -182,53 +185,109 @@ export default function CoinTossAdminPage() {
           <div className="h-40 animate-pulse rounded-xl bg-slate-700" />
         ) : (
           <div className="space-y-5">
-            <div
-              className={`flex items-center justify-between gap-4 rounded-xl border px-4 py-4 ${
-                isEnabled
-                  ? "border-emerald-500/40 bg-emerald-500/10"
-                  : "border-red-500/40 bg-red-500/10"
-              }`}
-            >
-              <div className="flex items-center gap-3">
-                <div
-                  className={`rounded-xl p-3 ${
-                    isEnabled
-                      ? "bg-emerald-500/15 text-emerald-300"
-                      : "bg-red-500/15 text-red-300"
-                  }`}
-                >
-                  <Power className="h-5 w-5" />
-                </div>
-                <div>
-                  <p className="text-sm font-semibold text-slate-200">
-                    Game Status
-                  </p>
-                  <p
-                    className={`text-xs font-bold ${
-                      isEnabled ? "text-emerald-300" : "text-red-300"
-                    }`}
-                  >
-                    {isEnabled ? "ONLINE" : "OFFLINE"}
-                  </p>
-                </div>
-              </div>
-
-              <button
-                type="button"
-                disabled={isPending || !settings}
-                onClick={() => updateSettings({ isEnabled: !isEnabled })}
-                className={`rounded-lg px-5 py-2.5 text-xs font-black text-white shadow-lg transition disabled:opacity-50 ${
+            {/* দুইটা কন্ট্রোল বাটনকে সুন্দরভাবে গ্রিডে সাজানো হলো */}
+            <div className="grid gap-4 md:grid-cols-2">
+              
+              {/* ১. গেম স্ট্যাটাস অন/অফ বাটন */}
+              <div
+                className={`flex items-center justify-between gap-4 rounded-xl border px-4 py-4 ${
                   isEnabled
-                    ? "bg-red-600 shadow-red-500/20 hover:bg-red-700"
-                    : "bg-emerald-600 shadow-emerald-500/20 hover:bg-emerald-700"
+                    ? "border-emerald-500/40 bg-emerald-500/10"
+                    : "border-red-500/40 bg-red-500/10"
                 }`}
               >
-                {isPending
-                  ? "Saving..."
-                  : isEnabled
-                    ? "Turn OFF"
-                    : "Turn ON"}
-              </button>
+                <div className="flex items-center gap-3">
+                  <div
+                    className={`rounded-xl p-3 ${
+                      isEnabled
+                        ? "bg-emerald-500/15 text-emerald-300"
+                        : "bg-red-500/15 text-red-300"
+                    }`}
+                  >
+                    <Power className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-slate-200">
+                      Game Status
+                    </p>
+                    <p
+                      className={`text-xs font-bold ${
+                        isEnabled ? "text-emerald-300" : "text-red-300"
+                      }`}
+                    >
+                      {isEnabled ? "ONLINE" : "OFFLINE"}
+                    </p>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  disabled={isPending || !settings}
+                  onClick={() => updateSettings({ isEnabled: !isEnabled })}
+                  className={`rounded-lg px-5 py-2.5 text-xs font-black text-white shadow-lg transition disabled:opacity-50 ${
+                    isEnabled
+                      ? "bg-red-600 shadow-red-500/20 hover:bg-red-700"
+                      : "bg-emerald-600 shadow-emerald-500/20 hover:bg-emerald-700"
+                  }`}
+                >
+                  {isPending
+                    ? "Saving..."
+                    : isEnabled
+                      ? "Turn OFF"
+                      : "Turn ON"}
+                </button>
+              </div>
+
+              {/* ২. অ্যান্টি-লস মোড বাটন */}
+              <div
+                className={`flex items-center justify-between gap-4 rounded-xl border px-4 py-4 ${
+                  isAntiLossEnabled
+                    ? "border-cyan-500/40 bg-cyan-500/10"
+                    : "border-yellow-500/40 bg-yellow-500/10"
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <div
+                    className={`rounded-xl p-3 ${
+                      isAntiLossEnabled
+                        ? "bg-cyan-500/15 text-cyan-300"
+                        : "bg-yellow-500/15 text-yellow-300"
+                    }`}
+                  >
+                    <TrendingUp className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-slate-200">
+                      Anti-Loss Mode
+                    </p>
+                    <p
+                      className={`text-xs font-bold ${
+                        isAntiLossEnabled ? "text-cyan-300" : "text-yellow-300"
+                      }`}
+                    >
+                      {isAntiLossEnabled ? "LOW STAKE (🛡️ Anti-Loss)" : "100% RANDOM (🎰 Luck)"}
+                    </p>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  disabled={isPending || !settings}
+                  onClick={toggleAntiLoss}
+                  className={`rounded-lg px-5 py-2.5 text-xs font-black text-white shadow-lg transition disabled:opacity-50 ${
+                    isAntiLossEnabled
+                      ? "bg-yellow-600 shadow-yellow-500/20 hover:bg-yellow-700"
+                      : "bg-cyan-600 shadow-cyan-500/20 hover:bg-cyan-700"
+                  }`}
+                >
+                  {isPending
+                    ? "Saving..."
+                    : isAntiLossEnabled
+                      ? "Turn RANDOM"
+                      : "Turn ANTI-LOSS"}
+                </button>
+              </div>
+
             </div>
 
             <div className="grid gap-3 md:grid-cols-3">
@@ -242,7 +301,7 @@ export default function CoinTossAdminPage() {
                     type="number"
                     min={1}
                     value={minBetInput}
-                    onChange={(event) => setMinBetInput(event.target.value)}
+                    onChange={(event) => setMinBetDraft(event.target.value)}
                     className="h-9 rounded-lg border border-slate-600 bg-slate-800 px-3 text-sm font-bold text-white outline-none focus:border-emerald-500"
                     placeholder="Min"
                   />
@@ -250,7 +309,7 @@ export default function CoinTossAdminPage() {
                     type="number"
                     min={1}
                     value={maxBetInput}
-                    onChange={(event) => setMaxBetInput(event.target.value)}
+                    onChange={(event) => setMaxBetDraft(event.target.value)}
                     className="h-9 rounded-lg border border-slate-600 bg-slate-800 px-3 text-sm font-bold text-white outline-none focus:border-emerald-500"
                     placeholder="Max"
                   />
@@ -279,7 +338,7 @@ export default function CoinTossAdminPage() {
                   max={10}
                   step={0.01}
                   value={payoutInput}
-                  onChange={(event) => setPayoutInput(event.target.value)}
+                  onChange={(event) => setPayoutDraft(event.target.value)}
                   className="h-9 w-full rounded-lg border border-slate-600 bg-slate-800 px-3 text-sm font-bold text-white outline-none focus:border-emerald-500"
                   placeholder="0.70"
                 />
@@ -307,7 +366,7 @@ export default function CoinTossAdminPage() {
                   max={120}
                   step={1}
                   value={roundTimeInput}
-                  onChange={(event) => setRoundTimeInput(event.target.value)}
+                  onChange={(event) => setRoundTimeDraft(event.target.value)}
                   className="h-9 w-full rounded-lg border border-slate-600 bg-slate-800 px-3 text-sm font-bold text-white outline-none focus:border-emerald-500"
                   placeholder="10"
                 />
