@@ -64,6 +64,16 @@ const games: GameItem[] = [
     glow: "240,191,56",
   },
   {
+    href: "/games/seven-up-down",
+    titleKey: "sevenUpDownTitle",
+    subtitleKey: "sevenUpDownSubtitle",
+    logoSrc: GAME_LOGO_SRC.sevenUpDown,
+    active: true,
+    accentFrom: "#047857",
+    accentTo: "#38bdf8",
+    glow: "56,189,248",
+  },
+  {
     href: "/games",
     titleKey: "pcsoTitle",
     subtitleKey: "pcsoSubtitle",
@@ -92,6 +102,8 @@ type GamesText = {
   ludoSubtitle: string;
   coinTossTitle: string;
   coinTossSubtitle: string;
+  sevenUpDownTitle: string;
+  sevenUpDownSubtitle: string;
   pcsoTitle: string;
   pcsoSubtitle: string;
 };
@@ -239,6 +251,8 @@ export default function GamesPage() {
       ludoSubtitle: "1 vs 1 token battle",
       coinTossTitle: "Coin Toss",
       coinTossSubtitle: "Head Tail live betting",
+      sevenUpDownTitle: "7 Up 7 Down",
+      sevenUpDownSubtitle: "Dice total live betting board",
       pcsoTitle: "PCSO Lottery",
       pcsoSubtitle: "Philippine Charity Sweepstakes",
     },
@@ -259,6 +273,8 @@ export default function GamesPage() {
       ludoSubtitle: "১ বনাম ১ টোকেন ব্যাটল",
       coinTossTitle: "কয়েন টস",
       coinTossSubtitle: "হেড টেইল লাইভ বেটিং",
+      sevenUpDownTitle: "৭ আপ ৭ ডাউন",
+      sevenUpDownSubtitle: "ডাইস টোটাল লাইভ বেটিং বোর্ড",
       pcsoTitle: "পিসিএসও লটারি",
       pcsoSubtitle: "ফিলিপাইন চ্যারিটি সুইপস্টেকস",
     },
@@ -279,6 +295,8 @@ export default function GamesPage() {
       ludoSubtitle: "1 बनाम 1 टोकन बैटल",
       coinTossTitle: "कॉइन टॉस",
       coinTossSubtitle: "हेड टेल लाइव बेटिंग",
+      sevenUpDownTitle: "7 अप 7 डाउन",
+      sevenUpDownSubtitle: "डाइस टोटल लाइव बेटिंग बोर्ड",
       pcsoTitle: "PCSO लॉटरी",
       pcsoSubtitle: "फिलिपीन चैरिटी स्वीपस्टेक्स",
     },

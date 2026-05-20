@@ -307,12 +307,12 @@ export default function LoginPage() {
         <div className="-mb-8 -mt-3 flex justify-center">
           <div className="flex h-32 w-32 items-center justify-center overflow-hidden p-1">
             <Image
-              src="/logo.png?v=20260331-1726"
+              src="/logo.png"
               alt="Company logo"
               width={128}
               height={128}
               className="h-full w-full object-contain"
-              priority
+              unoptimized
             />
           </div>
         </div>
@@ -632,3 +632,4 @@ export default function LoginPage() {
     </Card>
   );
 }
+

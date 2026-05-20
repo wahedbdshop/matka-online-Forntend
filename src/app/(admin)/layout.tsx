@@ -386,6 +386,13 @@ const navItems: NavItem[] = [
       { href: "/admin/coin-toss", icon: LayoutDashboard, label: "Control" },
     ],
   },
+  {
+    icon: Dices,
+    label: "7 Up 7 Down",
+    children: [
+      { href: "/admin/seven-up-down", icon: LayoutDashboard, label: "Control" },
+    ],
+  },
 
   {
     icon: Gift,

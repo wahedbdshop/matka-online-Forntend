@@ -15,7 +15,10 @@ export function UserLayoutShell({
   const isLudoRoute = segments[0] === "games" && segments[1] === "ludo";
   const isLudoRoomRoute = isLudoRoute && segments[2] === "room";
   const isCoinTossRoute = segments[0] === "games" && segments[1] === "coin-toss";
-  const isFullScreenGameRoute = isLudoRoomRoute || isCoinTossRoute;
+  const isSevenUpDownRoute =
+    segments[0] === "games" && segments[1] === "seven-up-down";
+  const isFullScreenGameRoute =
+    isLudoRoomRoute || isCoinTossRoute || isSevenUpDownRoute;
   const isSupportHubRoute =
     segments[0] === "support" && segments[1] === "live";
 
@@ -29,6 +32,8 @@ export function UserLayoutShell({
           isLudoRoomRoute
             ? "flex min-h-dvh w-full overflow-hidden"
             : isCoinTossRoute
+            ? "block min-h-dvh w-full overflow-x-hidden overflow-y-auto"
+            : isSevenUpDownRoute
             ? "block min-h-dvh w-full overflow-x-hidden overflow-y-auto"
             : `flex-1 max-w-lg w-full mx-auto px-4 pt-4 ${
                 isSupportHubRoute ? "pb-6" : "pb-24"

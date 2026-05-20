@@ -4,6 +4,7 @@ export const GAME_LOGO_SRC = {
   ludo: "/ludo.svg",
   kalyan: "/kalyan.png",
   coinToss: "/coin-toss.svg",
+  sevenUpDown: "/seven-up-down.svg",
 } as const;
 
 const normalizeGameText = (value?: string | null) =>
@@ -17,6 +18,14 @@ export const getGameLogoSrc = (value?: string | null) => {
   if (normalized.includes("ludo")) return GAME_LOGO_SRC.ludo;
   if (normalized.includes("coin") || normalized.includes("toss")) {
     return GAME_LOGO_SRC.coinToss;
+  }
+  if (
+    normalized.includes("7 up") ||
+    normalized.includes("7 down") ||
+    normalized.includes("seven up") ||
+    normalized.includes("seven down")
+  ) {
+    return GAME_LOGO_SRC.sevenUpDown;
   }
   return null;
 };

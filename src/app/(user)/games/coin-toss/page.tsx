@@ -32,6 +32,8 @@ const resultRevealMs = 2400;
 const roundResetMs = 850;
 const roundStartFlashMs = 1000;
 const countdownSoundVolume = 0.08;
+const preferredChipValues = [5, 10, 20, 50, 100, 200, 500, 1000];
+const primaryChipValues = [5, 10, 20, 50, 100];
 
 type PlacedBetState = {
   id: string;
@@ -41,18 +43,65 @@ type PlacedBetState = {
   totalStake: number;
   headStake: number;
   tailStake: number;
+  headChipAmounts: number[];
+  tailChipAmounts: number[];
 };
 
 const liveChipPositions = [
-  { left: "10%", top: "18%" },
-  { left: "24%", top: "10%" },
-  { left: "39%", top: "22%" },
-  { left: "55%", top: "12%" },
-  { left: "69%", top: "24%" },
-  { left: "18%", top: "32%" },
-  { left: "47%", top: "34%" },
-  { left: "77%", top: "16%" },
+  { left: "8%", top: "12%" },
+  { left: "20%", top: "28%" },
+  { left: "33%", top: "14%" },
+  { left: "46%", top: "30%" },
+  { left: "60%", top: "12%" },
+  { left: "74%", top: "28%" },
+  { left: "86%", top: "14%" },
+  { left: "14%", top: "54%" },
+  { left: "29%", top: "68%" },
+  { left: "45%", top: "52%" },
+  { left: "61%", top: "68%" },
+  { left: "77%", top: "54%" },
+  { left: "10%", top: "80%" },
+  { left: "26%", top: "88%" },
+  { left: "43%", top: "80%" },
+  { left: "59%", top: "90%" },
+  { left: "75%", top: "80%" },
+  { left: "89%", top: "88%" },
 ];
+
+const buildSeed = (input: string) => {
+  let hash = 0;
+
+  for (let index = 0; index < input.length; index += 1) {
+    hash = (hash * 31 + input.charCodeAt(index)) >>> 0;
+  }
+
+  return hash || 1;
+};
+
+const createSeededRandom = (seedInput: string) => {
+  let seed = buildSeed(seedInput);
+
+  return () => {
+    seed = (seed * 1664525 + 1013904223) >>> 0;
+    return seed / 4294967296;
+  };
+};
+
+const buildLiveChipLayout = (
+  roundSeed: string,
+  outcome: CoinTossOutcome,
+  chipAmounts: string[],
+) => {
+  const random = createSeededRandom(`${roundSeed}-${outcome}-${chipAmounts.join("-")}`);
+  return [...liveChipPositions]
+    .map((position) => ({
+      position,
+      order: random(),
+      rotate: Math.floor(random() * 16) - 8,
+    }))
+    .sort((left, right) => left.order - right.order)
+    .slice(0, Math.min(chipAmounts.length, liveChipPositions.length));
+};
 
 const formatAmount = (value: number | string) =>
   Number(value || 0).toLocaleString("en-BD", {
@@ -62,15 +111,25 @@ const formatAmount = (value: number | string) =>
 const buildChipOptions = (minBet: number, maxBet: number) => {
   const min = Math.max(1, Math.floor(minBet || 5));
   const max = Math.max(min, Math.floor(maxBet || 100));
-  const preferred = [5, 10, 20, 30, 60, 90, 100, 200, 500, 1000];
-  const options = preferred.filter((amount) => amount >= min && amount <= max);
+  const options = primaryChipValues.filter(
+    (amount) => amount >= min && amount <= max,
+  );
 
   if (!options.includes(min)) {
     options.unshift(min);
   }
 
-  if (options.length < 6 && !options.includes(max)) {
+  if (!options.includes(max)) {
     options.push(max);
+  }
+
+  if (options.length < 6) {
+    for (const amount of preferredChipValues) {
+      if (options.length >= 6) break;
+      if (amount >= min && amount <= max && !options.includes(amount)) {
+        options.push(amount);
+      }
+    }
   }
 
   if (options.length < 6) {
@@ -122,7 +181,10 @@ function PlayerRail({
         {title}
       </div>
       {players.slice(0, 3).map((player, index) => (
-        <div key={player.name} className="relative">
+        <div
+          key={player.id || player.username || `${player.name}-${index}`}
+          className="relative"
+        >
           <div className="h-10 w-10 overflow-hidden rounded-lg border-2 border-[#f0bf38] bg-gradient-to-br from-amber-300 to-rose-500 shadow-[0_4px_10px_rgba(0,0,0,0.35)] sm:h-12 sm:w-12">
             {player.image ? (
               // eslint-disable-next-line @next/next/no-img-element
@@ -462,8 +524,9 @@ function BetPanel({
   overlayMessage,
   payoutMultiplier,
   stake,
-  liveBetCount,
-  liveStakeTotal,
+  liveChipAmounts,
+  ownChipAmounts,
+  roundSeed,
   winningOutcome,
   isReveal,
   showWinPayout,
@@ -476,8 +539,9 @@ function BetPanel({
   overlayMessage?: string | null;
   payoutMultiplier: string;
   stake: number;
-  liveBetCount: number;
-  liveStakeTotal: string;
+  liveChipAmounts: string[];
+  ownChipAmounts: number[];
+  roundSeed: string;
   winningOutcome?: CoinTossOutcome | null;
   isReveal: boolean;
   showWinPayout: boolean;
@@ -486,13 +550,27 @@ function BetPanel({
   const isHead = outcome === "HEAD";
   const isWinner = isReveal && winningOutcome === outcome;
   const isLoser = isReveal && winningOutcome !== outcome;
+  const liveChipSourceOffset = isHead
+    ? { x: -140, y: -155 }
+    : { x: -360, y: -155 };
   const hasPower = Boolean(powerMultiplier);
   const showPowerLight = hasPower && !isReveal;
   const powerLevel = Math.max(0, Math.floor(Number(powerMultiplier) || 0));
   const sparkCount = powerLevel >= 4 ? 8 : powerLevel >= 2 ? 5 : 0;
   const powerAnimationMs = Math.max(1800, (powerLevel + 1) * 650);
-  const visibleChipCount = Math.min(liveBetCount, liveChipPositions.length);
-  const overflowChipCount = Math.max(0, liveBetCount - visibleChipCount);
+  const visibleChipCount = Math.min(liveChipAmounts.length, liveChipPositions.length);
+  const overflowChipCount = Math.max(0, liveChipAmounts.length - visibleChipCount);
+  const liveChipLayout = useMemo(
+    () => buildLiveChipLayout(roundSeed, outcome, liveChipAmounts),
+    [liveChipAmounts, outcome, roundSeed],
+  );
+  const visibleOwnChipCount = Math.min(ownChipAmounts.length, 4);
+  const ownChipPositions = [
+    { left: "50%", top: "2px", transform: "translateX(-50%)" },
+    { left: "30%", top: "12px", transform: "translateX(-50%)" },
+    { left: "70%", top: "12px", transform: "translateX(-50%)" },
+    { left: "50%", top: "24px", transform: "translateX(-50%)" },
+  ];
 
   return (
     <button
@@ -565,14 +643,23 @@ function BetPanel({
       </div>
       <div className="flex h-[96px] flex-col items-center justify-center bg-[#d8b487] sm:h-[126px]">
         {visibleChipCount > 0 ? (
-          <div className="pointer-events-none absolute inset-x-3 bottom-8 top-12 z-10 sm:inset-x-5 sm:bottom-10 sm:top-16">
-            {liveChipPositions.slice(0, visibleChipCount).map((position, index) => (
+          <div className="pointer-events-none absolute inset-x-2 top-[52px] z-10 h-[70px] sm:inset-x-4 sm:top-[72px] sm:h-[98px]">
+            {liveChipLayout.map(({ position, rotate }, index) => (
               <div
-                key={`${outcome}-live-chip-${index}`}
+                key={`${roundSeed}-${outcome}-live-chip-${index}-${liveChipAmounts[index] ?? "0"}`}
                 className="absolute flex h-6 min-w-6 items-center justify-center rounded-full border-[3px] border-slate-200 bg-white px-1 text-[7px] font-black text-slate-500 shadow-[0_3px_8px_rgba(0,0,0,0.28)] sm:h-7 sm:min-w-7 sm:text-[8px]"
-                style={position}
+                style={{
+                  ...position,
+                  transform: `rotate(${rotate}deg)`,
+                  ["--chip-rotate" as string]: `${rotate}deg`,
+                  ["--chip-start-x" as string]: `${liveChipSourceOffset.x}px`,
+                  ["--chip-start-y" as string]: `${liveChipSourceOffset.y}px`,
+                  animation:
+                    "live-chip-toss 560ms cubic-bezier(0.22, 1, 0.36, 1) both",
+                  animationDelay: `${index * 55}ms`,
+                }}
               >
-                {index === 0 ? formatAmount(liveStakeTotal) : liveBetCount}
+                {formatAmount(liveChipAmounts[index] ?? 0)}
               </div>
             ))}
             {overflowChipCount > 0 ? (
@@ -597,8 +684,25 @@ function BetPanel({
           1 : {payoutMultiplier}
         </div>
       </div>
-      {selected ? (
-        <div className="absolute left-4 top-[58px] flex h-7 w-7 items-center justify-center rounded-full border-4 border-slate-100 bg-white text-[9px] font-black text-slate-600 shadow-[0_2px_5px_rgba(0,0,0,0.35)] sm:left-12 sm:top-[92px] sm:h-9 sm:w-9 sm:text-[11px]">
+      {visibleOwnChipCount > 0 ? (
+        <div className="pointer-events-none absolute left-1/2 top-[44px] z-30 h-[52px] w-[82px] -translate-x-1/2 sm:top-[62px] sm:h-[64px] sm:w-[104px]">
+          {ownChipAmounts.slice(0, visibleOwnChipCount).map((amount, index) => (
+            <div
+              key={`${outcome}-own-chip-${index}-${amount}`}
+              className="absolute flex h-7 min-w-7 -translate-x-1/2 items-center justify-center rounded-full border-4 border-[#fff7ad] bg-[linear-gradient(180deg,#fffdf2,#fef3c7)] px-1 text-[9px] font-black text-[#92400e] shadow-[0_4px_10px_rgba(0,0,0,0.35)] sm:h-9 sm:min-w-9 sm:text-[11px]"
+              style={ownChipPositions[index]}
+            >
+              {formatAmount(amount)}
+            </div>
+          ))}
+          {ownChipAmounts.length > visibleOwnChipCount ? (
+            <div className="absolute right-0 top-0 flex h-7 min-w-7 items-center justify-center rounded-full border-4 border-[#fff7ad] bg-[#7c2d12] px-1 text-[8px] font-black text-[#fff7ad] shadow-[0_4px_10px_rgba(0,0,0,0.35)] sm:h-9 sm:min-w-9 sm:text-[10px]">
+              +{ownChipAmounts.length - visibleOwnChipCount}
+            </div>
+          ) : null}
+        </div>
+      ) : selected ? (
+        <div className="absolute left-1/2 top-[50px] z-20 flex h-7 min-w-7 -translate-x-1/2 items-center justify-center rounded-full border-4 border-slate-100 bg-white px-1 text-[9px] font-black text-slate-600 shadow-[0_2px_5px_rgba(0,0,0,0.35)] sm:top-[72px] sm:h-9 sm:min-w-9 sm:text-[11px]">
           {stake}
         </div>
       ) : null}
@@ -692,6 +796,25 @@ function BetPanel({
           100% {
             opacity: 0;
             transform: translateX(76%) rotate(-12deg);
+          }
+        }
+        @keyframes live-chip-toss {
+          0% {
+            opacity: 0;
+            transform: translate(var(--chip-start-x), var(--chip-start-y))
+              scale(0.72) rotate(-18deg);
+          }
+          45% {
+            opacity: 1;
+            transform: translate(
+                calc(var(--chip-start-x) * 0.28),
+                calc(var(--chip-start-y) * 0.18)
+              )
+              scale(1.05) rotate(calc(var(--chip-rotate) - 10deg));
+          }
+          100% {
+            opacity: 1;
+            transform: translate(0, 0) scale(1) rotate(var(--chip-rotate));
           }
         }
       `}</style>
@@ -833,7 +956,7 @@ function ChipSelector({
           selected
           onClick={onToggle}
           tone="gold"
-          className="h-16 w-16 text-lg"
+          className="h-14 w-14 text-base sm:h-16 sm:w-16 sm:text-lg"
         />
       </div>
     </div>
@@ -964,6 +1087,9 @@ export default function CoinTossPage() {
   const lastCountdownSecondRef = useRef<number | null>(null);
   const lastRoundStartSoundRoundRef = useRef<string | null>(null);
   const lastRoundStartSpeechRoundRef = useRef<string | null>(null);
+  const lastBetCloseSpeechRoundRef = useRef<string | null>(null);
+  const pendingWinSoundRoundRef = useRef<string | null>(null);
+  const lastPowerSoundRoundRef = useRef<string | null>(null);
   const revealDelayTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
     null,
   );
@@ -999,19 +1125,27 @@ export default function CoinTossPage() {
   }, []);
 
   const playTone = useCallback(
-    (frequency: number, durationMs: number, gainValue = countdownSoundVolume) => {
+    (
+      frequency: number,
+      durationMs: number,
+      gainValue = countdownSoundVolume,
+      type: OscillatorType = "sine",
+    ) => {
       const ctx = getAudioContext();
       if (!ctx) return;
       if (ctx.state !== "running") {
         void ctx.resume().then(() => {
-          window.setTimeout(() => playTone(frequency, durationMs, gainValue), 20);
+          window.setTimeout(
+            () => playTone(frequency, durationMs, gainValue, type),
+            20,
+          );
         }).catch(() => {});
         return;
       }
 
       const oscillator = ctx.createOscillator();
       const gain = ctx.createGain();
-      oscillator.type = "sine";
+      oscillator.type = type;
       oscillator.frequency.setValueAtTime(frequency, ctx.currentTime);
       gain.gain.setValueAtTime(0.0001, ctx.currentTime);
       gain.gain.exponentialRampToValueAtTime(
@@ -1030,9 +1164,103 @@ export default function CoinTossPage() {
     [getAudioContext],
   );
 
+  const playApplauseSound = useCallback(() => {
+    const ctx = getAudioContext();
+    if (!ctx) return;
+    if (ctx.state !== "running") {
+      void ctx.resume()
+        .then(() => {
+          setTimeout(() => playApplauseSound(), 20);
+        })
+        .catch(() => {});
+      return;
+    }
+
+    const burstCount = 7;
+
+    for (let index = 0; index < burstCount; index += 1) {
+      const startAt = ctx.currentTime + index * 0.08;
+      const duration = 0.12 + index * 0.01;
+      const bufferSize = Math.max(1, Math.floor(ctx.sampleRate * duration));
+      const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+      const channel = buffer.getChannelData(0);
+
+      for (let sampleIndex = 0; sampleIndex < bufferSize; sampleIndex += 1) {
+        const decay = 1 - sampleIndex / bufferSize;
+        channel[sampleIndex] = (Math.random() * 2 - 1) * decay;
+      }
+
+      const source = ctx.createBufferSource();
+      source.buffer = buffer;
+
+      const filter = ctx.createBiquadFilter();
+      filter.type = "bandpass";
+      filter.frequency.setValueAtTime(1400 + index * 180, startAt);
+      filter.Q.setValueAtTime(0.8, startAt);
+
+      const gain = ctx.createGain();
+      gain.gain.setValueAtTime(0.0001, startAt);
+      gain.gain.exponentialRampToValueAtTime(0.11, startAt + 0.01);
+      gain.gain.exponentialRampToValueAtTime(0.0001, startAt + duration);
+
+      source.connect(filter);
+      filter.connect(gain);
+      gain.connect(ctx.destination);
+
+      source.start(startAt);
+      source.stop(startAt + duration + 0.02);
+    }
+  }, [getAudioContext]);
+
   const playRoundStartSound = useCallback(() => {
     playTone(660, 110, 0.09);
     window.setTimeout(() => playTone(880, 140, 0.07), 110);
+  }, [playTone]);
+
+  const playWinSound = useCallback(() => {
+    playTone(760, 180, 0.22, "sawtooth");
+    setTimeout(() => playTone(1120, 220, 0.2, "square"), 90);
+    setTimeout(() => playTone(1480, 260, 0.18, "triangle"), 210);
+    playApplauseSound();
+
+    if (typeof window === "undefined" || !("speechSynthesis" in window)) {
+      playTone(960, 140, 0.16, "triangle");
+      setTimeout(() => playTone(1320, 180, 0.14, "triangle"), 120);
+      setTimeout(() => playTone(1680, 260, 0.12, "sawtooth"), 260);
+      return;
+    }
+
+    const utterance = new SpeechSynthesisUtterance("Congratulations");
+    utterance.lang = "en-US";
+    utterance.rate = 0.95;
+    utterance.pitch = 1.05;
+    utterance.volume = 1;
+
+    const voices = window.speechSynthesis.getVoices();
+    const preferredVoice =
+      voices.find((voice) => voice.lang.toLowerCase().startsWith("en-us")) ??
+      voices.find((voice) => voice.lang.toLowerCase().startsWith("en")) ??
+      null;
+
+    if (preferredVoice) {
+      utterance.voice = preferredVoice;
+    }
+
+    window.speechSynthesis.cancel();
+    window.speechSynthesis.speak(utterance);
+  }, [playApplauseSound, playTone]);
+
+  const playResultSound = useCallback(() => {
+    playTone(720, 110, 0.12, "triangle");
+    window.setTimeout(() => playTone(980, 140, 0.1, "sine"), 100);
+    window.setTimeout(() => playTone(1240, 180, 0.09, "triangle"), 220);
+  }, [playTone]);
+
+  const playPowerSound = useCallback(() => {
+    playTone(540, 110, 0.12, "sawtooth");
+    window.setTimeout(() => playTone(880, 140, 0.12, "triangle"), 90);
+    window.setTimeout(() => playTone(1320, 220, 0.11, "sine"), 200);
+    window.setTimeout(() => playTone(1760, 260, 0.1, "triangle"), 320);
   }, [playTone]);
 
   const speakRoundStartHindi = useCallback(() => {
@@ -1052,6 +1280,29 @@ export default function CoinTossPage() {
 
     if (hindiVoice) {
       utterance.voice = hindiVoice;
+    }
+
+    window.speechSynthesis.cancel();
+    window.speechSynthesis.speak(utterance);
+  }, []);
+
+  const speakBetClose = useCallback(() => {
+    if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
+
+    const utterance = new SpeechSynthesisUtterance("Bet close");
+    utterance.lang = "en-IN";
+    utterance.rate = 0.95;
+    utterance.pitch = 0.92;
+    utterance.volume = 1;
+
+    const voices = window.speechSynthesis.getVoices();
+    const preferredVoice =
+      voices.find((voice) => voice.lang.toLowerCase().startsWith("en-in")) ??
+      voices.find((voice) => voice.lang.toLowerCase().startsWith("en")) ??
+      null;
+
+    if (preferredVoice) {
+      utterance.voice = preferredVoice;
     }
 
     window.speechSynthesis.cancel();
@@ -1086,7 +1337,6 @@ export default function CoinTossPage() {
     const sendPresence = async () => {
       try {
         await CoinTossService.trackPresence(sessionId);
-        void refetch();
       } catch {
         // Best-effort live viewer count.
       }
@@ -1098,7 +1348,7 @@ export default function CoinTossPage() {
     }, 5000);
 
     return () => window.clearInterval(timer);
-  }, [refetch]);
+  }, []);
 
   const lobby = lobbyData?.data;
   const minBet = Number(lobby?.settings.minBet ?? 5);
@@ -1126,6 +1376,8 @@ export default function CoinTossPage() {
         totalStake: Number(bet.stake),
         headStake: bet.outcome === "HEAD" ? Number(bet.stake) : 0,
         tailStake: bet.outcome === "TAIL" ? Number(bet.stake) : 0,
+        headChipAmounts: bet.outcome === "HEAD" ? [Number(bet.stake)] : [],
+        tailChipAmounts: bet.outcome === "TAIL" ? [Number(bet.stake)] : [],
       };
 
       setPlacedBet((current) => {
@@ -1138,6 +1390,14 @@ export default function CoinTossPage() {
           totalStake: current.totalStake + nextPlacedBet.stake,
           headStake: current.headStake + nextPlacedBet.headStake,
           tailStake: current.tailStake + nextPlacedBet.tailStake,
+          headChipAmounts: [
+            ...current.headChipAmounts,
+            ...nextPlacedBet.headChipAmounts,
+          ],
+          tailChipAmounts: [
+            ...current.tailChipAmounts,
+            ...nextPlacedBet.tailChipAmounts,
+          ],
         };
       });
       setCardErrorMessage(null);
@@ -1215,6 +1475,10 @@ export default function CoinTossPage() {
     hasPlacedBetInCurrentRound && placedBet ? placedBet.headStake : 0;
   const tailOwnPlacedStake =
     hasPlacedBetInCurrentRound && placedBet ? placedBet.tailStake : 0;
+  const headOwnChipAmounts =
+    hasPlacedBetInCurrentRound && placedBet ? placedBet.headChipAmounts : [];
+  const tailOwnChipAmounts =
+    hasPlacedBetInCurrentRound && placedBet ? placedBet.tailChipAmounts : [];
   const headLiveBetCount = Math.max(
     0,
     (lobby?.liveBetStats.head.betCount ?? 0) - (headOwnPlacedStake > 0 ? 1 : 0),
@@ -1225,12 +1489,16 @@ export default function CoinTossPage() {
   );
   const headLiveStakeTotal = Math.max(
     0,
-    Number(lobby?.currentRound.totalHeadStake ?? 0) - headOwnPlacedStake,
+    Number(lobby?.displayTotalHeadStake ?? lobby?.currentRound.totalHeadStake ?? 0) -
+      headOwnPlacedStake,
   ).toString();
   const tailLiveStakeTotal = Math.max(
     0,
-    Number(lobby?.currentRound.totalTailStake ?? 0) - tailOwnPlacedStake,
+    Number(lobby?.displayTotalTailStake ?? lobby?.currentRound.totalTailStake ?? 0) -
+      tailOwnPlacedStake,
   ).toString();
+  const headLiveChipAmounts = lobby?.displayHeadChipAmounts ?? [];
+  const tailLiveChipAmounts = lobby?.displayTailChipAmounts ?? [];
   const currentRoundOwnBetTotal =
     hasPlacedBetInCurrentRound && placedBet ? placedBet.totalStake : 0;
 
@@ -1317,6 +1585,23 @@ export default function CoinTossPage() {
   }, [isRoundStartFlash, lobby?.currentRound.id, speakRoundStartHindi]);
 
   useEffect(() => {
+    const roundId = lobby?.currentRound.id;
+    if (!roundId || !isLocked) return;
+    if (lastBetCloseSpeechRoundRef.current === roundId) return;
+
+    lastBetCloseSpeechRoundRef.current = roundId;
+    speakBetClose();
+  }, [isLocked, lobby?.currentRound.id, speakBetClose]);
+
+  useEffect(() => {
+    if (!activePowerRoundCode) return;
+    if (lastPowerSoundRoundRef.current === activePowerRoundCode) return;
+
+    lastPowerSoundRoundRef.current = activePowerRoundCode;
+    playPowerSound();
+  }, [activePowerRoundCode, playPowerSound]);
+
+  useEffect(() => {
     if (isRoundStartFlash || isLocked || secondsLeft <= 0) {
       lastCountdownSecondRef.current = null;
       return;
@@ -1352,8 +1637,14 @@ export default function CoinTossPage() {
       : 4000;
 
     revealDelayTimerRef.current = setTimeout(() => {
+      pendingWinSoundRoundRef.current =
+        placedBet?.outcome === latestHistoryRound.outcome
+          ? latestHistoryRound.roundCode
+          : null;
+
       setActivePowerRoundCode(null);
       setRevealedOutcome(latestHistoryRound.outcome);
+      playResultSound();
       const revealEndsAt = Date.now() + resultRevealMs;
       setRevealUntil(revealEndsAt);
       setResetUntil(revealEndsAt + roundResetMs);
@@ -1378,13 +1669,17 @@ export default function CoinTossPage() {
             if (Number.isFinite(balance)) {
               updateUser({ balance });
             }
+            if (pendingWinSoundRoundRef.current === latestHistoryRound.roundCode) {
+              playWinSound();
+              pendingWinSoundRoundRef.current = null;
+            }
           })
           .catch(() => {
             // Balance refresh is best-effort; the next profile refresh will recover it.
           });
       }, resultRevealMs);
     }, revealDelayMs);
-  }, [latestHistoryRound?.outcome, latestHistoryRound?.roundCode, updateUser]);
+  }, [latestHistoryRound?.outcome, latestHistoryRound?.roundCode, placedBet?.outcome, playResultSound, playWinSound, updateUser]);
 
   useEffect(
     () => () => {
@@ -1447,8 +1742,9 @@ export default function CoinTossPage() {
                 }
                 payoutMultiplier={payoutMultiplier}
                 stake={displayStake}
-                liveBetCount={headLiveBetCount}
-                liveStakeTotal={headLiveStakeTotal}
+                liveChipAmounts={headLiveChipAmounts}
+                ownChipAmounts={headOwnChipAmounts}
+                roundSeed={lobby?.currentRound.roundCode ?? lobby?.currentRound.id ?? "head"}
                 winningOutcome={revealedOutcome}
                 isReveal={isResultReveal}
                 showWinPayout={isUserWinReveal && placedBet?.outcome === "HEAD"}
@@ -1466,8 +1762,9 @@ export default function CoinTossPage() {
                 }
                 payoutMultiplier={payoutMultiplier}
                 stake={displayStake}
-                liveBetCount={tailLiveBetCount}
-                liveStakeTotal={tailLiveStakeTotal}
+                liveChipAmounts={tailLiveChipAmounts}
+                ownChipAmounts={tailOwnChipAmounts}
+                roundSeed={lobby?.currentRound.roundCode ?? lobby?.currentRound.id ?? "tail"}
                 winningOutcome={revealedOutcome}
                 isReveal={isResultReveal}
                 showWinPayout={isUserWinReveal && placedBet?.outcome === "TAIL"}

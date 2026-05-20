@@ -51,6 +51,10 @@ export type CoinTossLobby = {
   activePlayerCount: number;
   activeViewerCount: number;
   totalBetCount: number;
+  displayTotalHeadStake: string;
+  displayTotalTailStake: string;
+  displayHeadChipAmounts: string[];
+  displayTailChipAmounts: string[];
   liveBetPercentage: {
     head: number;
     tail: number;
