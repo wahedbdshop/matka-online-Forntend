@@ -8,6 +8,7 @@ export type CoinTossRoundStatus =
   | "SETTLED"
   | "CANCELLED";
 export type CoinTossBetStatus = "PENDING" | "WON" | "LOST" | "REFUNDED";
+export type CoinTossReportUserStatus = "WIN" | "LOSS";
 
 export type CoinTossRound = {
   id: string;
@@ -197,6 +198,39 @@ export const CoinTossAdminService = {
         userProfit: string;
         adminProfit: string;
         adminLoss: string;
+        userCount: number;
+        userSummaries: Array<{
+          userId: string;
+          name: string;
+          username: string | null;
+          phone: string | null;
+          email: string | null;
+          totalBets: number;
+          wonBets: number;
+          lostBets: number;
+          totalStake: string;
+          totalPayout: string;
+          totalProfit: string;
+          status: CoinTossReportUserStatus;
+          lastPlayedAt: string;
+        }>;
+        userBetHistory: Array<{
+          betId: string;
+          userId: string;
+          name: string;
+          username: string | null;
+          phone: string | null;
+          email: string | null;
+          roundCode: string;
+          selectedSide: CoinTossOutcome;
+          resultSide: CoinTossOutcome | null;
+          stake: string;
+          payout: string;
+          profit: string;
+          status: CoinTossBetStatus;
+          playedAt: string;
+          settledAt: string;
+        }>;
         recentRounds: Array<{
           roundCode: string;
           outcome: CoinTossOutcome | null;

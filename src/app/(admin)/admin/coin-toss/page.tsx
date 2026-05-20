@@ -23,6 +23,15 @@ const formatAmount = (value?: string | number) =>
 const todayDhaka = () =>
   new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Dhaka" });
 
+const formatDateTime = (value?: string | null) => {
+  if (!value) return "-";
+
+  return new Date(value).toLocaleString("en-BD", {
+    dateStyle: "short",
+    timeStyle: "short",
+  });
+};
+
 function ReportCard({
   label,
   value,
@@ -469,75 +478,185 @@ export default function CoinTossAdminPage() {
               />
             </div>
 
-            <div className="overflow-hidden rounded-xl border border-slate-700 bg-slate-900/60">
-              <div className="border-b border-slate-700 px-4 py-3">
-                <p className="text-xs font-black text-white">
-                  Recent Coin Toss Rounds
-                </p>
-              </div>
-              {report?.recentRounds?.length ? (
-                <div className="divide-y divide-slate-700/70">
-                  {report.recentRounds.map((round) => {
-                    const roundProfit = Number(round.adminProfit ?? 0);
+            <div className="grid gap-4 xl:grid-cols-[minmax(0,1.5fr)_minmax(320px,0.9fr)]">
+              <div className="overflow-hidden rounded-xl border border-slate-700 bg-slate-900/60">
+                <div className="border-b border-slate-700 px-4 py-3">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div>
+                      <p className="text-xs font-black text-white">
+                        User Bet Report
+                      </p>
+                      <p className="mt-1 text-[11px] text-slate-400">
+                        Kon user koto taka khelse, jitlo na harlo, shob latest report.
+                      </p>
+                    </div>
+                    <div className="rounded-full border border-cyan-500/20 bg-cyan-500/10 px-3 py-1 text-[10px] font-black text-cyan-300">
+                      {formatAmount(report?.userCount)} users
+                    </div>
+                  </div>
+                </div>
+                {report?.userSummaries?.length ? (
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full border-separate border-spacing-0 text-left">
+                      <thead className="bg-slate-950/70">
+                        <tr className="text-[10px] uppercase tracking-wide text-slate-400">
+                          <th className="border-b border-r border-slate-700 bg-slate-950/90 px-4 py-3 font-bold text-slate-300">
+                            User
+                          </th>
+                          <th className="border-b border-r border-slate-700 bg-slate-950/90 px-4 py-3 font-bold text-slate-300">
+                            Played
+                          </th>
+                          <th className="border-b border-r border-slate-700 bg-slate-950/90 px-4 py-3 font-bold text-slate-300">
+                            Stake
+                          </th>
+                          <th className="border-b border-r border-slate-700 bg-slate-950/90 px-4 py-3 font-bold text-slate-300">
+                            Win/Loss
+                          </th>
+                          <th className="border-b border-slate-700 bg-slate-950/90 px-4 py-3 font-bold text-slate-300">
+                            Date Time
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {report.userSummaries.map((user, index) => {
+                          const totalProfit = Number(user.totalProfit ?? 0);
+                          const rowTone =
+                            index % 2 === 0 ? "bg-slate-900/70" : "bg-slate-950/40";
 
-                    return (
-                      <div
-                        key={round.roundCode}
-                        className="grid grid-cols-[minmax(0,1fr)_auto] gap-3 px-4 py-3"
-                      >
-                        <div className="min-w-0">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <p className="truncate font-mono text-xs font-bold text-white">
-                              {round.roundCode}
+                          return (
+                            <tr
+                              key={user.userId}
+                              className={`${rowTone} align-top text-xs text-slate-200 transition hover:bg-slate-800/80`}
+                            >
+                              <td className="border-b border-r border-slate-700/80 px-4 py-3">
+                                <div className="space-y-1">
+                                  <p className="font-bold text-white">
+                                    {user.name}
+                                  </p>
+                                  <p className="rounded-md bg-slate-800/80 px-2 py-1 text-[11px] text-slate-300">
+                                    @{user.username ?? "unknown"}
+                                  </p>
+                                  <p className="text-[11px] text-slate-500">
+                                    {user.phone || user.email || "No contact"}
+                                  </p>
+                                </div>
+                              </td>
+                              <td className="border-b border-r border-slate-700/80 px-4 py-3">
+                                <p className="font-bold text-white">
+                                  {formatAmount(user.totalBets)} bets
+                                </p>
+                                <div className="mt-1 flex flex-wrap gap-1.5 text-[11px]">
+                                  <span className="rounded-md bg-emerald-500/10 px-2 py-1 text-emerald-300">
+                                    W {formatAmount(user.wonBets)}
+                                  </span>
+                                  <span className="rounded-md bg-red-500/10 px-2 py-1 text-red-300">
+                                    L {formatAmount(user.lostBets)}
+                                  </span>
+                                </div>
+                              </td>
+                              <td className="border-b border-r border-slate-700/80 px-4 py-3">
+                                <div className="inline-flex rounded-md bg-cyan-500/10 px-2.5 py-1.5 font-bold text-cyan-300">
+                                  Rs {formatAmount(user.totalStake)}
+                                </div>
+                              </td>
+                              <td className="border-b border-r border-slate-700/80 px-4 py-3">
+                                <p
+                                  className={`inline-flex rounded-md px-2.5 py-1.5 font-black ${
+                                    totalProfit >= 0
+                                      ? "bg-emerald-500/10 text-emerald-300"
+                                      : "bg-red-500/10 text-red-400"
+                                  }`}
+                                >
+                                  Rs {formatAmount(totalProfit)}
+                                </p>
+                                <p className="mt-1 text-[11px] text-slate-400">
+                                  {user.status === "WIN" ? "User Win" : "User Loss"}
+                                </p>
+                              </td>
+                              <td className="border-b border-slate-700/80 px-4 py-3 text-[11px] text-slate-300">
+                                <div className="rounded-md bg-slate-800/70 px-2 py-1.5">
+                                  {formatDateTime(user.lastPlayedAt)}
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <div className="px-4 py-8 text-center text-xs text-slate-400">
+                    No user bet report found for this date range.
+                  </div>
+                )}
+              </div>
+
+              <div className="overflow-hidden rounded-xl border border-slate-700 bg-slate-900/60">
+                <div className="border-b border-slate-700 px-4 py-3">
+                  <p className="text-xs font-black text-white">
+                    Recent Coin Toss Rounds
+                  </p>
+                </div>
+                {report?.recentRounds?.length ? (
+                  <div className="divide-y divide-slate-700/70">
+                    {report.recentRounds.map((round) => {
+                      const roundProfit = Number(round.adminProfit ?? 0);
+
+                      return (
+                        <div
+                          key={round.roundCode}
+                          className="grid grid-cols-[minmax(0,1fr)_auto] gap-3 px-4 py-3"
+                        >
+                          <div className="min-w-0">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <p className="truncate font-mono text-xs font-bold text-white">
+                                {round.roundCode}
+                              </p>
+                              <span
+                                className={`rounded-full px-2 py-0.5 text-[10px] font-black ${
+                                  round.outcome === "HEAD"
+                                    ? "bg-amber-500/10 text-amber-300"
+                                    : "bg-emerald-500/10 text-emerald-300"
+                                }`}
+                              >
+                                {round.outcome ?? "-"}
+                              </span>
+                              {round.powerMultiplier ? (
+                                <span className="rounded-full bg-yellow-500/15 px-2 py-0.5 text-[10px] font-black text-yellow-300">
+                                  {round.powerMultiplier}x power
+                                </span>
+                              ) : null}
+                            </div>
+                            <p className="mt-1 text-[11px] text-slate-400">
+                              H Rs {formatAmount(round.totalHeadStake)} · T Rs{" "}
+                              {formatAmount(round.totalTailStake)} · Payout Rs{" "}
+                              {formatAmount(round.totalPayout)}
                             </p>
-                            <span
-                              className={`rounded-full px-2 py-0.5 text-[10px] font-black ${
-                                round.outcome === "HEAD"
-                                  ? "bg-amber-500/10 text-amber-300"
-                                  : "bg-emerald-500/10 text-emerald-300"
+                          </div>
+                          <div className="text-right">
+                            <p
+                              className={`text-sm font-black ${
+                                roundProfit < 0
+                                  ? "text-red-400"
+                                  : "text-emerald-300"
                               }`}
                             >
-                              {round.outcome ?? "-"}
-                            </span>
-                            {round.powerMultiplier ? (
-                              <span className="rounded-full bg-yellow-500/15 px-2 py-0.5 text-[10px] font-black text-yellow-300">
-                                {round.powerMultiplier}x power
-                              </span>
-                            ) : null}
+                              Rs {formatAmount(roundProfit)}
+                            </p>
+                            <p className="text-[10px] text-slate-500">
+                              {formatDateTime(round.settledAt)}
+                            </p>
                           </div>
-                          <p className="mt-1 text-[11px] text-slate-400">
-                            H Rs {formatAmount(round.totalHeadStake)} · T Rs {formatAmount(round.totalTailStake)} · Payout Rs {formatAmount(round.totalPayout)}
-                          </p>
                         </div>
-                        <div className="text-right">
-                          <p
-                            className={`text-sm font-black ${
-                              roundProfit < 0 ? "text-red-400" : "text-emerald-300"
-                            }`}
-                          >
-                            Rs {formatAmount(roundProfit)}
-                          </p>
-                          <p className="text-[10px] text-slate-500">
-                            {round.settledAt
-                              ? new Date(round.settledAt).toLocaleTimeString(
-                                  "en-BD",
-                                  {
-                                    hour: "2-digit",
-                                    minute: "2-digit",
-                                  },
-                                )
-                              : "-"}
-                          </p>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              ) : (
-                <div className="px-4 py-8 text-center text-xs text-slate-400">
-                  No Coin Toss rounds found for this date range.
-                </div>
-              )}
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="px-4 py-8 text-center text-xs text-slate-400">
+                    No Coin Toss rounds found for this date range.
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         )}
