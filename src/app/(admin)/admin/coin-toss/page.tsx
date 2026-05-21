@@ -2,8 +2,11 @@
 
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import Link from "next/link";
 import {
   ArrowUpFromLine,
+  ChevronLeft,
+  ChevronRight,
   Coins,
   Power,
   RefreshCw,
@@ -14,6 +17,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { CoinTossAdminService } from "@/services/coin-toss.service";
+import { cn } from "@/lib/utils";
 
 const formatAmount = (value?: string | number) =>
   Number(value ?? 0).toLocaleString("en-BD", {
@@ -30,6 +34,41 @@ const formatDateTime = (value?: string | null) => {
     dateStyle: "short",
     timeStyle: "short",
   });
+};
+
+const formatDateOnly = (value?: string | null) => {
+  if (!value) return "-";
+
+  return new Date(value).toLocaleDateString("en-BD", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
+};
+
+const formatTimeOnly = (value?: string | null) => {
+  if (!value) return "-";
+
+  return new Date(value).toLocaleTimeString("en-BD", {
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: true,
+  });
+};
+
+const reportTranColor = (tranType?: string) => {
+  const type = tranType?.toLowerCase() ?? "";
+
+  if (type.includes("win")) {
+    return "border-emerald-500/20 bg-emerald-500/10 text-emerald-300";
+  }
+
+  if (type.includes("loss")) {
+    return "border-red-500/20 bg-red-500/10 text-red-300";
+  }
+
+  return "border-cyan-500/20 bg-cyan-500/10 text-cyan-300";
 };
 
 function ReportCard({
@@ -80,6 +119,7 @@ export default function CoinTossAdminPage() {
   const [roundTimeDraft, setRoundTimeDraft] = useState<string | null>(null);
   const [reportFrom, setReportFrom] = useState(todayDhaka);
   const [reportTo, setReportTo] = useState(todayDhaka);
+  const [reportPage, setReportPage] = useState(1);
 
   const {
     data: reportData,
@@ -87,11 +127,13 @@ export default function CoinTossAdminPage() {
     refetch: refetchReport,
     isFetching: isReportFetching,
   } = useQuery({
-    queryKey: ["admin-coin-toss-report", reportFrom, reportTo],
+    queryKey: ["admin-coin-toss-report", reportFrom, reportTo, reportPage],
     queryFn: () =>
       CoinTossAdminService.getReport({
         fromDate: reportFrom,
         toDate: reportTo,
+        page: reportPage,
+        limit: 20,
       }),
     refetchInterval: 10000,
     refetchIntervalInBackground: true,
@@ -421,7 +463,10 @@ export default function CoinTossAdminPage() {
             />
             <button
               type="button"
-              onClick={() => refetchReport()}
+              onClick={() => {
+                setReportPage(1);
+                refetchReport();
+              }}
               className="flex h-9 items-center gap-2 rounded-xl border border-cyan-500/25 bg-cyan-500/10 px-3 text-xs font-bold text-cyan-300"
             >
               <RefreshCw
@@ -491,92 +536,125 @@ export default function CoinTossAdminPage() {
                       </p>
                     </div>
                     <div className="rounded-full border border-cyan-500/20 bg-cyan-500/10 px-3 py-1 text-[10px] font-black text-cyan-300">
-                      {formatAmount(report?.userCount)} users
+                      {formatAmount(report?.settledRoundUserReport?.meta?.total)} rows
                     </div>
                   </div>
                 </div>
-                {report?.userSummaries?.length ? (
+                {report?.settledRoundUserReport?.data?.length ? (
                   <div className="overflow-x-auto">
-                    <table className="min-w-full border-separate border-spacing-0 text-left">
-                      <thead className="bg-slate-950/70">
-                        <tr className="text-[10px] uppercase tracking-wide text-slate-400">
-                          <th className="border-b border-r border-slate-700 bg-slate-950/90 px-4 py-3 font-bold text-slate-300">
-                            User
-                          </th>
-                          <th className="border-b border-r border-slate-700 bg-slate-950/90 px-4 py-3 font-bold text-slate-300">
-                            Played
-                          </th>
-                          <th className="border-b border-r border-slate-700 bg-slate-950/90 px-4 py-3 font-bold text-slate-300">
-                            Stake
-                          </th>
-                          <th className="border-b border-r border-slate-700 bg-slate-950/90 px-4 py-3 font-bold text-slate-300">
-                            Win/Loss
-                          </th>
-                          <th className="border-b border-slate-700 bg-slate-950/90 px-4 py-3 font-bold text-slate-300">
-                            Date Time
-                          </th>
+                    <table className="min-w-full border-collapse text-left text-xs">
+                      <thead>
+                        <tr className="border-b border-slate-700 bg-slate-950/80">
+                          {[
+                            "SL",
+                            "User Name",
+                            "Date & Time",
+                            "Tran Type",
+                            "Old Balance",
+                            "Amount",
+                            "New Balance",
+                            "View",
+                          ].map((heading) => (
+                            <th
+                              key={heading}
+                              className={cn(
+                                "whitespace-nowrap border-r border-slate-700/70 px-4 py-3 text-[10px] font-bold uppercase tracking-widest text-slate-400 last:border-r-0",
+                                heading === "Old Balance" ||
+                                  heading === "Amount" ||
+                                  heading === "New Balance"
+                                  ? "text-right"
+                                  : heading === "View"
+                                    ? "text-center"
+                                    : "text-left",
+                              )}
+                            >
+                              {heading}
+                            </th>
+                          ))}
                         </tr>
                       </thead>
                       <tbody>
-                        {report.userSummaries.map((user, index) => {
-                          const totalProfit = Number(user.totalProfit ?? 0);
+                        {report.settledRoundUserReport.data.map((row, index) => {
+                          const dateTime = row.settledAt || row.playedAt;
                           const rowTone =
-                            index % 2 === 0 ? "bg-slate-900/70" : "bg-slate-950/40";
-
+                            index % 2 === 0
+                              ? "bg-slate-900/70"
+                              : "bg-slate-950/40";
                           return (
                             <tr
-                              key={user.userId}
+                              key={`${row.transactionId}-${index}`}
                               className={`${rowTone} align-top text-xs text-slate-200 transition hover:bg-slate-800/80`}
                             >
-                              <td className="border-b border-r border-slate-700/80 px-4 py-3">
-                                <div className="space-y-1">
-                                  <p className="font-bold text-white">
-                                    {user.name}
-                                  </p>
-                                  <p className="rounded-md bg-slate-800/80 px-2 py-1 text-[11px] text-slate-300">
-                                    @{user.username ?? "unknown"}
-                                  </p>
-                                  <p className="text-[11px] text-slate-500">
-                                    {user.phone || user.email || "No contact"}
-                                  </p>
-                                </div>
+                              <td className="border-b border-r border-slate-700/70 px-4 py-3 font-mono text-slate-500">
+                                {row.sl}
                               </td>
-                              <td className="border-b border-r border-slate-700/80 px-4 py-3">
-                                <p className="font-bold text-white">
-                                  {formatAmount(user.totalBets)} bets
+                              <td className="border-b border-r border-slate-700/70 px-4 py-3">
+                                <p className="font-semibold text-white">
+                                  {row.username || "-"}
                                 </p>
-                                <div className="mt-1 flex flex-wrap gap-1.5 text-[11px]">
-                                  <span className="rounded-md bg-emerald-500/10 px-2 py-1 text-emerald-300">
-                                    W {formatAmount(user.wonBets)}
-                                  </span>
-                                  <span className="rounded-md bg-red-500/10 px-2 py-1 text-red-300">
-                                    L {formatAmount(user.lostBets)}
-                                  </span>
-                                </div>
                               </td>
-                              <td className="border-b border-r border-slate-700/80 px-4 py-3">
-                                <div className="inline-flex rounded-md bg-cyan-500/10 px-2.5 py-1.5 font-bold text-cyan-300">
-                                  Rs {formatAmount(user.totalStake)}
-                                </div>
+                              <td className="border-b border-r border-slate-700/70 px-4 py-3">
+                                <p className="font-mono text-slate-300">
+                                  {formatDateOnly(dateTime)}
+                                </p>
+                                <p className="mt-0.5 font-mono text-[10px] text-slate-500">
+                                  {formatTimeOnly(dateTime)}
+                                </p>
                               </td>
-                              <td className="border-b border-r border-slate-700/80 px-4 py-3">
-                                <p
-                                  className={`inline-flex rounded-md px-2.5 py-1.5 font-black ${
-                                    totalProfit >= 0
-                                      ? "bg-emerald-500/10 text-emerald-300"
-                                      : "bg-red-500/10 text-red-400"
-                                  }`}
+                              <td className="border-b border-r border-slate-700/70 px-4 py-3">
+                                <span
+                                  className={cn(
+                                    "inline-flex rounded-lg border px-2.5 py-1 text-[10px] font-semibold",
+                                    reportTranColor(row.tranType),
+                                  )}
                                 >
-                                  Rs {formatAmount(totalProfit)}
-                                </p>
-                                <p className="mt-1 text-[11px] text-slate-400">
-                                  {user.status === "WIN" ? "User Win" : "User Loss"}
-                                </p>
+                                  {row.tranType}
+                                </span>
                               </td>
-                              <td className="border-b border-slate-700/80 px-4 py-3 text-[11px] text-slate-300">
-                                <div className="rounded-md bg-slate-800/70 px-2 py-1.5">
-                                  {formatDateTime(user.lastPlayedAt)}
+                              <td className="border-b border-r border-slate-700/70 px-4 py-3 text-right font-mono text-slate-300">
+                                Rs {formatAmount(row.oldBalance)}
+                              </td>
+                              <td className="border-b border-r border-slate-700/70 px-4 py-3 text-right">
+                                <div className="flex flex-col items-end gap-1">
+                                  <span
+                                    className={cn(
+                                      "font-mono font-bold",
+                                      row.balanceChangeType?.toLowerCase() === "credit"
+                                        ? "text-emerald-300"
+                                        : "text-red-300",
+                                    )}
+                                  >
+                                    Rs {formatAmount(row.amount)}
+                                  </span>
+                                  <span className="text-[10px] text-slate-500">
+                                    Played Rs {formatAmount(row.playedAmount)}
+                                  </span>
                                 </div>
+                              </td>
+                              <td className="border-b border-r border-slate-700/70 px-4 py-3 text-right">
+                                <div className="flex items-center justify-end gap-2">
+                                  <span className="font-mono text-white">
+                                    Rs {formatAmount(row.newBalance)}
+                                  </span>
+                                  <span
+                                    className={cn(
+                                      "inline-flex rounded-lg border px-2 py-0.5 text-[10px] font-semibold",
+                                      row.balanceChangeType?.toLowerCase() === "credit"
+                                        ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-300"
+                                        : "border-red-500/20 bg-red-500/10 text-red-300",
+                                    )}
+                                  >
+                                    {row.balanceChangeType}
+                                  </span>
+                                </div>
+                              </td>
+                              <td className="border-b border-slate-700/70 px-4 py-3 text-center">
+                                <Link
+                                  href={`/admin/users/${row.userId}`}
+                                  className="inline-flex items-center rounded-lg border border-slate-600 bg-slate-800 px-2.5 py-1 text-[10px] text-slate-300 transition hover:border-cyan-500/40 hover:bg-cyan-500/10 hover:text-cyan-300"
+                                >
+                                  View
+                                </Link>
                               </td>
                             </tr>
                           );
@@ -587,6 +665,39 @@ export default function CoinTossAdminPage() {
                 ) : (
                   <div className="px-4 py-8 text-center text-xs text-slate-400">
                     No user bet report found for this date range.
+                  </div>
+                )}
+                {!!report?.settledRoundUserReport?.data?.length && (
+                  <div className="flex items-center justify-between border-t border-slate-700 px-4 py-3">
+                    <span className="text-[10px] text-slate-500">
+                      Page {report.settledRoundUserReport.meta.page} of{" "}
+                      {report.settledRoundUserReport.meta.totalPages} ·{" "}
+                      {formatAmount(report.settledRoundUserReport.meta.total)} rows
+                    </span>
+                    <div className="flex items-center gap-1">
+                      <button
+                        type="button"
+                        onClick={() => setReportPage((current) => Math.max(1, current - 1))}
+                        disabled={reportPage <= 1}
+                        className="flex h-7 w-7 items-center justify-center rounded-lg border border-slate-600 bg-slate-800 text-slate-400 transition hover:text-white disabled:opacity-40"
+                      >
+                        <ChevronLeft className="h-3.5 w-3.5" />
+                      </button>
+                      <span className="px-2 font-mono text-[10px] text-slate-500">
+                        {report.settledRoundUserReport.meta.page}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setReportPage((current) => current + 1)}
+                        disabled={
+                          report.settledRoundUserReport.meta.page >=
+                          report.settledRoundUserReport.meta.totalPages
+                        }
+                        className="flex h-7 w-7 items-center justify-center rounded-lg border border-slate-600 bg-slate-800 text-slate-400 transition hover:text-white disabled:opacity-40"
+                      >
+                        <ChevronRight className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
                   </div>
                 )}
               </div>

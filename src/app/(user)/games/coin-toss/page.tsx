@@ -571,6 +571,7 @@ function BetPanel({
     { left: "70%", top: "12px", transform: "translateX(-50%)" },
     { left: "50%", top: "24px", transform: "translateX(-50%)" },
   ];
+  const ownTotalStake = ownChipAmounts.reduce((sum, amount) => sum + amount, 0);
 
   return (
     <button
@@ -689,14 +690,14 @@ function BetPanel({
           {ownChipAmounts.slice(0, visibleOwnChipCount).map((amount, index) => (
             <div
               key={`${outcome}-own-chip-${index}-${amount}`}
-              className="absolute flex h-7 min-w-7 -translate-x-1/2 items-center justify-center rounded-full border-4 border-[#fff7ad] bg-[linear-gradient(180deg,#fffdf2,#fef3c7)] px-1 text-[9px] font-black text-[#92400e] shadow-[0_4px_10px_rgba(0,0,0,0.35)] sm:h-9 sm:min-w-9 sm:text-[11px]"
+              className="absolute flex h-7 min-w-7 -translate-x-1/2 items-center justify-center rounded-full border-[3px] border-slate-200 bg-white px-1 text-[8px] font-black text-slate-500 shadow-[0_3px_8px_rgba(0,0,0,0.28)] sm:h-8 sm:min-w-8 sm:text-[9px]"
               style={ownChipPositions[index]}
             >
               {formatAmount(amount)}
             </div>
           ))}
           {ownChipAmounts.length > visibleOwnChipCount ? (
-            <div className="absolute right-0 top-0 flex h-7 min-w-7 items-center justify-center rounded-full border-4 border-[#fff7ad] bg-[#7c2d12] px-1 text-[8px] font-black text-[#fff7ad] shadow-[0_4px_10px_rgba(0,0,0,0.35)] sm:h-9 sm:min-w-9 sm:text-[10px]">
+            <div className="absolute right-0 top-0 flex h-7 min-w-7 items-center justify-center rounded-full border-[3px] border-slate-200 bg-white px-1 text-[8px] font-black text-slate-500 shadow-[0_3px_8px_rgba(0,0,0,0.28)] sm:h-8 sm:min-w-8 sm:text-[9px]">
               +{ownChipAmounts.length - visibleOwnChipCount}
             </div>
           ) : null}
@@ -1015,11 +1016,13 @@ function Roadmap({ cells }: { cells: CoinTossRoadmapCell[] }) {
 
 function TopBar({
   lobby,
+  activeViewerCount,
   secondsLeft,
   isLocked,
   isRoundStartFlash,
 }: {
   lobby?: CoinTossLobby;
+  activeViewerCount?: number | null;
   secondsLeft: number;
   isLocked: boolean;
   isRoundStartFlash: boolean;
@@ -1029,7 +1032,7 @@ function TopBar({
       <div className="flex items-center gap-2">
         <Users className="h-5 w-5 text-[#f0bf38]" />
         <span className="text-xl font-black sm:text-2xl">
-          {lobby?.activeViewerCount ?? lobby?.activePlayerCount ?? 0}
+          {activeViewerCount ?? lobby?.activeViewerCount ?? lobby?.activePlayerCount ?? 0}
         </span>
       </div>
       <div
@@ -1079,6 +1082,9 @@ export default function CoinTossPage() {
   const [cardErrorMessage, setCardErrorMessage] = useState<string | null>(null);
   const [cardErrorOutcome, setCardErrorOutcome] = useState<CoinTossOutcome | null>(null);
   const [activePowerRoundCode, setActivePowerRoundCode] = useState<string | null>(
+    null,
+  );
+  const [presenceViewerCount, setPresenceViewerCount] = useState<number | null>(
     null,
   );
   const lastRevealedRoundRef = useRef<string | null>(null);
@@ -1336,7 +1342,11 @@ export default function CoinTossPage() {
     const sessionId = getPresenceSessionId();
     const sendPresence = async () => {
       try {
-        await CoinTossService.trackPresence(sessionId);
+        const response = await CoinTossService.trackPresence(sessionId);
+        const nextViewerCount = Number(response?.data?.activeViewerCount ?? 0);
+        if (Number.isFinite(nextViewerCount) && nextViewerCount > 0) {
+          setPresenceViewerCount(nextViewerCount);
+        }
       } catch {
         // Best-effort live viewer count.
       }
@@ -1351,6 +1361,8 @@ export default function CoinTossPage() {
   }, []);
 
   const lobby = lobbyData?.data;
+  const displayViewerCount =
+    presenceViewerCount ?? lobby?.activeViewerCount ?? lobby?.activePlayerCount ?? 0;
   const minBet = Number(lobby?.settings.minBet ?? 5);
   const maxBet = Number(lobby?.settings.maxBet ?? 100);
   const chipOptions = useMemo(
@@ -1722,6 +1734,7 @@ export default function CoinTossPage() {
 
         <TopBar
           lobby={lobby}
+          activeViewerCount={displayViewerCount}
           secondsLeft={secondsLeft}
           isLocked={isLocked}
           isRoundStartFlash={isRoundStartFlash}

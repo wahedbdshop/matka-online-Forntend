@@ -129,10 +129,42 @@ export const CoinTossService = {
       ApiResponse<{
         sessionId: string;
         activeViewerCount: number;
+        realActiveViewerCount: number;
+        trackedViewerCount: number;
+        displayBasePlayerCount: number;
       }>
     >("/coin-toss/presence", { sessionId });
     return res.data;
   },
+};
+
+export type CoinTossReportRow = {
+  sl: number;
+  roundId?: string;
+  roundCode?: string;
+  userId: string;
+  username: string | null;
+  transactionId: string;
+  tranType: string;
+  amount: string;
+  oldBalance: string;
+  newBalance: string;
+  balanceChangeType: string;
+  action: string;
+  playedAmount?: string;
+  totalWinAmount?: string;
+  totalLossAmount?: string;
+  selectedSide?: CoinTossOutcome;
+  resultSide?: CoinTossOutcome | null;
+  playedAt?: string;
+  settledAt?: string | null;
+};
+
+export type CoinTossReportMeta = {
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
 };
 
 export const CoinTossAdminService = {
@@ -180,10 +212,17 @@ export const CoinTossAdminService = {
     return res.data;
   },
 
-  async getReport(params?: { fromDate?: string; toDate?: string }) {
+  async getReport(params?: {
+    fromDate?: string;
+    toDate?: string;
+    page?: number;
+    limit?: number;
+  }) {
     const query = new URLSearchParams({
       ...(params?.fromDate ? { fromDate: params.fromDate } : {}),
       ...(params?.toDate ? { toDate: params.toDate } : {}),
+      ...(params?.page ? { page: String(params.page) } : {}),
+      ...(params?.limit ? { limit: String(params.limit) } : {}),
     }).toString();
     const res = await api.get<
       ApiResponse<{
@@ -201,36 +240,48 @@ export const CoinTossAdminService = {
         userCount: number;
         userSummaries: Array<{
           userId: string;
-          name: string;
           username: string | null;
-          phone: string | null;
-          email: string | null;
           totalBets: number;
           wonBets: number;
           lostBets: number;
+          playedAmount: string;
           totalStake: string;
           totalPayout: string;
           totalProfit: string;
+          totalWinAmount: string;
+          totalLossAmount: string;
+          transactionId: string;
+          tranType: string;
+          amount: string;
+          oldBalance: string;
+          newBalance: string;
+          balanceChangeType: string;
+          action: string;
           status: CoinTossReportUserStatus;
           lastPlayedAt: string;
         }>;
         userBetHistory: Array<{
           betId: string;
           userId: string;
-          name: string;
           username: string | null;
-          phone: string | null;
-          email: string | null;
           roundCode: string;
           selectedSide: CoinTossOutcome;
           resultSide: CoinTossOutcome | null;
           stake: string;
           payout: string;
           profit: string;
+          winAmount: string;
+          lossAmount: string;
           status: CoinTossBetStatus;
           playedAt: string;
           settledAt: string;
         }>;
+        settledRoundUserReport: {
+          data: CoinTossReportRow[];
+          meta: CoinTossReportMeta;
+          rows: CoinTossReportRow[];
+          pagination: CoinTossReportMeta;
+        };
         recentRounds: Array<{
           roundCode: string;
           outcome: CoinTossOutcome | null;
